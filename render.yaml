@@ -2,21 +2,15 @@ services:
   - type: web
     name: vinyl-collection-manager
     runtime: python
-    buildCommand: |
-      pip install -r requirements.txt
-      cd frontend
-      npm install
-      npm run build
-    startCommand: |
-      cd $RENDER_PROJECT_DIR
-      python -m barcode_scanner.server
+    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build && cd ..
+    startCommand: gunicorn --bind 0.0.0.0:$PORT 'barcode_scanner.server:app' --log-file -
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: FLASK_ENV
         value: production
       - key: FLASK_SECRET_KEY
-        generateValue: true
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
