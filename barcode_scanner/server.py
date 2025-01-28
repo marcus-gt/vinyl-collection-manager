@@ -25,9 +25,16 @@ from .db import (
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
+
+# Define allowed origins based on environment
+allowed_origins = [
+    "http://localhost:5173",  # Local development
+    "https://vinyl-collection-manager.onrender.com"  # Production
+]
+
 CORS(app, 
      resources={r"/*": {
-         "origins": ["http://localhost:5173"],
+         "origins": allowed_origins,
          "supports_credentials": True,
          "allow_credentials": True
      }},
@@ -37,7 +44,7 @@ CORS(app,
 
 # Add session configuration
 app.config.update(
-    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',  # True in production
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax'
 )
@@ -302,11 +309,15 @@ if __name__ == '__main__':
     print(f"Environment: {os.getenv('FLASK_ENV')}")
     print(f"Debug mode: {os.getenv('FLASK_ENV') != 'production'}")
     print(f"Supabase URL: {os.getenv('SUPABASE_URL')}")
-    print("\nServer will be available at: http://localhost:3000")
-    print("Test the server by visiting: http://localhost:3000/")
-    print("\nPress Ctrl+C to stop the server")
     
-    port = int(os.environ.get('PORT', 3000))
-    app.run(debug=os.getenv('FLASK_ENV') != 'production',
-            host='localhost',  # Changed from 0.0.0.0 to localhost
-            port=port) 
+    port = int(os.environ.get('PORT', 10000))
+    is_production = os.getenv('FLASK_ENV') == 'production'
+    
+    print(f"\nServer will be available on port {port}")
+    print("Press Ctrl+C to stop the server")
+    
+    app.run(
+        debug=not is_production,
+        host='0.0.0.0',  # Allow external connections
+        port=port
+    ) 
