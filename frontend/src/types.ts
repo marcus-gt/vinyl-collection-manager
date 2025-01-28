@@ -1,3 +1,8 @@
+export interface User {
+  id: string;
+  email: string;
+}
+
 export interface VinylRecord {
   id?: string;
   user_id?: string;
