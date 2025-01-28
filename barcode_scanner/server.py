@@ -32,7 +32,9 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY')
 # Define allowed origins based on environment
 allowed_origins = [
     "http://localhost:5173",  # Local development
-    "https://vinyl-collection-manager.onrender.com"  # Production
+    "http://localhost:10000",  # Local production build
+    "https://vinyl-collection-manager.onrender.com",  # Production
+    "https://vinyl-collection-manager.onrender.com/"  # Production with trailing slash
 ]
 
 CORS(app, 
@@ -47,9 +49,10 @@ CORS(app,
 
 # Add session configuration
 app.config.update(
-    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV') == 'production',  # True in production
+    SESSION_COOKIE_SECURE=True,  # Always use secure cookies
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax'
+    SESSION_COOKIE_SAMESITE='None',  # Required for cross-origin requests
+    SESSION_COOKIE_DOMAIN='.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None
 )
 
 @app.route('/')
