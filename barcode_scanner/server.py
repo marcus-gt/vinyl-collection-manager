@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -38,14 +39,14 @@ allowed_origins = [
     "http://localhost:5173",  # Local development
     "http://localhost:10000",  # Local production build
     "https://vinyl-collection-manager.onrender.com",  # Production
-    "https://vinyl-collection-manager.onrender.com/"  # Production with trailing slash
 ]
 
 CORS(app, 
      resources={r"/*": {
          "origins": allowed_origins,
          "supports_credentials": True,
-         "allow_credentials": True
+         "allow_credentials": True,
+         "expose_headers": ["Set-Cookie"]
      }},
      expose_headers=["Content-Type", "Authorization", "Set-Cookie"],
      allow_headers=["Content-Type", "Authorization", "Cookie"],
@@ -53,10 +54,12 @@ CORS(app,
 
 # Add session configuration
 app.config.update(
-    SESSION_COOKIE_SECURE=True,  # Always use secure cookies
+    SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',  # Required for cross-origin requests
-    SESSION_COOKIE_DOMAIN='.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
+    SESSION_COOKIE_PATH='/',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
 )
 
 @app.route('/')
@@ -134,16 +137,27 @@ def register():
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login a user."""
+    print("\n=== Login Attempt ===")
+    print(f"Request Headers: {dict(request.headers)}")
+    print(f"Request Origin: {request.headers.get('Origin')}")
+    
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
     
     if not email or not password:
+        print("Error: Missing email or password")
         return jsonify({'success': False, 'error': 'Email and password required'}), 400
     
     result = login_user(email, password)
+    print(f"Login result: {result}")
+    
     if result['success']:
         session['user_id'] = result['session'].user.id
+        session.permanent = True
+        print(f"Session after login: {dict(session)}")
+        print(f"Response Headers: {dict(response.headers)}" if 'response' in locals() else "No response headers yet")
+        
         return jsonify({
             'success': True,
             'session': {
