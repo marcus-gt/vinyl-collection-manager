@@ -14,7 +14,7 @@ import sys
 
 sys.path.append(parent_dir)
 from discogs_lookup import search_by_barcode
-from db import (
+from .db import (
     create_user,
     login_user,
     add_record_to_collection,
