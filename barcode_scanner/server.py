@@ -83,60 +83,37 @@ def api_index():
         'message': 'Server is running'
     })
 
-@app.route('/api/lookup/barcode/<barcode>', methods=['GET'])
-def lookup_barcode(barcode):
+@app.route('/lookup/<barcode>')
+def lookup(barcode):
     try:
-        print(f"\n=== Looking up barcode: {barcode} ===")
-        # Handle UPC to EAN conversion
-        search_barcodes = [barcode]
-        if len(barcode) == 12:
-            # If it's a 12-digit UPC, also try with a leading zero
-            search_barcodes.append('0' + barcode)
-            print(f"Added leading zero version: {search_barcodes[-1]}")
-        elif len(barcode) == 13 and barcode.startswith('0'):
-            # If it's a 13-digit EAN starting with 0, also try without it
-            search_barcodes.append(barcode[1:])
-            print(f"Added version without leading zero: {search_barcodes[-1]}")
-
-        print(f"Trying barcodes: {search_barcodes}")
-
-        # Try each barcode format
-        for search_barcode in search_barcodes:
-            print(f"\nSearching for barcode: {search_barcode}")
-            result = search_by_barcode(search_barcode)
-            print(f"Raw Discogs result: {result}")
-            
-            if result:
-                # Found a match, process it
-                record = {
-                    'artist': result.get('artist', 'Unknown Artist'),
-                    'album': result.get('album'),
-                    'year': result.get('year'),
-                    'release_year': result.get('release_year'),
-                    'barcode': barcode,
-                    'genres': result.get('genres', []),
-                    'styles': result.get('styles', []),
-                    'musicians': result.get('musicians', []),
-                    'master_url': result.get('master_url'),
-                    'release_url': result.get('main_release_url'),
-                    'label': result.get('label')
-                }
-                return jsonify({
-                    'success': True,
-                    'data': record
-                })
-
-        # No match found
-        return jsonify({
-            'success': False,
-            'error': 'No record found for this barcode'
-        }), 404
-
+        result = search_by_barcode(barcode)
+        
+        if result:
+            response_data = {
+                'success': True,
+                'title': f"{result.get('artist')} - {result.get('album')}" if result.get('artist') and result.get('album') else result.get('title'),
+                'year': result.get('year'),
+                'format': ', '.join(result.get('format', [])),
+                'label': result.get('label'),
+                'web_url': result.get('uri'),
+                'master_url': result.get('master_url'),
+                'genres': result.get('genres'),
+                'styles': result.get('styles'),
+                'is_master': result.get('is_master', False),
+                'release_year': result.get('release_year'),
+                'release_url': result.get('release_url'),
+                'musicians': result.get('musicians')
+            }
+            return jsonify(response_data)
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No results found'
+            })
     except Exception as e:
-        print(f"Error looking up barcode: {str(e)}")
         return jsonify({
             'success': False,
-            'error': 'Failed to lookup barcode'
+            'message': str(e)
         }), 500
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -307,6 +284,62 @@ def update_notes(record_id):
     if result['success']:
         return jsonify({'success': True, 'record': result['record']}), 200
     return jsonify({'success': False, 'error': result['error']}), 400
+
+@app.route('/api/lookup/barcode/<barcode>', methods=['GET'])
+def lookup_barcode(barcode):
+    try:
+        print(f"\n=== Looking up barcode: {barcode} ===")
+        # Handle UPC to EAN conversion
+        search_barcodes = [barcode]
+        if len(barcode) == 12:
+            # If it's a 12-digit UPC, also try with a leading zero
+            search_barcodes.append('0' + barcode)
+            print(f"Added leading zero version: {search_barcodes[-1]}")
+        elif len(barcode) == 13 and barcode.startswith('0'):
+            # If it's a 13-digit EAN starting with 0, also try without it
+            search_barcodes.append(barcode[1:])
+            print(f"Added version without leading zero: {search_barcodes[-1]}")
+
+        print(f"Trying barcodes: {search_barcodes}")
+
+        # Try each barcode format
+        for search_barcode in search_barcodes:
+            print(f"\nSearching for barcode: {search_barcode}")
+            result = search_by_barcode(search_barcode)
+            print(f"Raw Discogs result: {result}")
+            
+            if result:
+                # Found a match, process it
+                record = {
+                    'artist': result.get('artist', 'Unknown Artist'),
+                    'album': result.get('album'),
+                    'year': result.get('year'),
+                    'release_year': result.get('release_year'),
+                    'barcode': barcode,
+                    'genres': result.get('genres', []),
+                    'styles': result.get('styles', []),
+                    'musicians': result.get('musicians', []),
+                    'master_url': result.get('master_url'),
+                    'release_url': result.get('main_release_url'),
+                    'label': result.get('label')
+                }
+                return jsonify({
+                    'success': True,
+                    'data': record
+                })
+
+        # No match found
+        return jsonify({
+            'success': False,
+            'error': 'No record found for this barcode'
+        }), 404
+
+    except Exception as e:
+        print(f"Error looking up barcode: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to lookup barcode'
+        }), 500
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
