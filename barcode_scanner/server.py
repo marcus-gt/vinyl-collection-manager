@@ -8,7 +8,7 @@ dotenv_path = os.path.join(parent_dir, '.env')
 load_dotenv(dotenv_path)
 
 # Now import everything else
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, send_from_directory
 from flask_cors import CORS
 import sys
 
@@ -23,7 +23,10 @@ from .db import (
     update_record_notes
 )
 
-app = Flask(__name__)
+# Set up static file serving
+static_folder = os.path.join(parent_dir, 'frontend', 'dist')
+app = Flask(__name__, static_folder=static_folder, static_url_path='')
+
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
 # Define allowed origins based on environment
@@ -50,7 +53,20 @@ app.config.update(
 )
 
 @app.route('/')
-def index():
+def serve_frontend():
+    """Serve the frontend application."""
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files."""
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, 'index.html')
+
+# API routes
+@app.route('/api')
+def api_index():
     """Test endpoint to verify server is running."""
     return jsonify({
         'status': 'ok',
