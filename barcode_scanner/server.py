@@ -329,13 +329,39 @@ def lookup_barcode(barcode):
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
-    if not is_production:
+    port = int(os.environ.get('PORT', 10000))
+
+    if is_production:
+        import gunicorn.app.base
+
+        class StandaloneApplication(gunicorn.app.base.BaseApplication):
+            def __init__(self, app, options=None):
+                self.options = options or {}
+                self.application = app
+                super().__init__()
+
+            def load_config(self):
+                for key, value in self.options.items():
+                    self.cfg.set(key.lower(), value)
+
+            def load(self):
+                return self.application
+
+        options = {
+            'bind': f'0.0.0.0:{port}',
+            'workers': 4,
+            'accesslog': '-',
+            'errorlog': '-',
+            'capture_output': True,
+            'worker_class': 'sync'
+        }
+
+        StandaloneApplication(app, options).run()
+    else:
         print("\nStarting development server...")
         print(f"Environment: {os.getenv('FLASK_ENV')}")
         print(f"Debug mode: True")
         print(f"Supabase URL: {os.getenv('SUPABASE_URL')}")
-        
-        port = int(os.environ.get('PORT', 10000))
         
         print(f"\nServer will be available on port {port}")
         print("Press Ctrl+C to stop the server")
@@ -344,6 +370,4 @@ if __name__ == '__main__':
             debug=True,
             host='0.0.0.0',
             port=port
-        )
-    else:
-        print("Running in production mode. Please use Gunicorn to serve the application.") 
+        ) 
