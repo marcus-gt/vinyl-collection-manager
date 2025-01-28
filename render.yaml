@@ -3,7 +3,7 @@ services:
     name: vinyl-collection-manager
     runtime: python
     buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build && cd ..
-    startCommand: gunicorn --bind 0.0.0.0:$PORT 'barcode_scanner.server:app' --log-file -
+    startCommand: cd /opt/render/project/src && gunicorn 'barcode_scanner.server:app' --bind=0.0.0.0:$PORT --log-file=-
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

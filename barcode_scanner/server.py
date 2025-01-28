@@ -7,6 +7,10 @@ parent_dir = str(Path(__file__).resolve().parent.parent)
 dotenv_path = os.path.join(parent_dir, '.env')
 load_dotenv(dotenv_path)
 
+# Set environment variables if not set
+if not os.getenv('FLASK_ENV'):
+    os.environ['FLASK_ENV'] = 'development'
+
 # Now import everything else
 from flask import Flask, jsonify, request, session, send_from_directory
 from flask_cors import CORS
@@ -324,8 +328,8 @@ def lookup_barcode(barcode):
         }), 500
 
 if __name__ == '__main__':
-    # Only run the development server when running the file directly
-    if os.getenv('FLASK_ENV') != 'production':
+    is_production = os.getenv('FLASK_ENV') == 'production'
+    if not is_production:
         print("\nStarting development server...")
         print(f"Environment: {os.getenv('FLASK_ENV')}")
         print(f"Debug mode: True")
@@ -342,5 +346,4 @@ if __name__ == '__main__':
             port=port
         )
     else:
-        # In production, we use Gunicorn to run the app
         print("Running in production mode. Please use Gunicorn to serve the application.") 
