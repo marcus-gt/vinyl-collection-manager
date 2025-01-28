@@ -2,8 +2,14 @@ services:
   - type: web
     name: vinyl-collection-manager
     runtime: python
-    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build
-    startCommand: python -m barcode_scanner.server
+    buildCommand: |
+      pip install -r requirements.txt
+      cd frontend
+      npm install
+      npm run build
+    startCommand: |
+      cd $RENDER_PROJECT_DIR
+      python -m barcode_scanner.server
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
