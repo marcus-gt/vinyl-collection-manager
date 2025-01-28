@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type { AuthResponse, VinylRecord, ApiResponse } from '../types';
 
-const API_URL = 'http://localhost:3000';
+const API_URL = import.meta.env.PROD 
+  ? 'https://vinyl-collection-manager.onrender.com'
+  : 'http://localhost:3000';
 
 const api = axios.create({
   baseURL: API_URL,
