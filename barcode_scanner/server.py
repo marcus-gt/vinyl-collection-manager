@@ -324,19 +324,23 @@ def lookup_barcode(barcode):
         }), 500
 
 if __name__ == '__main__':
-    print("\nStarting server...")
-    print(f"Environment: {os.getenv('FLASK_ENV')}")
-    print(f"Debug mode: {os.getenv('FLASK_ENV') != 'production'}")
-    print(f"Supabase URL: {os.getenv('SUPABASE_URL')}")
-    
-    port = int(os.environ.get('PORT', 10000))
-    is_production = os.getenv('FLASK_ENV') == 'production'
-    
-    print(f"\nServer will be available on port {port}")
-    print("Press Ctrl+C to stop the server")
-    
-    app.run(
-        debug=not is_production,
-        host='0.0.0.0',  # Allow external connections
-        port=port
-    ) 
+    # Only run the development server when running the file directly
+    if os.getenv('FLASK_ENV') != 'production':
+        print("\nStarting development server...")
+        print(f"Environment: {os.getenv('FLASK_ENV')}")
+        print(f"Debug mode: True")
+        print(f"Supabase URL: {os.getenv('SUPABASE_URL')}")
+        
+        port = int(os.environ.get('PORT', 10000))
+        
+        print(f"\nServer will be available on port {port}")
+        print("Press Ctrl+C to stop the server")
+        
+        app.run(
+            debug=True,
+            host='0.0.0.0',
+            port=port
+        )
+    else:
+        # In production, we use Gunicorn to run the app
+        print("Running in production mode. Please use Gunicorn to serve the application.") 
