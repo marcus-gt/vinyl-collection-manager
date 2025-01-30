@@ -325,11 +325,21 @@ def get_current_user():
         print("No authenticated user found in session")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
+    # Get user email from JWT token
+    try:
+        import jwt
+        decoded = jwt.decode(access_token, options={"verify_signature": False})
+        email = decoded.get('email', 'unknown@email.com')
+    except Exception as e:
+        print(f"Error decoding JWT: {e}")
+        email = 'unknown@email.com'
+    
     # Return the current user's information
     return jsonify({
         'success': True,
         'user': {
             'id': user_id,
+            'email': email,
             'access_token': access_token
         }
     }), 200
