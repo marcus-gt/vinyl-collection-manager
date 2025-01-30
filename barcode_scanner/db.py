@@ -26,10 +26,8 @@ def get_supabase_client() -> Client:
             return client
             
         print("Setting session with access and refresh tokens")
-        client.auth.set_session({
-            'access_token': access_token,
-            'refresh_token': refresh_token
-        })
+        # Pass refresh_token as a separate argument
+        client.auth.set_session(access_token, refresh_token)
     
     return client
 
