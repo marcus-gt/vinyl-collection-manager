@@ -121,7 +121,12 @@ def after_request(response):
     """Modify response headers for CORS and security."""
     origin = request.headers.get('Origin')
     if origin in allowed_origins:
-        response.headers['Access-Control-Allow-Origin'] = origin
+        # Set the correct origin based on the environment
+        if os.getenv('FLASK_ENV') == 'production':
+            response.headers['Access-Control-Allow-Origin'] = 'https://vinyl-collection-manager.onrender.com'
+        else:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
@@ -138,6 +143,8 @@ def after_request(response):
         
         # Debug response
         print("\n=== Response Debug ===")
+        print(f"Origin: {origin}")
+        print(f"Environment: {os.getenv('FLASK_ENV')}")
         print(f"Response headers: {dict(response.headers)}")
         print(f"Response status: {response.status}")
         print(f"Current session after: {dict(session)}")
