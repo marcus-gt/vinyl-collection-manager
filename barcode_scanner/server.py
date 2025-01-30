@@ -67,17 +67,27 @@ def after_request(response):
     origin = request.headers.get('Origin')
     if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
+        # Add other CORS headers
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
+        # Add cookie exposure
+        response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
+        
+        # Ensure cookie settings
+        if 'Set-Cookie' in response.headers:
+            current_cookie = response.headers['Set-Cookie']
+            if 'SameSite=' not in current_cookie:
+                response.headers['Set-Cookie'] = f"{current_cookie}; SameSite=None; Secure"
+    
     return response
 
 # Add session configuration
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_DOMAIN=None,  # Let Flask set the domain automatically
+    SESSION_COOKIE_SAMESITE='None',  # Required for cross-site cookies
+    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com',  # Explicitly set domain
     SESSION_COOKIE_PATH='/',
     PERMANENT_SESSION_LIFETIME=timedelta(days=7)
 )
@@ -209,11 +219,11 @@ def login():
     
     if result['success']:
         session['user_id'] = result['session'].user.id
+        session['access_token'] = result['session'].access_token
+        session['refresh_token'] = result['session'].refresh_token
         session.permanent = True
-        print(f"Session after login: {dict(session)}")
-        print(f"Response Headers: {dict(response.headers)}" if 'response' in locals() else "No response headers yet")
         
-        return jsonify({
+        response = jsonify({
             'success': True,
             'session': {
                 'access_token': result['session'].access_token,
@@ -222,7 +232,12 @@ def login():
                     'email': result['session'].user.email
                 }
             }
-        }), 200
+        })
+        
+        print(f"Session after login: {dict(session)}")
+        print(f"Response Headers: {dict(response.headers)}")
+        return response, 200
+        
     return jsonify({'success': False, 'error': result['error']}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
