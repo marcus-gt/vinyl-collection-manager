@@ -361,12 +361,37 @@ def lookup_barcode(barcode):
 @app.route('/<path:path>')
 def serve_frontend(path):
     """Serve the frontend application for all other routes."""
-    # Always return index.html for frontend routes
-    if not path.startswith('api/'):
-        return send_from_directory(app.static_folder, 'index.html')
+    print(f"\n=== Serving Frontend ===")
+    print(f"Requested path: {path}")
+    print(f"Static folder: {app.static_folder}")
     
-    # Let other routes handle API requests
-    return app.send_static_file(path)
+    # Check if there's a physical folder matching the route
+    potential_folder = os.path.join(app.static_folder, path)
+    if os.path.exists(potential_folder):
+        print(f"Warning: Found physical folder at {potential_folder}")
+        if os.path.isdir(potential_folder):
+            print("This is a directory - this might be causing the 404!")
+    
+    # List contents of static folder for debugging
+    print("\nStatic folder contents:")
+    for item in os.listdir(app.static_folder):
+        print(f"- {item}")
+    
+    # Always serve index.html for non-API routes
+    if not path.startswith('api/'):
+        print("Serving index.html for frontend route")
+        try:
+            return send_from_directory(app.static_folder, 'index.html')
+        except Exception as e:
+            print(f"Error serving index.html: {str(e)}")
+            return str(e), 500
+    
+    print("Attempting to serve static file")
+    try:
+        return app.send_static_file(path)
+    except Exception as e:
+        print(f"Error serving static file: {str(e)}")
+        return str(e), 404
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
