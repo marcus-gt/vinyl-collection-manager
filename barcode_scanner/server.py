@@ -43,6 +43,7 @@ allowed_origins = [
     "http://localhost:5173",  # Local development
     "http://localhost:10000",  # Local production build
     "https://vinyl-collection-manager.onrender.com",  # Production
+    "http://vinyl-collection-manager.onrender.com",   # Production without SSL
 ]
 
 CORS(app, 
@@ -50,7 +51,9 @@ CORS(app,
          "origins": allowed_origins,
          "supports_credentials": True,
          "allow_credentials": True,
-         "expose_headers": ["Set-Cookie"]
+         "expose_headers": ["Set-Cookie"],
+         "allow_headers": ["Content-Type", "Authorization", "Cookie"],
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
      }},
      expose_headers=["Content-Type", "Authorization", "Set-Cookie"],
      allow_headers=["Content-Type", "Authorization", "Cookie"],
@@ -338,7 +341,12 @@ def lookup_barcode(barcode):
 @app.route('/<path:path>')
 def serve_frontend(path):
     """Serve the frontend application for all other routes."""
-    # First try to serve as a static file
+    # Special paths that should always serve index.html
+    spa_routes = {'collection', 'scanner', 'login', 'register'}
+    if path in spa_routes:
+        return send_from_directory(app.static_folder, 'index.html')
+        
+    # Try to serve as a static file
     try:
         if path and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
