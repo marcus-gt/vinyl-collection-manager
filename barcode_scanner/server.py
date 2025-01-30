@@ -66,7 +66,9 @@ if os.getenv('FLASK_ENV') == 'production':
         'SESSION_COOKIE_SAMESITE': 'None',
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_PATH': '/',
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=7)
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
+        'SESSION_PROTECTION': 'strong',
+        'SESSION_COOKIE_NAME': 'session'
     }
 else:
     session_config = {
@@ -74,7 +76,9 @@ else:
         'SESSION_COOKIE_HTTPONLY': True,
         'SESSION_COOKIE_SAMESITE': 'None',
         'SESSION_COOKIE_PATH': '/',
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=7)
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
+        'SESSION_PROTECTION': 'strong',
+        'SESSION_COOKIE_NAME': 'session'
     }
 
 app.config.update(**session_config)
@@ -94,6 +98,11 @@ def after_request(response):
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
+        
+        # Add security headers
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         
         # Debug cookie headers
         if 'Set-Cookie' in response.headers:
