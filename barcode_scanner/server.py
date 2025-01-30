@@ -63,22 +63,24 @@ if os.getenv('FLASK_ENV') == 'production':
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_SAMESITE': 'Lax',
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
         'SESSION_PROTECTION': 'strong',
-        'SESSION_COOKIE_NAME': 'session'
+        'SESSION_COOKIE_NAME': 'session',
+        'SESSION_REFRESH_EACH_REQUEST': True
     }
 else:
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_SAMESITE': 'Lax',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
         'SESSION_PROTECTION': 'strong',
-        'SESSION_COOKIE_NAME': 'session'
+        'SESSION_COOKIE_NAME': 'session',
+        'SESSION_REFRESH_EACH_REQUEST': True
     }
 
 app.config.update(**session_config)
@@ -88,15 +90,41 @@ print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set
 print(f"SESSION_COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
 print(f"SESSION_COOKIE_SAMESITE: {app.config['SESSION_COOKIE_SAMESITE']}")
 
+@app.before_request
+def before_request():
+    """Debug request information and ensure session is configured."""
+    print("\n=== Request Debug ===")
+    print(f"Request path: {request.path}")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {dict(request.headers)}")
+    print(f"Request cookies: {request.cookies}")
+    print(f"Current session before: {dict(session)}")
+    
+    # Ensure session is permanent
+    if not session.get('_permanent'):
+        session.permanent = True
+        
+    # Check if user is authenticated
+    if 'user_id' in session:
+        print("User is authenticated in session")
+        
+    # Debug session configuration
+    print("\n=== Session Configuration ===")
+    print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN')}")
+    print(f"SESSION_COOKIE_SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
+    print(f"SESSION_COOKIE_SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
+    print(f"SESSION_COOKIE_PATH: {app.config.get('SESSION_COOKIE_PATH')}")
+    print(f"SESSION_COOKIE_NAME: {app.config.get('SESSION_COOKIE_NAME')}")
+
 @app.after_request
 def after_request(response):
-    """Modify response headers for CORS and caching."""
+    """Modify response headers for CORS and security."""
     origin = request.headers.get('Origin')
     if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
         
         # Add security headers
@@ -104,16 +132,14 @@ def after_request(response):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         
-        # Debug cookie headers
+        # Debug response
+        print("\n=== Response Debug ===")
+        print(f"Response headers: {dict(response.headers)}")
+        print(f"Response status: {response.status}")
+        print(f"Current session after: {dict(session)}")
+        
         if 'Set-Cookie' in response.headers:
-            print("\n=== Cookie Debug ===")
             print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
-            print(f"Request URL: {request.url}")
-            print(f"Request scheme: {request.scheme}")
-            print(f"Request host: {request.host}")
-            print(f"Request is secure: {request.is_secure}")
-            print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
-            print(f"Request headers: {dict(request.headers)}")
     
     return response
 
@@ -241,9 +267,6 @@ def login():
     print("\n=== Login Attempt ===")
     print(f"Request Headers: {dict(request.headers)}")
     print(f"Request Origin: {request.headers.get('Origin')}")
-    print(f"Request URL: {request.url}")
-    print(f"Request scheme: {request.scheme}")
-    print(f"Request host: {request.host}")
     
     data = request.get_json()
     email = data.get('email')
@@ -257,6 +280,10 @@ def login():
     print(f"Login result: {result}")
     
     if result['success']:
+        # Clear any existing session data
+        session.clear()
+        
+        # Set new session data
         session['user_id'] = result['session'].user.id
         session['access_token'] = result['session'].access_token
         session['refresh_token'] = result['session'].refresh_token
