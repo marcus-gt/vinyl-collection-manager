@@ -30,7 +30,12 @@ from .db import (
 
 # Set up static file serving
 static_folder = os.path.join(parent_dir, 'frontend', 'dist')
-app = Flask(__name__, static_folder=static_folder, static_url_path='')
+app = Flask(__name__, 
+    static_folder=static_folder, 
+    static_url_path='',
+    # Add template folder for serving index.html
+    template_folder=static_folder
+)
 
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
@@ -62,20 +67,27 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=7)
 )
 
-@app.route('/')
-@app.route('/login')
-@app.route('/register')
-@app.route('/collection')
-@app.route('/scanner')
-def serve_frontend():
-    """Serve the frontend application for all app routes."""
-    return send_from_directory(app.static_folder, 'index.html')
-
+# Serve static files first
 @app.route('/<path:path>')
 def serve_static(path):
-    """Serve static files or return to index.html for frontend routes."""
-    if path and os.path.exists(os.path.join(app.static_folder, path)):
+    """Serve static files if they exist."""
+    try:
         return send_from_directory(app.static_folder, path)
+    except:
+        return serve_frontend()
+
+# Then handle all frontend routes
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path=''):
+    """Serve the frontend application for all other routes."""
+    try:
+        # First try to serve as a static file
+        if path and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+    except:
+        pass
+    # If not a static file or any error occurs, serve index.html
     return send_from_directory(app.static_folder, 'index.html')
 
 # API routes should be prefixed with /api
