@@ -43,23 +43,15 @@ allowed_origins = [
     "http://localhost:5173",  # Local development
     "http://localhost:10000",  # Local production build
     "https://vinyl-collection-manager.onrender.com",  # Production
-    "http://vinyl-collection-manager.onrender.com",   # Production without SSL
 ]
 
 # Configure CORS with dynamic origin
 CORS(app, 
      origins=allowed_origins,
      supports_credentials=True,
-     resources={
-         r"/*": {
-             "origins": "*",
-             "supports_credentials": True,
-             "allow_credentials": True,
-             "expose_headers": ["Set-Cookie"],
-             "allow_headers": ["Content-Type", "Authorization", "Cookie"],
-             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-         }
-     })
+     expose_headers=["Set-Cookie"],
+     allow_headers=["Content-Type", "Authorization", "Cookie"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 @app.after_request
 def after_request(response):
@@ -67,38 +59,26 @@ def after_request(response):
     origin = request.headers.get('Origin')
     if origin in allowed_origins:
         response.headers['Access-Control-Allow-Origin'] = origin
-        # Add other CORS headers
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
-        # Add cookie exposure
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
-        
-        # Ensure cookie settings
-        if 'Set-Cookie' in response.headers:
-            current_cookie = response.headers['Set-Cookie']
-            if 'SameSite=' not in current_cookie:
-                response.headers['Set-Cookie'] = f"{current_cookie}; SameSite=None; Secure"
-    
     return response
 
 # Add session configuration
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',  # Required for cross-site cookies
-    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com',  # Explicitly set domain
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
     SESSION_COOKIE_PATH='/',
     PERMANENT_SESSION_LIFETIME=timedelta(days=7)
 )
 
 @app.before_request
 def make_session_permanent():
-    """Ensure session is permanent and set correctly."""
+    """Ensure session is permanent."""
     session.permanent = True
-    # Set session cookie domain based on request
-    if request.environ.get('SERVER_NAME'):
-        app.config['SESSION_COOKIE_DOMAIN'] = request.environ['SERVER_NAME']
 
 # Frontend routes - these must be before API routes
 @app.route('/')
@@ -111,8 +91,10 @@ def serve_spa():
     print("\n=== Serving SPA Route ===")
     print(f"Request path: {request.path}")
     print(f"Static folder: {app.static_folder}")
-    print(f"Session: {dict(session)}")  # Log session state
-    print(f"Request cookies: {request.cookies}")  # Log cookies
+    print(f"Session: {dict(session)}")
+    print(f"Request cookies: {request.cookies}")
+    print(f"Request host: {request.host}")
+    print(f"Request environ: {request.environ.get('SERVER_NAME')}")
     return send_from_directory(app.static_folder, 'index.html')
 
 # Static files route
