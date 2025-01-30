@@ -63,19 +63,23 @@ if os.getenv('FLASK_ENV') == 'production':
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',  # Changed back to None for cross-origin
+        'SESSION_COOKIE_SAMESITE': 'Lax',
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
+        'SESSION_PROTECTION': 'strong',
+        'SESSION_COOKIE_NAME': 'session',
         'SESSION_REFRESH_EACH_REQUEST': True
     }
 else:
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',  # Changed back to None for cross-origin
+        'SESSION_COOKIE_SAMESITE': 'Lax',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
+        'SESSION_PROTECTION': 'strong',
+        'SESSION_COOKIE_NAME': 'session',
         'SESSION_REFRESH_EACH_REQUEST': True
     }
 
@@ -120,7 +124,7 @@ def after_request(response):
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
         
         # Add security headers
@@ -135,7 +139,7 @@ def after_request(response):
         print(f"Current session after: {dict(session)}")
         
         if 'Set-Cookie' in response.headers:
-            print(f"Set-Cookie header: {response.headers.getall('Set-Cookie')}")
+            print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
     
     return response
 
@@ -295,19 +299,6 @@ def login():
                 }
             }
         })
-        
-        # Ensure the cookie is set with the correct domain
-        if os.getenv('FLASK_ENV') == 'production':
-            response.set_cookie(
-                'session',
-                session.get('_id'),
-                secure=True,
-                httponly=True,
-                samesite='None',
-                domain='vinyl-collection-manager.onrender.com',
-                path='/',
-                max_age=7 * 24 * 60 * 60  # 7 days
-            )
         
         print(f"Session after login: {dict(session)}")
         print(f"Response Headers: {dict(response.headers)}")
