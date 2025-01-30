@@ -32,7 +32,7 @@ from .db import (
 static_folder = os.path.join(parent_dir, 'frontend', 'dist')
 app = Flask(__name__, 
     static_folder=static_folder, 
-    static_url_path='',  # Revert to empty string for root-level static files
+    static_url_path='',  # Revert to empty string
     template_folder=static_folder
 )
 
@@ -333,7 +333,7 @@ def lookup_barcode(barcode):
             'error': 'Failed to lookup barcode'
         }), 500
 
-# Catch-all route for the frontend - this should be the last route
+# Catch-all route for the frontend - this MUST be the last route
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
@@ -344,6 +344,7 @@ def serve_frontend(path):
             return send_from_directory(app.static_folder, path)
     except:
         pass
+        
     # For all other routes, return index.html
     return send_from_directory(app.static_folder, 'index.html')
 
