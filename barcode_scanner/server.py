@@ -32,7 +32,7 @@ from .db import (
 static_folder = os.path.join(parent_dir, 'frontend', 'dist')
 app = Flask(__name__, 
     static_folder=static_folder, 
-    static_url_path='',
+    static_url_path='/static',  # Use distinct path for static files
     template_folder=static_folder
 )
 
@@ -333,29 +333,17 @@ def lookup_barcode(barcode):
             'error': 'Failed to lookup barcode'
         }), 500
 
-# Static files route
-@app.route('/assets/<path:filename>')
+# Serve static files from the /static path
+@app.route('/static/<path:filename>')
 def serve_static(filename):
-    """Serve static files from the assets directory."""
-    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
+    """Serve static files from the static directory."""
+    return send_from_directory(app.static_folder, filename)
 
 # Catch-all route for the frontend - this should be the last route
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_frontend(path):
     """Serve the frontend application for all other routes."""
-    # Special handling for root path
-    if path == '':
-        return send_from_directory(app.static_folder, 'index.html')
-        
-    # Try to serve as a static file first
-    try:
-        if os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-    except:
-        pass
-        
-    # For all other routes, return the index.html to let React handle routing
     return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
