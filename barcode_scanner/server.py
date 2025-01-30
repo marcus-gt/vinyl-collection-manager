@@ -45,13 +45,21 @@ allowed_origins = [
     "https://vinyl-collection-manager.onrender.com",  # Production
 ]
 
-# Configure CORS with dynamic origin
-CORS(app, 
-     origins=allowed_origins,
-     supports_credentials=True,
-     expose_headers=["Set-Cookie"],
-     allow_headers=["Content-Type", "Authorization", "Cookie"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+# Configure CORS based on environment
+if os.getenv('FLASK_ENV') == 'production':
+    CORS(app,
+         origins=["https://vinyl-collection-manager.onrender.com"],
+         supports_credentials=True,
+         expose_headers=["Set-Cookie"],
+         allow_headers=["Content-Type", "Authorization", "Cookie"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+else:
+    CORS(app,
+         origins=allowed_origins,
+         supports_credentials=True,
+         expose_headers=["Set-Cookie"],
+         allow_headers=["Content-Type", "Authorization", "Cookie"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Add session configuration
 print("\n=== Flask Configuration ===")
@@ -120,38 +128,42 @@ def before_request():
 def after_request(response):
     """Modify response headers for CORS and security."""
     origin = request.headers.get('Origin')
-    if origin in allowed_origins:
-        # Set the correct origin based on the environment
-        if os.getenv('FLASK_ENV') == 'production':
-            response.headers['Access-Control-Allow-Origin'] = 'https://vinyl-collection-manager.onrender.com'
-        else:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            
+    
+    # In production, always use the production URL
+    if os.getenv('FLASK_ENV') == 'production':
+        response.headers['Access-Control-Allow-Origin'] = 'https://vinyl-collection-manager.onrender.com'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
+        response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
+    # In development, use the dynamic origin if it's in allowed_origins
+    elif origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
         
-        # Add security headers
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-        
-        # Set cookie policy headers
-        if app.config['SESSION_COOKIE_SAMESITE'] == 'None':
-            response.headers['Set-Cookie'] = response.headers.get('Set-Cookie', '').replace('SameSite=Lax', 'SameSite=None')
-        
-        # Debug response
-        print("\n=== Response Debug ===")
-        print(f"Origin: {origin}")
-        print(f"Environment: {os.getenv('FLASK_ENV')}")
-        print(f"Response headers: {dict(response.headers)}")
-        print(f"Response status: {response.status}")
-        print(f"Current session after: {dict(session)}")
-        
-        if 'Set-Cookie' in response.headers:
-            print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
+    # Add security headers
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     
+    # Set cookie policy headers
+    if app.config['SESSION_COOKIE_SAMESITE'] == 'None':
+        response.headers['Set-Cookie'] = response.headers.get('Set-Cookie', '').replace('SameSite=Lax', 'SameSite=None')
+    
+    # Debug response
+    print("\n=== Response Debug ===")
+    print(f"Origin: {origin}")
+    print(f"Environment: {os.getenv('FLASK_ENV')}")
+    print(f"Response headers: {dict(response.headers)}")
+    print(f"Response status: {response.status}")
+    print(f"Current session after: {dict(session)}")
+    
+    if 'Set-Cookie' in response.headers:
+        print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
+
     return response
 
 @app.before_request
