@@ -33,7 +33,6 @@ static_folder = os.path.join(parent_dir, 'frontend', 'dist')
 app = Flask(__name__, 
     static_folder=static_folder, 
     static_url_path='',
-    # Add template folder for serving index.html
     template_folder=static_folder
 )
 
@@ -67,30 +66,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=7)
 )
 
-# Serve static files first
-@app.route('/<path:path>')
-def serve_static(path):
-    """Serve static files if they exist."""
-    try:
-        return send_from_directory(app.static_folder, path)
-    except:
-        return serve_frontend()
-
-# Then handle all frontend routes
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_frontend(path=''):
-    """Serve the frontend application for all other routes."""
-    try:
-        # First try to serve as a static file
-        if path and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-    except:
-        pass
-    # If not a static file or any error occurs, serve index.html
-    return send_from_directory(app.static_folder, 'index.html')
-
-# API routes should be prefixed with /api
+# API routes first (keep all existing API routes as they are)
 @app.route('/api')
 def api_index():
     """Test endpoint to verify server is running."""
@@ -356,6 +332,31 @@ def lookup_barcode(barcode):
             'success': False,
             'error': 'Failed to lookup barcode'
         }), 500
+
+# Static files route
+@app.route('/assets/<path:filename>')
+def serve_static(filename):
+    """Serve static files from the assets directory."""
+    return send_from_directory(os.path.join(app.static_folder, 'assets'), filename)
+
+# Catch-all route for the frontend - this should be the last route
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    """Serve the frontend application for all other routes."""
+    # Special handling for root path
+    if path == '':
+        return send_from_directory(app.static_folder, 'index.html')
+        
+    # Try to serve as a static file first
+    try:
+        if os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+    except:
+        pass
+        
+    # For all other routes, return the index.html to let React handle routing
+    return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
