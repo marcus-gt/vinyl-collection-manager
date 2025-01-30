@@ -13,7 +13,7 @@ if not os.getenv('FLASK_ENV'):
     os.environ['FLASK_ENV'] = 'development'
 
 # Now import everything else
-from flask import Flask, jsonify, request, session, send_from_directory
+from flask import Flask, jsonify, request, session, send_from_directory, redirect
 from flask_cors import CORS
 import sys
 
@@ -53,6 +53,25 @@ CORS(app,
      allow_headers=["Content-Type", "Authorization", "Cookie"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
+# Add session configuration
+print("\n=== Flask Configuration ===")
+print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
+print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
+
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='None',
+    # Let Flask set the domain automatically based on the request
+    SESSION_COOKIE_PATH='/',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
+)
+
+print("\n=== Session Configuration ===")
+print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set - using request host')}")
+print(f"SESSION_COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
+print(f"SESSION_COOKIE_SAMESITE: {app.config['SESSION_COOKIE_SAMESITE']}")
+
 @app.after_request
 def after_request(response):
     """Modify response headers for CORS and caching."""
@@ -63,17 +82,25 @@ def after_request(response):
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
+        
+        # Debug cookie headers
+        if 'Set-Cookie' in response.headers:
+            print("\n=== Cookie Debug ===")
+            print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
+            print(f"Request URL: {request.url}")
+            print(f"Request scheme: {request.scheme}")
+            print(f"Request host: {request.host}")
+            print(f"Request is secure: {request.is_secure}")
+            print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
+    
     return response
 
-# Add session configuration
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
-    SESSION_COOKIE_PATH='/',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
-)
+@app.before_request
+def ensure_https():
+    """Ensure all requests use HTTPS."""
+    if request.headers.get('X-Forwarded-Proto', 'http') == 'http' and os.getenv('FLASK_ENV') == 'production':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
 
 @app.before_request
 def make_session_permanent():
@@ -187,6 +214,9 @@ def login():
     print("\n=== Login Attempt ===")
     print(f"Request Headers: {dict(request.headers)}")
     print(f"Request Origin: {request.headers.get('Origin')}")
+    print(f"Request URL: {request.url}")
+    print(f"Request scheme: {request.scheme}")
+    print(f"Request host: {request.host}")
     
     data = request.get_json()
     email = data.get('email')
