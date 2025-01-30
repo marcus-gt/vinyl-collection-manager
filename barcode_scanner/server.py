@@ -72,6 +72,24 @@ def after_request(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
     return response
 
+# Add session configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_DOMAIN=None,  # Let Flask set the domain automatically
+    SESSION_COOKIE_PATH='/',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
+)
+
+@app.before_request
+def make_session_permanent():
+    """Ensure session is permanent and set correctly."""
+    session.permanent = True
+    # Set session cookie domain based on request
+    if request.environ.get('SERVER_NAME'):
+        app.config['SESSION_COOKIE_DOMAIN'] = request.environ['SERVER_NAME']
+
 # Frontend routes - these must be before API routes
 @app.route('/')
 @app.route('/login')
@@ -83,13 +101,9 @@ def serve_spa():
     print("\n=== Serving SPA Route ===")
     print(f"Request path: {request.path}")
     print(f"Static folder: {app.static_folder}")
-    print(f"Looking for index.html at: {os.path.join(app.static_folder, 'index.html')}")
-    try:
-        return send_from_directory(app.static_folder, 'index.html')
-    except Exception as e:
-        print(f"Error serving index.html: {str(e)}")
-        print(f"Static folder contents: {os.listdir(app.static_folder)}")
-        return str(e), 500
+    print(f"Session: {dict(session)}")  # Log session state
+    print(f"Request cookies: {request.cookies}")  # Log cookies
+    return send_from_directory(app.static_folder, 'index.html')
 
 # Static files route
 @app.route('/<path:filename>')
@@ -114,16 +128,6 @@ def serve_static(filename):
     
     print("Falling back to index.html")
     return send_from_directory(app.static_folder, 'index.html')
-
-# Add session configuration
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
-    SESSION_COOKIE_PATH='/',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
-)
 
 # API routes first (keep all existing API routes as they are)
 @app.route('/api')
