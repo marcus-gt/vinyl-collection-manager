@@ -8,6 +8,16 @@ const API_URL = import.meta.env.PROD
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+});
+
+api.interceptors.request.use((config) => {
+  config.withCredentials = true;
+  return config;
 });
 
 export const auth = {
