@@ -81,22 +81,38 @@ def after_request(response):
 def serve_spa():
     """Serve the SPA for known frontend routes."""
     print("\n=== Serving SPA Route ===")
-    return send_from_directory(app.static_folder, 'index.html')
+    print(f"Request path: {request.path}")
+    print(f"Static folder: {app.static_folder}")
+    print(f"Looking for index.html at: {os.path.join(app.static_folder, 'index.html')}")
+    try:
+        return send_from_directory(app.static_folder, 'index.html')
+    except Exception as e:
+        print(f"Error serving index.html: {str(e)}")
+        print(f"Static folder contents: {os.listdir(app.static_folder)}")
+        return str(e), 500
 
 # Static files route
 @app.route('/<path:filename>')
 def serve_static(filename):
     """Serve static files."""
+    print(f"\n=== Serving Static File ===")
+    print(f"Requested filename: {filename}")
+    print(f"Full path: {os.path.join(app.static_folder, filename)}")
+    
     if filename.startswith('api/'):
+        print("API route detected, passing through")
         return app.send_static_file(filename)
-        
+    
     try:
-        if os.path.exists(os.path.join(app.static_folder, filename)):
+        full_path = os.path.join(app.static_folder, filename)
+        print(f"Checking if file exists at: {full_path}")
+        if os.path.exists(full_path):
+            print("File exists, serving it")
             return send_from_directory(app.static_folder, filename)
-    except:
-        pass
-        
-    # If not a static file, serve index.html
+    except Exception as e:
+        print(f"Error checking/serving file: {str(e)}")
+    
+    print("Falling back to index.html")
     return send_from_directory(app.static_folder, 'index.html')
 
 # Add session configuration
