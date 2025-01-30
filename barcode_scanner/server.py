@@ -46,13 +46,6 @@ allowed_origins = [
     "http://vinyl-collection-manager.onrender.com",   # Production without SSL
 ]
 
-# Dynamic CORS origin handling
-def get_cors_origin(request):
-    origin = request.headers.get('Origin')
-    if origin in allowed_origins:
-        return origin
-    return allowed_origins[0]  # Default to first origin
-
 # Configure CORS with dynamic origin
 CORS(app, 
      origins=allowed_origins,
@@ -78,6 +71,33 @@ def after_request(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
     return response
+
+# Frontend routes - these must be before API routes
+@app.route('/')
+@app.route('/login')
+@app.route('/register')
+@app.route('/collection')
+@app.route('/scanner')
+def serve_spa():
+    """Serve the SPA for known frontend routes."""
+    print("\n=== Serving SPA Route ===")
+    return send_from_directory(app.static_folder, 'index.html')
+
+# Static files route
+@app.route('/<path:filename>')
+def serve_static(filename):
+    """Serve static files."""
+    if filename.startswith('api/'):
+        return app.send_static_file(filename)
+        
+    try:
+        if os.path.exists(os.path.join(app.static_folder, filename)):
+            return send_from_directory(app.static_folder, filename)
+    except:
+        pass
+        
+    # If not a static file, serve index.html
+    return send_from_directory(app.static_folder, 'index.html')
 
 # Add session configuration
 app.config.update(
@@ -355,43 +375,6 @@ def lookup_barcode(barcode):
             'success': False,
             'error': 'Failed to lookup barcode'
         }), 500
-
-# Catch-all route for the frontend - this MUST be the last route
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_frontend(path):
-    """Serve the frontend application for all other routes."""
-    print(f"\n=== Serving Frontend ===")
-    print(f"Requested path: {path}")
-    print(f"Static folder: {app.static_folder}")
-    
-    # Check if there's a physical folder matching the route
-    potential_folder = os.path.join(app.static_folder, path)
-    if os.path.exists(potential_folder):
-        print(f"Warning: Found physical folder at {potential_folder}")
-        if os.path.isdir(potential_folder):
-            print("This is a directory - this might be causing the 404!")
-    
-    # List contents of static folder for debugging
-    print("\nStatic folder contents:")
-    for item in os.listdir(app.static_folder):
-        print(f"- {item}")
-    
-    # Always serve index.html for non-API routes
-    if not path.startswith('api/'):
-        print("Serving index.html for frontend route")
-        try:
-            return send_from_directory(app.static_folder, 'index.html')
-        except Exception as e:
-            print(f"Error serving index.html: {str(e)}")
-            return str(e), 500
-    
-    print("Attempting to serve static file")
-    try:
-        return app.send_static_file(path)
-    except Exception as e:
-        print(f"Error serving static file: {str(e)}")
-        return str(e), 404
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
