@@ -24,6 +24,11 @@ export const auth = {
   logout: async (): Promise<void> => {
     await api.post('/api/auth/logout');
   },
+
+  getCurrentUser: async (): Promise<AuthResponse> => {
+    const response = await api.get<AuthResponse>('/api/auth/me');
+    return response.data;
+  },
 };
 
 export const records = {

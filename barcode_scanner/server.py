@@ -312,6 +312,28 @@ def logout():
     session.clear()
     return jsonify({'success': True}), 200
 
+@app.route('/api/auth/me', methods=['GET'])
+def get_current_user():
+    """Get the current authenticated user."""
+    print("\n=== Checking Current User ===")
+    print(f"Session data: {dict(session)}")
+    
+    user_id = session.get('user_id')
+    access_token = session.get('access_token')
+    
+    if not user_id or not access_token:
+        print("No authenticated user found in session")
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    # Return the current user's information
+    return jsonify({
+        'success': True,
+        'user': {
+            'id': user_id,
+            'access_token': access_token
+        }
+    }), 200
+
 @app.route('/api/records', methods=['GET'])
 def get_records():
     """Get all records for the current user."""
