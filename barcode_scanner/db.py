@@ -19,9 +19,16 @@ def get_supabase_client() -> Client:
     
     # Set the auth token if available
     if access_token:
+        # Store refresh token in session during login
+        refresh_token = session.get('refresh_token')
+        if not refresh_token:
+            print("Warning: No refresh token found in session")
+            return client
+            
+        print("Setting session with access and refresh tokens")
         client.auth.set_session({
             'access_token': access_token,
-            'token_type': 'bearer'
+            'refresh_token': refresh_token
         })
     
     return client
@@ -70,6 +77,9 @@ def login_user(email: str, password: str) -> Dict[str, Any]:
             "email": email,
             "password": password
         })
+        # Store both tokens in session
+        session['access_token'] = response.session.access_token
+        session['refresh_token'] = response.session.refresh_token
         return {"success": True, "session": response.session}
     except Exception as e:
         return {"success": False, "error": str(e)}
