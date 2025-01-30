@@ -329,20 +329,35 @@ def get_current_user():
     try:
         import jwt
         decoded = jwt.decode(access_token, options={"verify_signature": False})
-        email = decoded.get('email', 'unknown@email.com')
+        email = decoded.get('email')
+        if not email:
+            print("No email found in JWT token")
+            email = 'unknown@email.com'
+    except ImportError:
+        print("JWT package not installed")
+        email = 'unknown@email.com'
     except Exception as e:
-        print(f"Error decoding JWT: {e}")
+        print(f"Error decoding JWT: {str(e)}")
         email = 'unknown@email.com'
     
-    # Return the current user's information
-    return jsonify({
+    # Return the current user's information with session data
+    response_data = {
         'success': True,
         'user': {
             'id': user_id,
-            'email': email,
-            'access_token': access_token
+            'email': email
+        },
+        'session': {
+            'access_token': access_token,
+            'user': {
+                'id': user_id,
+                'email': email
+            }
         }
-    }), 200
+    }
+    
+    print(f"Returning user data: {response_data}")
+    return jsonify(response_data), 200
 
 @app.route('/api/records', methods=['GET'])
 def get_records():

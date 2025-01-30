@@ -21,11 +21,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = useCallback(async () => {
     try {
       const response = await auth.getCurrentUser();
-      if (response.success && response.user) {
-        setUser({
-          id: response.user.id,
-          email: response.user.email
-        });
+      if (response.success && response.session) {
+        // Use session data to maintain consistency with login response
+        setUser(response.session.user);
         return true;
       }
       return false;
@@ -48,8 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await auth.login(email, password);
       if (response.success && response.session) {
         setUser(response.session.user);
-        // After successful login, check auth to ensure session is set
-        await checkAuth();
       } else {
         setError(response.error || 'Login failed');
       }
@@ -58,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [checkAuth]);
+  }, []);
 
   const register = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -67,8 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await auth.register(email, password);
       if (response.success && response.user) {
         setUser(response.user);
-        // After successful registration, check auth to ensure session is set
-        await checkAuth();
       } else {
         setError(response.error || 'Registration failed');
       }
@@ -77,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [checkAuth]);
+  }, []);
 
   const logout = useCallback(async () => {
     setIsLoading(true);
