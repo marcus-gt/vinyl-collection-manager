@@ -63,18 +63,22 @@ app.config.update(
 )
 
 @app.route('/')
+@app.route('/login')
+@app.route('/register')
+@app.route('/collection')
+@app.route('/scanner')
 def serve_frontend():
-    """Serve the frontend application."""
+    """Serve the frontend application for all app routes."""
     return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    """Serve static files."""
+    """Serve static files or return to index.html for frontend routes."""
     if path and os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
 
-# API routes
+# API routes should be prefixed with /api
 @app.route('/api')
 def api_index():
     """Test endpoint to verify server is running."""
