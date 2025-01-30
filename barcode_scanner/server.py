@@ -32,7 +32,7 @@ from .db import (
 static_folder = os.path.join(parent_dir, 'frontend', 'dist')
 app = Flask(__name__, 
     static_folder=static_folder, 
-    static_url_path='',  # Revert to empty string
+    static_url_path='',  # Serve static files from root
     template_folder=static_folder
 )
 
@@ -46,18 +46,38 @@ allowed_origins = [
     "http://vinyl-collection-manager.onrender.com",   # Production without SSL
 ]
 
+# Dynamic CORS origin handling
+def get_cors_origin(request):
+    origin = request.headers.get('Origin')
+    if origin in allowed_origins:
+        return origin
+    return allowed_origins[0]  # Default to first origin
+
+# Configure CORS with dynamic origin
 CORS(app, 
-     resources={r"/*": {
-         "origins": allowed_origins,
-         "supports_credentials": True,
-         "allow_credentials": True,
-         "expose_headers": ["Set-Cookie"],
-         "allow_headers": ["Content-Type", "Authorization", "Cookie"],
-         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-     }},
-     expose_headers=["Content-Type", "Authorization", "Set-Cookie"],
-     allow_headers=["Content-Type", "Authorization", "Cookie"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+     origins=allowed_origins,
+     supports_credentials=True,
+     resources={
+         r"/*": {
+             "origins": "*",
+             "supports_credentials": True,
+             "allow_credentials": True,
+             "expose_headers": ["Set-Cookie"],
+             "allow_headers": ["Content-Type", "Authorization", "Cookie"],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+         }
+     })
+
+@app.after_request
+def after_request(response):
+    """Modify response headers for CORS and caching."""
+    origin = request.headers.get('Origin')
+    if origin in allowed_origins:
+        response.headers['Access-Control-Allow-Origin'] = origin
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
+    return response
 
 # Add session configuration
 app.config.update(
@@ -341,20 +361,12 @@ def lookup_barcode(barcode):
 @app.route('/<path:path>')
 def serve_frontend(path):
     """Serve the frontend application for all other routes."""
-    # Special paths that should always serve index.html
-    spa_routes = {'collection', 'scanner', 'login', 'register'}
-    if path in spa_routes:
+    # Always return index.html for frontend routes
+    if not path.startswith('api/'):
         return send_from_directory(app.static_folder, 'index.html')
-        
-    # Try to serve as a static file
-    try:
-        if path and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-    except:
-        pass
-        
-    # For all other routes, return index.html
-    return send_from_directory(app.static_folder, 'index.html')
+    
+    # Let other routes handle API requests
+    return app.send_static_file(path)
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
