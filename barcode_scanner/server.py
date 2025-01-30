@@ -58,14 +58,26 @@ print("\n=== Flask Configuration ===")
 print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
 
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    # Let Flask set the domain automatically based on the request
-    SESSION_COOKIE_PATH='/',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
-)
+# Set session configuration based on environment
+if os.getenv('FLASK_ENV') == 'production':
+    session_config = {
+        'SESSION_COOKIE_SECURE': True,
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
+        'SESSION_COOKIE_PATH': '/',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=7)
+    }
+else:
+    session_config = {
+        'SESSION_COOKIE_SECURE': True,
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_PATH': '/',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=7)
+    }
+
+app.config.update(**session_config)
 
 print("\n=== Session Configuration ===")
 print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set - using request host')}")
@@ -92,6 +104,7 @@ def after_request(response):
             print(f"Request host: {request.host}")
             print(f"Request is secure: {request.is_secure}")
             print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
+            print(f"Request headers: {dict(request.headers)}")
     
     return response
 
@@ -106,6 +119,11 @@ def ensure_https():
 def make_session_permanent():
     """Ensure session is permanent."""
     session.permanent = True
+    # Print session info for debugging
+    print("\n=== Session Debug ===")
+    print(f"Current session: {dict(session)}")
+    print(f"Session cookie name: {app.config.get('SESSION_COOKIE_NAME', 'session')}")
+    print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
 
 # Frontend routes - these must be before API routes
 @app.route('/')
