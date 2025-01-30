@@ -8,13 +8,23 @@ def get_supabase_client() -> Client:
     """Get a Supabase client with the current access token if available."""
     print("\n=== Getting Supabase Client ===")
     url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
+    key = os.getenv("SUPABASE_KEY")  # This is the anon key
     access_token = session.get('access_token')
     
     print(f"URL: {url}")
     print(f"Using access token: {'Yes' if access_token else 'No'}")
     
-    return create_client(url, access_token if access_token else key)
+    # Create client with anon key
+    client = create_client(url, key)
+    
+    # Set the auth token if available
+    if access_token:
+        client.auth.set_session({
+            'access_token': access_token,
+            'token_type': 'bearer'
+        })
+    
+    return client
 
 # Initialize default Supabase client
 supabase: Client = create_client(
