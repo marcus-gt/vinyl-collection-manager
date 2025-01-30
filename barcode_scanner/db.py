@@ -2,8 +2,21 @@ import os
 from supabase import create_client, Client
 from typing import Optional, Dict, Any
 from datetime import datetime
+from flask import session
 
-# Initialize Supabase client
+def get_supabase_client() -> Client:
+    """Get a Supabase client with the current access token if available."""
+    print("\n=== Getting Supabase Client ===")
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+    access_token = session.get('access_token')
+    
+    print(f"URL: {url}")
+    print(f"Using access token: {'Yes' if access_token else 'No'}")
+    
+    return create_client(url, access_token if access_token else key)
+
+# Initialize default Supabase client
 supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_KEY")
@@ -54,11 +67,27 @@ def login_user(email: str, password: str) -> Dict[str, Any]:
 def get_user_collection(user_id: str) -> Dict[str, Any]:
     """Get a user's vinyl collection."""
     try:
-        response = supabase.table('vinyl_records').select(
-            '*'
-        ).eq('user_id', user_id).execute()
+        print("\n=== Fetching User Collection ===")
+        print(f"User ID: {user_id}")
+        
+        # Get client with current session token
+        client = get_supabase_client()
+        print("Building query...")
+        
+        query = client.table('vinyl_records').select('*').eq('user_id', user_id)
+        print(f"Query built: {query}")
+        
+        print("Executing query...")
+        response = query.execute()
+        print(f"Raw response: {response}")
+        print(f"Response data type: {type(response.data)}")
+        print(f"Number of records: {len(response.data)}")
+        
         return {"success": True, "records": response.data}
     except Exception as e:
+        print(f"Error fetching collection: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {"success": False, "error": str(e)}
 
 def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[str, Any]:
