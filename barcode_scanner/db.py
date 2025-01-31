@@ -115,6 +115,9 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
         print(f"User ID: {user_id}")
         print(f"Raw record data: {record_data}")
         
+        # Get authenticated client
+        client = get_supabase_client()
+        
         # Map fields from API response to database schema
         record_to_insert = {
             'user_id': user_id,
@@ -128,8 +131,8 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'styles': record_data.get('styles', []),
             'musicians': record_data.get('musicians', []),
             'master_url': record_data.get('master_url'),
-            'current_release_url': record_data.get('current_release_url'),  # Changed from release_url
-            'current_release_year': record_data.get('current_release_year'),  # Changed from release_year
+            'current_release_url': record_data.get('current_release_url'),
+            'current_release_year': record_data.get('current_release_year'),
             'barcode': record_data.get('barcode'),
             'notes': record_data.get('notes', '')
         }
@@ -139,7 +142,7 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             print(f"{key}: {type(value).__name__} = {value}")
         
         print("\nSending to Supabase...")
-        response = supabase.table('vinyl_records').insert(record_to_insert).execute()
+        response = client.table('vinyl_records').insert(record_to_insert).execute()
         print(f"Supabase response: {response.data}")
         
         if not response.data:
