@@ -29,7 +29,12 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         {
           fps: 10,
           qrbox: { width: 250, height: 150 },
-          aspectRatio: 1.0
+          aspectRatio: 1.0,
+          videoConstraints: {
+            facingMode: { exact: "environment" },
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 }
+          }
         },
         (decodedText) => {
           console.log("Barcode detected:", decodedText);
@@ -48,10 +53,44 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       );
       setIsRunning(true);
       setIsPaused(false);
-      console.log("Camera started");
+      console.log("Camera started with environment facing mode");
     } catch (err) {
       console.error("Failed to start camera:", err);
-      setError("Failed to start camera. Please try again.");
+      try {
+        await scannerRef.current.start(
+          cameraId,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 150 },
+            aspectRatio: 1.0,
+            videoConstraints: {
+              facingMode: "environment",
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 }
+            }
+          },
+          (decodedText) => {
+            console.log("Barcode detected:", decodedText);
+            onScan(decodedText);
+            if (scannerRef.current) {
+              scannerRef.current.pause(true);
+              setIsPaused(true);
+            }
+          },
+          (errorMessage) => {
+            if (!errorMessage.includes("QR code parse error") && 
+                !errorMessage.includes("No MultiFormat Readers were able to detect the code")) {
+              console.log("Scanner error:", errorMessage);
+            }
+          }
+        );
+        setIsRunning(true);
+        setIsPaused(false);
+        console.log("Camera started with fallback mode");
+      } catch (fallbackErr) {
+        console.error("Failed to start camera with fallback:", fallbackErr);
+        setError("Failed to start camera. Please try again.");
+      }
     }
   };
 
