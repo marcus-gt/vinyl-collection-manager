@@ -117,11 +117,11 @@ button:focus-visible {
   z-index: 1 !important;
 }
 
-/* We can remove the landscape media query since we're using relative units */
+/* In landscape, use the same pixel dimensions as portrait max size */
 @media screen and (orientation: landscape) {
   #reader__scan_region > div:first-child {
-    width: min(250px, 40vw) !important;
-    height: min(150px, 40vh) !important;
+    width: 250px !important;
+    height: 150px !important;
   }
 }
 

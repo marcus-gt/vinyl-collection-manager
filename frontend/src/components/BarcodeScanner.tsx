@@ -29,9 +29,9 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
     
-    // Calculate sizes using the same logic as CSS
-    const width = Math.min(250, isLandscape ? screenWidth * 0.4 : screenWidth * 0.7);
-    const height = Math.min(150, isLandscape ? screenHeight * 0.4 : screenHeight * 0.25);
+    // In portrait: responsive, in landscape: fixed
+    const width = isLandscape ? 250 : Math.min(250, screenWidth * 0.7);
+    const height = isLandscape ? 150 : Math.min(150, screenHeight * 0.25);
     
     const qrboxSize = { 
       width: Math.round(width), 
