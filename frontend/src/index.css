@@ -121,7 +121,7 @@ button:focus-visible {
 @media screen and (orientation: landscape) {
   #reader__scan_region > div:first-child {
     width: 200px !important;
-    height: 160px !important;
+    height: 180px !important;
   }
 }
 
