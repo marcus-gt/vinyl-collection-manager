@@ -4,6 +4,7 @@ import { IconExternalLink } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
+import { HEADER_HEIGHT } from '../components/Layout';
 
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
@@ -138,7 +139,11 @@ export function Scanner() {
   };
 
   return (
-    <Container fluid px="xs">
+    <Container 
+      fluid 
+      px={{ base: 'xs', sm: 'md' }}
+      pt={{ base: `${HEADER_HEIGHT}px`, sm: 'md' }}
+    >
       <Box maw={600} mx="auto">
         <Title ta="center" mb="xl">Scan Vinyl Record</Title>
 

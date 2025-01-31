@@ -3,6 +3,8 @@ import { AppShell, Button, Group, Title, Burger, Drawer, Stack } from '@mantine/
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 
+export const HEADER_HEIGHT = 60;
+
 function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -29,7 +31,7 @@ function Layout() {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: HEADER_HEIGHT }}
       padding="xs"
     >
       <AppShell.Header>
