@@ -240,7 +240,6 @@ function Collection() {
     <Container 
       size="xl" 
       px={{ base: 'xs', sm: 'md' }}
-      pt={{ base: 'calc(50px + var(--mantine-spacing-md))', sm: 'calc(60px + var(--mantine-spacing-xl))' }}
     >
       <Stack>
         <Group justify="space-between" align="center" mb="md">

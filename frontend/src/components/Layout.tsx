@@ -29,19 +29,14 @@ function Layout() {
 
   return (
     <AppShell
-      header={{ 
-        height: { 
-          base: 50,  // Smaller height on mobile
-          sm: 60     // Larger height on tablets and up
-        } 
-      }}
-      padding={{ 
-        base: 'xs',
-        sm: 'md' 
-      }}
+      header={{ height: 60 }}
+      padding={{ base: 'xs', sm: 'md' }}
       styles={{
         header: {
-          padding: 0  // Remove default header padding
+          padding: 0
+        },
+        main: {
+          paddingTop: 'calc(var(--app-shell-header-height) + var(--mantine-spacing-xs))'
         }
       }}
     >
@@ -57,7 +52,7 @@ function Layout() {
             size="h3"
             style={{
               fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
-              lineHeight: 1.2  // Reduce line height for better vertical centering
+              lineHeight: 1.2
             }}
           >
             Vinyl Collection

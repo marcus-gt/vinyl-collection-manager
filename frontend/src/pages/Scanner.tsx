@@ -141,7 +141,6 @@ export function Scanner() {
     <Container 
       fluid 
       px={{ base: 'xs', sm: 'md' }}
-      pt={{ base: 'calc(50px + var(--mantine-spacing-md))', sm: 'calc(60px + var(--mantine-spacing-xl))' }}
     >
       <Box maw={600} mx="auto">
         <Title ta="center" mb="xl">Scan Vinyl Record</Title>
