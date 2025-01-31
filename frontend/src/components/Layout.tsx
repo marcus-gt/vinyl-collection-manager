@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { AppShell, Button, Group, Title, Burger, Drawer, Stack, createTheme } from '@mantine/core';
+import { AppShell, Button, Group, Title, Burger, Drawer, Stack } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 
