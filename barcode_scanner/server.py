@@ -71,24 +71,31 @@ if os.getenv('FLASK_ENV') == 'production':
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',  # Changed back to None for cross-site requests
+        'SESSION_COOKIE_SAMESITE': 'None',
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
         'SESSION_PROTECTION': 'strong',
         'SESSION_COOKIE_NAME': 'session',
-        'SESSION_REFRESH_EACH_REQUEST': True
+        'SESSION_REFRESH_EACH_REQUEST': True,
+        'REMEMBER_COOKIE_SECURE': True,
+        'REMEMBER_COOKIE_HTTPONLY': True,
+        'REMEMBER_COOKIE_SAMESITE': 'None',
+        'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com'
     }
 else:
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',  # Changed back to None for cross-site requests
+        'SESSION_COOKIE_SAMESITE': 'None',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
         'SESSION_PROTECTION': 'strong',
         'SESSION_COOKIE_NAME': 'session',
-        'SESSION_REFRESH_EACH_REQUEST': True
+        'SESSION_REFRESH_EACH_REQUEST': True,
+        'REMEMBER_COOKIE_SECURE': True,
+        'REMEMBER_COOKIE_HTTPONLY': True,
+        'REMEMBER_COOKIE_SAMESITE': 'None'
     }
 
 app.config.update(**session_config)
@@ -123,6 +130,9 @@ def before_request():
     print(f"SESSION_COOKIE_SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
     print(f"SESSION_COOKIE_PATH: {app.config.get('SESSION_COOKIE_PATH')}")
     print(f"SESSION_COOKIE_NAME: {app.config.get('SESSION_COOKIE_NAME')}")
+    print(f"Request is secure: {request.is_secure}")
+    print(f"Request scheme: {request.scheme}")
+    print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
 
 @app.after_request
 def after_request(response):
@@ -136,22 +146,24 @@ def after_request(response):
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
         response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
-    # In development, use the dynamic origin if it's in allowed_origins
-    elif origin in allowed_origins:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
-        response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
         
+        # Ensure cookie settings
+        if 'Set-Cookie' in response.headers:
+            cookie = response.headers['Set-Cookie']
+            if 'SameSite=' not in cookie:
+                cookie += '; SameSite=None'
+            if 'Secure' not in cookie:
+                cookie += '; Secure'
+            if 'HttpOnly' not in cookie:
+                cookie += '; HttpOnly'
+            if 'Domain=' not in cookie:
+                cookie += '; Domain=vinyl-collection-manager.onrender.com'
+            response.headers['Set-Cookie'] = cookie
+    
     # Add security headers
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    
-    # Set cookie policy headers
-    if app.config['SESSION_COOKIE_SAMESITE'] == 'None':
-        response.headers['Set-Cookie'] = response.headers.get('Set-Cookie', '').replace('SameSite=Lax', 'SameSite=None')
     
     # Debug response
     print("\n=== Response Debug ===")
