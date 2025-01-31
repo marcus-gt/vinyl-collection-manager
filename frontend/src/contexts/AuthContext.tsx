@@ -33,11 +33,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(response.user);
         return true;
       }
-      console.log('No valid user data found in response');
+      // Handle the case where there's no valid session
+      console.log('No active session found');
       setUser(null);
       return false;
     } catch (err) {
-      console.log('Auth check error:', err);
+      // This will now only be for unexpected errors
+      console.error('Unexpected auth check error:', err);
       setUser(null);
       return false;
     }

@@ -81,7 +81,16 @@ export const auth = {
     try {
       const response = await api.get<AuthResponse>('/api/auth/me');
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      // If it's a 401, return a standardized response instead of throwing
+      if (error.response?.status === 401) {
+        console.log('No active session found');
+        return {
+          success: false,
+          error: 'Not authenticated'
+        };
+      }
+      // For other errors, log and throw
       console.error('Get current user error:', error);
       throw error;
     }
