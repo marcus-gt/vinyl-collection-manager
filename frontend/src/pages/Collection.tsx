@@ -80,16 +80,17 @@ function Collection() {
   };
 
   const handleSortStatusChange = (newSortStatus: DataTableSortStatus<VinylRecord>) => {
-    if (
-      sortStatus &&
-      sortStatus.columnAccessor === newSortStatus.columnAccessor &&
-      sortStatus.direction === 'desc'
-    ) {
-      // If clicking the same column that's already sorted desc, clear sorting
-      setSortStatus({ columnAccessor: 'artist', direction: 'asc' });
+    if (sortStatus.columnAccessor === newSortStatus.columnAccessor) {
+      // Clicking the same column, cycle through: asc -> desc -> unsorted
+      if (sortStatus.direction === 'asc') {
+        setSortStatus({ ...newSortStatus, direction: 'desc' });
+      } else {
+        // Reset to default sorting
+        setSortStatus({ columnAccessor: 'artist', direction: 'asc' });
+      }
     } else {
-      // Otherwise, apply the new sort
-      setSortStatus(newSortStatus);
+      // Clicking a new column, start with ascending
+      setSortStatus({ ...newSortStatus, direction: 'asc' });
     }
   };
 
