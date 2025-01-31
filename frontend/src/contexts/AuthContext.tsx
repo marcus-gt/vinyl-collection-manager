@@ -24,15 +24,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await auth.getCurrentUser();
       console.log('Auth check response:', response);
       
-      if (response.success && response.session) {
+      if (response.success && response.session && response.session.user) {
         console.log('Setting user from session:', response.session.user);
         setUser(response.session.user);
         return true;
+      } else if (response.success && response.user) {
+        console.log('Setting user from direct response:', response.user);
+        setUser(response.user);
+        return true;
       }
-      console.log('No valid session found');
+      console.log('No valid user data found in response');
+      setUser(null);
       return false;
     } catch (err) {
       console.log('Auth check error:', err);
+      setUser(null);
       return false;
     }
   }, []);
@@ -53,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await auth.login(email, password);
       console.log('Login response:', response);
       
-      if (response.success && response.session) {
+      if (response.success && response.session && response.session.user) {
         console.log('Setting user after login:', response.session.user);
         setUser(response.session.user);
         // Verify session is set
@@ -61,10 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('Login failed:', response.error);
         setError(response.error || 'Login failed');
+        setUser(null);
       }
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -86,10 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('Registration failed:', response.error);
         setError(response.error || 'Registration failed');
+        setUser(null);
       }
     } catch (err) {
       console.error('Registration error:', err);
       setError(err instanceof Error ? err.message : 'Registration failed');
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
