@@ -232,11 +232,12 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       pos="relative"
       style={{ 
         width: '100%', 
-        height: 'calc(100vh - 180px)', // Adjust height to fill available space
+        height: '400px', // Fixed height instead of viewport-based
         backgroundColor: '#f0f0f0',
         overflow: 'hidden',
         maxWidth: '100vw',
-        margin: '0 auto'
+        margin: '0 auto',
+        position: 'relative'
       }}
     >
       {cameras.length > 1 && (
@@ -298,7 +299,10 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           height: '100%',
           display: 'flex',
           justifyContent: 'center',
-          alignItems: 'center'
+          alignItems: 'center',
+          position: 'absolute',
+          top: 0,
+          left: 0
         }}
       />
       <Box mt="md" style={{ textAlign: 'center' }}>

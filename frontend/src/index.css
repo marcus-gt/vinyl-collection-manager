@@ -70,14 +70,16 @@ button:focus-visible {
   object-fit: cover !important;
   border-radius: 8px !important;
   position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
 }
 
 #reader canvas {
   position: absolute !important;
-  left: 0 !important;
-  top: 0 !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
   width: 100% !important;
   height: 100% !important;
 }
@@ -94,10 +96,25 @@ button:focus-visible {
   width: 100% !important;
   height: 100% !important;
   min-height: 300px !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 #reader__scan_region img {
-  display: none;
+  display: none !important;
+}
+
+/* Style the viewfinder */
+#reader__scan_region > div:first-child {
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5) !important;
+  width: 250px !important;
+  height: 150px !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 1 !important;
 }
 
 #reader__dashboard {
@@ -106,6 +123,7 @@ button:focus-visible {
   width: 100% !important;
   background: rgba(0, 0, 0, 0.7) !important;
   padding: 10px !important;
+  z-index: 2 !important;
 }
 
 #reader__status_span {
