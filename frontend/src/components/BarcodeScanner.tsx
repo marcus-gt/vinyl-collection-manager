@@ -232,7 +232,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       pos="relative"
       style={{ 
         width: '100%', 
-        height: '400px', // Fixed height instead of viewport-based
+        height: '300px',
         backgroundColor: '#f0f0f0',
         overflow: 'hidden',
         maxWidth: '100vw',
