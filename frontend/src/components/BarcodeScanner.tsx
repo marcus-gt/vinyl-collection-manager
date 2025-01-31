@@ -29,7 +29,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         cameraId,
         {
           fps: 10,
-          qrbox: { width: 250, height: 150 },
+          qrbox: { width: 200, height: 160 },
           aspectRatio: 1.0,
           videoConstraints: {
             facingMode: { exact: "environment" },
@@ -107,8 +107,15 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           console.log("Available cameras:", devices);
           setCameras(devices);
 
-          // Try to find a back camera first
-          const backCamera = devices.find(device => 
+          // Try to find the main back camera by looking for specific keywords
+          const mainBackCamera = devices.find(device => 
+            device.label.toLowerCase().includes('back') && 
+            !device.label.toLowerCase().includes('wide') &&
+            !device.label.toLowerCase().includes('ultra')
+          );
+          
+          // Fallback to any back camera if main one not found
+          const backCamera = mainBackCamera || devices.find(device => 
             device.label.toLowerCase().includes('back') || 
             device.label.toLowerCase().includes('rear')
           );
@@ -247,10 +254,10 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
             position: 'absolute',
             top: 8,
             right: 8,
-            zIndex: 1000,
+            zIndex: 2,
             width: 'auto',
             minWidth: 150,
-            maxWidth: 'calc(100vw - 32px)' // Prevent overflow on mobile
+            maxWidth: 'calc(100vw - 32px)'
           }}
         >
           <Select
@@ -277,7 +284,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
               dropdown: {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 border: 'none',
-                maxWidth: 'calc(100vw - 32px)' // Prevent overflow on mobile
+                maxWidth: 'calc(100vw - 32px)'
               },
               option: {
                 color: 'white',
