@@ -232,9 +232,11 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       pos="relative"
       style={{ 
         width: '100%', 
-        height: '300px',
+        height: 'calc(100vh - 180px)', // Adjust height to fill available space
         backgroundColor: '#f0f0f0',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        maxWidth: '100vw',
+        margin: '0 auto'
       }}
     >
       {cameras.length > 1 && (
@@ -246,7 +248,8 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
             right: 8,
             zIndex: 1000,
             width: 'auto',
-            minWidth: 150
+            minWidth: 150,
+            maxWidth: 'calc(100vw - 32px)' // Prevent overflow on mobile
           }}
         >
           <Select
@@ -272,7 +275,8 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
               },
               dropdown: {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                border: 'none'
+                border: 'none',
+                maxWidth: 'calc(100vw - 32px)' // Prevent overflow on mobile
               },
               option: {
                 color: 'white',
@@ -291,7 +295,10 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         id="reader" 
         style={{
           width: '100%',
-          height: '100%'  // Remove the height adjustment since dropdown is absolute positioned
+          height: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}
       />
       <Box mt="md" style={{ textAlign: 'center' }}>
