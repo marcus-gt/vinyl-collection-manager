@@ -37,11 +37,19 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Don't log 401s from /api/auth/me as errors
+    if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
+      console.log('Auth check: No active session');
+      return Promise.reject(error);
+    }
+    
+    // For other errors, log them
     console.error(`Error from ${error.config?.url}:`, {
       status: error.response?.status,
       data: error.response?.data,
-      headers: error.response?.headers,
-      error: error.message
+      message: error.message,
+      // Don't log the full error object to keep the console clean
+      details: error.response?.data?.error || error.message
     });
     return Promise.reject(error);
   }
@@ -53,7 +61,7 @@ export const auth = {
       const response = await api.post<AuthResponse>('/api/auth/register', { email, password });
       return response.data;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   },
@@ -63,7 +71,7 @@ export const auth = {
       const response = await api.post<AuthResponse>('/api/auth/login', { email, password });
       return response.data;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   },
@@ -72,7 +80,7 @@ export const auth = {
     try {
       await api.post('/api/auth/logout');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Logout error:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   },
@@ -91,7 +99,7 @@ export const auth = {
         };
       }
       // For other errors, log and throw
-      console.error('Get current user error:', error);
+      console.error('Get current user error:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   },
