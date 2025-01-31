@@ -26,9 +26,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
 
     // Get current orientation
     const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-    const qrboxSize = isLandscape ? 
-      { width: 200, height: 180 } : 
-      { width: 250, height: 150 };
+    const qrboxSize = { width: 250, height: 150 };  // Same size for both orientations
 
     try {
       await scannerRef.current.start(

@@ -120,8 +120,8 @@ button:focus-visible {
 /* Adjust viewfinder for landscape mode */
 @media screen and (orientation: landscape) {
   #reader__scan_region > div:first-child {
-    width: 200px !important;
-    height: 180px !important;
+    width: 250px !important;
+    height: 150px !important;
   }
 }
 
