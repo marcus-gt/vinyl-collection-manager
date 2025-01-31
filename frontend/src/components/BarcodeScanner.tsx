@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Box, Text, Button, Loader } from '@mantine/core';
+import { Box, Text, Button, Loader, Select } from '@mantine/core';
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -17,6 +17,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -106,8 +107,17 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           console.log("Available cameras:", devices);
           setCameras(devices);
 
-          if (devices && devices.length > 0) {
-            await startScanning(devices[0].id);
+          // Try to find a back camera first
+          const backCamera = devices.find(device => 
+            device.label.toLowerCase().includes('back') || 
+            device.label.toLowerCase().includes('rear')
+          );
+          
+          // Set the default camera
+          const defaultCamera = backCamera || devices[0];
+          if (defaultCamera) {
+            setSelectedCamera(defaultCamera.id);
+            await startScanning(defaultCamera.id);
           } else {
             setError("No cameras found. Please make sure your device has a camera and it's not in use.");
           }
@@ -169,6 +179,14 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
     }
   };
 
+  const handleCameraChange = async (cameraId: string) => {
+    setSelectedCamera(cameraId);
+    if (scannerRef.current && isRunning) {
+      await scannerRef.current.stop();
+      await startScanning(cameraId);
+    }
+  };
+
   if (error) {
     return (
       <Box 
@@ -219,11 +237,26 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         overflow: 'hidden'
       }}
     >
+      {cameras.length > 1 && (
+        <Box mb="sm">
+          <Select
+            label="Select Camera"
+            placeholder="Choose a camera"
+            data={cameras.map(camera => ({
+              value: camera.id,
+              label: camera.label || `Camera ${camera.id}`
+            }))}
+            value={selectedCamera}
+            onChange={(value) => value && handleCameraChange(value)}
+            disabled={!isRunning || isPaused}
+          />
+        </Box>
+      )}
       <div 
         id="reader" 
         style={{
           width: '100%',
-          height: '100%'
+          height: cameras.length > 1 ? 'calc(100% - 80px)' : '100%'
         }}
       />
       <Box mt="md" style={{ textAlign: 'center' }}>
