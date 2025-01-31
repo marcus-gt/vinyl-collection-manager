@@ -238,10 +238,19 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       }}
     >
       {cameras.length > 1 && (
-        <Box mb="sm">
+        <Box 
+          mb="sm" 
+          style={{ 
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 1000,
+            width: 'auto',
+            minWidth: 150
+          }}
+        >
           <Select
-            label="Select Camera"
-            placeholder="Choose a camera"
+            placeholder="📷 Camera"
             data={cameras.map(camera => ({
               value: camera.id,
               label: camera.label || `Camera ${camera.id}`
@@ -249,6 +258,32 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
             value={selectedCamera}
             onChange={(value) => value && handleCameraChange(value)}
             disabled={!isRunning || isPaused}
+            variant="filled"
+            size="xs"
+            styles={{
+              root: { backgroundColor: 'transparent' },
+              input: {
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                color: 'white',
+                border: 'none',
+                '&:focus': {
+                  border: 'none'
+                }
+              },
+              dropdown: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                border: 'none'
+              },
+              option: {
+                color: 'white',
+                '&[data-selected]': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                },
+                '&[data-hovered]': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)'
+                }
+              }
+            }}
           />
         </Box>
       )}
@@ -256,7 +291,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         id="reader" 
         style={{
           width: '100%',
-          height: cameras.length > 1 ? 'calc(100% - 80px)' : '100%'
+          height: '100%'  // Remove the height adjustment since dropdown is absolute positioned
         }}
       />
       <Box mt="md" style={{ textAlign: 'center' }}>
