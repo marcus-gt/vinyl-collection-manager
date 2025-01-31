@@ -544,13 +544,13 @@ def lookup_barcode(barcode):
                     'artist': result.get('artist', 'Unknown Artist'),
                     'album': result.get('album'),
                     'year': result.get('year'),
-                    'release_year': result.get('release_year'),
+                    'current_release_year': result.get('release_year'),
                     'barcode': barcode,
                     'genres': result.get('genres', []),
                     'styles': result.get('styles', []),
                     'musicians': result.get('musicians', []),
                     'master_url': result.get('master_url'),
-                    'release_url': result.get('main_release_url'),
+                    'current_release_url': result.get('main_release_url'),
                     'label': result.get('label')
                 }
                 return jsonify({

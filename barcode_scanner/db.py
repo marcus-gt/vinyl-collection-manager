@@ -128,8 +128,8 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'styles': record_data.get('styles', []),
             'musicians': record_data.get('musicians', []),
             'master_url': record_data.get('master_url'),
-            'current_release_url': record_data.get('release_url'),  # Map from release_url
-            'current_release_year': record_data.get('release_year'),  # Map from release_year
+            'current_release_url': record_data.get('current_release_url'),  # Changed from release_url
+            'current_release_year': record_data.get('current_release_year'),  # Changed from release_year
             'barcode': record_data.get('barcode'),
             'notes': record_data.get('notes', '')
         }
