@@ -24,9 +24,19 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
   const startScanning = async (cameraId: string) => {
     if (!scannerRef.current) return;
 
-    // Get current orientation
+    // Calculate dimensions based on screen size
     const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-    const qrboxSize = { width: 250, height: 150 };  // Same size for both orientations
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    
+    // Calculate sizes using the same logic as CSS
+    const width = Math.min(250, isLandscape ? screenWidth * 0.4 : screenWidth * 0.7);
+    const height = Math.min(150, isLandscape ? screenHeight * 0.4 : screenHeight * 0.25);
+    
+    const qrboxSize = { 
+      width: Math.round(width), 
+      height: Math.round(height)
+    };
 
     try {
       await scannerRef.current.start(

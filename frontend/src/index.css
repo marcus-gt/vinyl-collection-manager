@@ -108,8 +108,8 @@ button:focus-visible {
 #reader__scan_region > div:first-child {
   border: 2px solid #ffffff !important;
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5) !important;
-  width: 250px !important;
-  height: 150px !important;
+  width: min(250px, 70vw) !important;
+  height: min(150px, 25vh) !important;
   position: absolute !important;
   left: 50% !important;
   top: 50% !important;
@@ -117,11 +117,11 @@ button:focus-visible {
   z-index: 1 !important;
 }
 
-/* Adjust viewfinder for landscape mode */
+/* We can remove the landscape media query since we're using relative units */
 @media screen and (orientation: landscape) {
   #reader__scan_region > div:first-child {
-    width: 250px !important;
-    height: 150px !important;
+    width: min(250px, 40vw) !important;
+    height: min(150px, 40vh) !important;
   }
 }
 
