@@ -24,12 +24,18 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
   const startScanning = async (cameraId: string) => {
     if (!scannerRef.current) return;
 
+    // Get current orientation
+    const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+    const qrboxSize = isLandscape ? 
+      { width: 200, height: 160 } : 
+      { width: 250, height: 150 };
+
     try {
       await scannerRef.current.start(
         cameraId,
         {
           fps: 10,
-          qrbox: { width: 200, height: 160 },
+          qrbox: qrboxSize,
           aspectRatio: 1.0,
           videoConstraints: {
             facingMode: { exact: "environment" },
