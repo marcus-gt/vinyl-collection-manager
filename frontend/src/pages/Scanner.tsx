@@ -23,10 +23,10 @@ export function Scanner() {
     try {
       const response = await records.getAll();
       if (response.success && response.data) {
-        // Sort by created_at and take the last 10
+        // Sort by created_at and take the last 5
         const sorted = [...response.data].sort((a, b) => 
           new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-        ).slice(0, 10);
+        ).slice(0, 5);
         setRecentRecords(sorted);
       }
     } catch (err) {
@@ -289,7 +289,7 @@ export function Scanner() {
 
       {recentRecords.length > 0 && (
         <Paper withBorder shadow="md" p="md" radius="md">
-          <Title order={3} mb="md">Recent Scans</Title>
+          <Title order={3} mb="md">Last 5 Scans</Title>
           <ScrollArea>
             <Table striped highlightOnHover verticalSpacing="xs" style={{ minWidth: 700 }}>
               <Table.Thead>
