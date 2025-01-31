@@ -253,7 +253,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         position: 'relative'
       }}
     >
-      {cameras.length > 1 && (
+      {cameras.length > 1 && !isPaused && (
         <Box 
           mb="sm" 
           style={{ 
