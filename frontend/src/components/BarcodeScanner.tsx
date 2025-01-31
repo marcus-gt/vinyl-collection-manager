@@ -332,10 +332,11 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
             color: 'white',
             backgroundColor: 'rgba(0,0,0,0.5)',
             padding: '5px 10px',
-            borderRadius: '4px'
+            borderRadius: '4px',
+            whiteSpace: 'nowrap'
           }}
         >
-          Camera active - Center the barcode in view
+          Center barcode to scan
         </Text>
       )}
     </Box>
