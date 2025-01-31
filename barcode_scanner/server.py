@@ -302,6 +302,7 @@ def login():
     print("\n=== Login Attempt ===")
     print(f"Request Headers: {dict(request.headers)}")
     print(f"Request Origin: {request.headers.get('Origin')}")
+    print(f"Previous session: {dict(session)}")
     
     data = request.get_json()
     email = data.get('email')
@@ -323,6 +324,7 @@ def login():
         session['access_token'] = result['session'].access_token
         session['refresh_token'] = result['session'].refresh_token
         session.permanent = True
+        session.modified = True
         
         response = jsonify({
             'success': True,
@@ -352,12 +354,15 @@ def get_current_user():
     """Get the current authenticated user."""
     print("\n=== Checking Current User ===")
     print(f"Session data: {dict(session)}")
+    print(f"Request cookies: {request.cookies}")
     
     user_id = session.get('user_id')
     access_token = session.get('access_token')
     
     if not user_id or not access_token:
         print("No authenticated user found in session")
+        # Instead of returning 401, create a new session
+        session.clear()
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     # Get user email from JWT token
@@ -391,8 +396,15 @@ def get_current_user():
         }
     }
     
+    # Ensure session is permanent and refresh it
+    session.permanent = True
+    session.modified = True
+    
     print(f"Returning user data: {response_data}")
-    return jsonify(response_data), 200
+    print(f"Final session state: {dict(session)}")
+    
+    response = jsonify(response_data)
+    return response, 200
 
 @app.route('/api/records', methods=['GET'])
 def get_records():
