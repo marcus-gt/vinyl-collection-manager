@@ -4,7 +4,6 @@ import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
 import { records } from '../services/api';
 import type { VinylRecord } from '../types';
-import { HEADER_HEIGHT } from '../components/Layout';
 
 const PAGE_SIZE = 15;
 
@@ -241,7 +240,7 @@ function Collection() {
     <Container 
       size="xl" 
       px={{ base: 'xs', sm: 'md' }}
-      pt={{ base: `${HEADER_HEIGHT}px`, sm: 'md' }}
+      pt={{ base: 'calc(50px + var(--mantine-spacing-md))', sm: 'calc(60px + var(--mantine-spacing-xl))' }}
     >
       <Stack>
         <Group justify="space-between" align="center" mb="md">

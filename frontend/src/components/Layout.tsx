@@ -1,9 +1,7 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { AppShell, Button, Group, Title, Burger, Drawer, Stack } from '@mantine/core';
+import { AppShell, Button, Group, Title, Burger, Drawer, Stack, createTheme } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
-
-export const HEADER_HEIGHT = 60;
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -31,12 +29,32 @@ function Layout() {
 
   return (
     <AppShell
-      header={{ height: HEADER_HEIGHT }}
-      padding="xs"
+      header={{ 
+        height: { 
+          base: 50,  // Smaller height on mobile
+          sm: 60     // Larger height on tablets and up
+        } 
+      }}
+      padding={{ 
+        base: 'xs',
+        sm: 'md' 
+      }}
     >
       <AppShell.Header>
-        <Group justify="space-between" h="100%" px="xs">
-          <Title order={1} size="h3">Vinyl Collection</Title>
+        <Group 
+          justify="space-between" 
+          h="100%" 
+          px={{ base: 'xs', sm: 'md' }}
+        >
+          <Title 
+            order={1} 
+            size="h3"
+            style={{
+              fontSize: 'clamp(1.2rem, 4vw, 1.5rem)'
+            }}
+          >
+            Vinyl Collection
+          </Title>
           {user && (
             <>
               <Group visibleFrom="sm">
@@ -60,7 +78,7 @@ function Layout() {
         </Stack>
       </Drawer>
 
-      <AppShell.Main pt="lg">
+      <AppShell.Main>
         <Outlet />
       </AppShell.Main>
     </AppShell>
