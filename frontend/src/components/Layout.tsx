@@ -39,18 +39,25 @@ function Layout() {
         base: 'xs',
         sm: 'md' 
       }}
+      styles={{
+        header: {
+          padding: 0  // Remove default header padding
+        }
+      }}
     >
       <AppShell.Header>
         <Group 
           justify="space-between" 
           h="100%" 
           px={{ base: 'xs', sm: 'md' }}
+          align="center"
         >
           <Title 
             order={1} 
             size="h3"
             style={{
-              fontSize: 'clamp(1.2rem, 4vw, 1.5rem)'
+              fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
+              lineHeight: 1.2  // Reduce line height for better vertical centering
             }}
           >
             Vinyl Collection
