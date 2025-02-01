@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, VinylRecord, ApiResponse } from '../types';
+import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue } from '../types';
 
 const API_URL = import.meta.env.PROD 
   ? 'https://vinyl-collection-manager.onrender.com'
@@ -135,4 +135,38 @@ export const lookup = {
       data: response.data.data
     };
   },
+};
+
+export const customColumns = {
+  getAll: async (): Promise<ApiResponse<CustomColumn[]>> => {
+    const response = await api.get<ApiResponse<CustomColumn[]>>('/api/custom-columns');
+    return response.data;
+  },
+
+  create: async (column: Omit<CustomColumn, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<CustomColumn>> => {
+    const response = await api.post<ApiResponse<CustomColumn>>('/api/custom-columns', column);
+    return response.data;
+  },
+
+  update: async (id: string, column: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
+    const response = await api.put<ApiResponse<CustomColumn>>(`/api/custom-columns/${id}`, column);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    const response = await api.delete<ApiResponse<void>>(`/api/custom-columns/${id}`);
+    return response.data;
+  }
+};
+
+export const customValues = {
+  getForRecord: async (recordId: string): Promise<ApiResponse<CustomColumnValue[]>> => {
+    const response = await api.get<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`);
+    return response.data;
+  },
+
+  update: async (recordId: string, values: { [columnId: string]: string }): Promise<ApiResponse<CustomColumnValue[]>> => {
+    const response = await api.put<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`, values);
+    return response.data;
+  }
 }; 

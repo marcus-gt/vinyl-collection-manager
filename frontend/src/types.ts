@@ -20,6 +20,9 @@ export interface VinylRecord {
   notes?: string;
   created_at?: string;
   updated_at?: string;
+  customValues?: {
+    [columnId: string]: string;
+  };
 }
 
 export interface ApiResponse<T> {
@@ -42,4 +45,25 @@ export interface AuthResponse {
     };
   };
   error?: string;
+}
+
+export type CustomColumnType = 'text' | 'number' | 'select';
+
+export interface CustomColumn {
+  id: string;
+  user_id: string;
+  name: string;
+  type: CustomColumnType;
+  options?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CustomColumnValue {
+  id: string;
+  record_id: string;
+  column_id: string;
+  value: string;
+  created_at?: string;
+  updated_at?: string;
 } 

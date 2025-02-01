@@ -571,6 +571,149 @@ def lookup_barcode(barcode):
             'error': 'Failed to lookup barcode'
         }), 500
 
+@app.route('/api/custom-columns', methods=['GET'])
+def get_custom_columns():
+    """Get all custom columns for the current user."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        client = get_supabase_client()
+        response = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
+        return jsonify({'success': True, 'data': response.data}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/custom-columns', methods=['POST'])
+def create_custom_column():
+    """Create a new custom column."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json()
+        if not data or not data.get('name') or not data.get('type'):
+            return jsonify({'success': False, 'error': 'Name and type are required'}), 400
+        
+        column_data = {
+            'user_id': user_id,
+            'name': data['name'],
+            'type': data['type'],
+            'options': data.get('options'),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        client = get_supabase_client()
+        response = client.table('custom_columns').insert(column_data).execute()
+        return jsonify({'success': True, 'data': response.data[0]}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/custom-columns/<column_id>', methods=['PUT'])
+def update_custom_column(column_id):
+    """Update a custom column."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        update_data = {
+            'name': data.get('name'),
+            'type': data.get('type'),
+            'options': data.get('options'),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        # Remove None values
+        update_data = {k: v for k, v in update_data.items() if v is not None}
+        
+        client = get_supabase_client()
+        response = client.table('custom_columns').update(update_data).eq('id', column_id).eq('user_id', user_id).execute()
+        
+        if not response.data:
+            return jsonify({'success': False, 'error': 'Column not found'}), 404
+            
+        return jsonify({'success': True, 'data': response.data[0]}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/custom-columns/<column_id>', methods=['DELETE'])
+def delete_custom_column(column_id):
+    """Delete a custom column."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        client = get_supabase_client()
+        response = client.table('custom_columns').delete().eq('id', column_id).eq('user_id', user_id).execute()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/records/<record_id>/custom-values', methods=['GET'])
+def get_custom_values(record_id):
+    """Get all custom values for a record."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        client = get_supabase_client()
+        response = client.table('custom_column_values').select('*').eq('record_id', record_id).execute()
+        return jsonify({'success': True, 'data': response.data}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/records/<record_id>/custom-values', methods=['PUT'])
+def update_custom_values(record_id):
+    """Update custom values for a record."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        values = request.get_json()
+        if not isinstance(values, dict):
+            return jsonify({'success': False, 'error': 'Invalid data format'}), 400
+        
+        client = get_supabase_client()
+        
+        # Get existing values
+        existing = client.table('custom_column_values').select('*').eq('record_id', record_id).execute()
+        existing_map = {v['column_id']: v for v in existing.data}
+        
+        results = []
+        for column_id, value in values.items():
+            if column_id in existing_map:
+                # Update existing value
+                response = client.table('custom_column_values').update({
+                    'value': value,
+                    'updated_at': datetime.utcnow().isoformat()
+                }).eq('record_id', record_id).eq('column_id', column_id).execute()
+            else:
+                # Insert new value
+                response = client.table('custom_column_values').insert({
+                    'record_id': record_id,
+                    'column_id': column_id,
+                    'value': value,
+                    'created_at': datetime.utcnow().isoformat(),
+                    'updated_at': datetime.utcnow().isoformat()
+                }).execute()
+            
+            if response.data:
+                results.extend(response.data)
+        
+        return jsonify({'success': True, 'data': results}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
     port = int(os.environ.get('PORT', 10000))
