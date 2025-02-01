@@ -4,6 +4,7 @@ import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
 import { records } from '../services/api';
 import type { VinylRecord } from '../types';
+import { CustomColumnManager } from '../components/CustomColumnManager';
 
 const PAGE_SIZE = 15;
 
@@ -16,6 +17,7 @@ function Collection() {
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<VinylRecord>>({ columnAccessor: 'artist', direction: 'asc' });
+  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
 
   useEffect(() => {
     loadRecords();
@@ -262,6 +264,12 @@ function Collection() {
               disabled={userRecords.length === 0}
             >
               Export CSV
+            </Button>
+            <Button
+              variant="light"
+              onClick={() => setCustomColumnManagerOpened(true)}
+            >
+              Manage Columns
             </Button>
           </Group>
         </Group>
@@ -581,6 +589,11 @@ function Collection() {
             </Group>
           </Stack>
         </Modal>
+
+        <CustomColumnManager
+          opened={customColumnManagerOpened}
+          onClose={() => setCustomColumnManagerOpened(false)}
+        />
       </Stack>
     </Container>
   );
