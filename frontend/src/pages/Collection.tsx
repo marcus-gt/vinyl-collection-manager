@@ -13,17 +13,21 @@ const PAGE_SIZE = 15;
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
     try {
+      console.log(`Getting custom values for record: ${recordId}`);
       // TODO: Implement actual API call
       return { success: true, data: [] };
     } catch (err) {
+      console.error(`Failed to get custom values for record ${recordId}:`, err);
       return { success: false };
     }
   },
   update: async (recordId: string, values: Record<string, string>): Promise<{ success: boolean }> => {
     try {
+      console.log(`Updating custom values for record ${recordId}:`, values);
       // TODO: Implement actual API call
       return { success: true };
     } catch (err) {
+      console.error(`Failed to update custom values for record ${recordId}:`, err);
       return { success: false };
     }
   }
