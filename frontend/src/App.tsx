@@ -8,6 +8,7 @@ import Collection from './pages/Collection';
 import Scanner from './pages/Scanner';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
+import { Notifications } from '@mantine/notifications';
 
 // Create custom theme
 const theme = createTheme({
@@ -87,6 +88,7 @@ const theme = createTheme({
 function App() {
   return (
     <MantineProvider defaultColorScheme="dark" theme={theme}>
+      <Notifications />
       <AuthProvider>
         <Router>
           <Routes>

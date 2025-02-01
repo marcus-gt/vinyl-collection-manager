@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect } from '@mantine/core';
 import { IconTrash, IconEdit } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { customColumns } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
 
