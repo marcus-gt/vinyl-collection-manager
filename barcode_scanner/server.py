@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -588,28 +588,57 @@ def get_custom_columns():
 @app.route('/api/custom-columns', methods=['POST'])
 def create_custom_column():
     """Create a new custom column."""
+    print("\n=== Creating Custom Column ===")
     user_id = session.get('user_id')
+    print(f"User ID: {user_id}")
+    access_token = session.get('access_token')
+    print(f"Access token present: {'Yes' if access_token else 'No'}")
+    
     if not user_id:
+        print("Error: User not authenticated")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
         data = request.get_json()
+        print(f"Request data: {data}")
+        
         if not data or not data.get('name') or not data.get('type'):
+            print("Error: Missing required fields")
             return jsonify({'success': False, 'error': 'Name and type are required'}), 400
         
+        now = datetime.utcnow().isoformat()
         column_data = {
             'user_id': user_id,
             'name': data['name'],
             'type': data['type'],
-            'options': data.get('options'),
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
+            'options': data.get('options', []),
+            'created_at': now,
+            'updated_at': now
         }
+        print(f"Column data to insert: {column_data}")
         
         client = get_supabase_client()
+        print("Got Supabase client")
+        
+        print("Inserting data into custom_columns table...")
         response = client.table('custom_columns').insert(column_data).execute()
+        print(f"Supabase response data: {response.data}")
+        print(f"Supabase response error: {response.error}")
+        
+        if response.error:
+            print(f"Error from Supabase: {response.error}")
+            return jsonify({'success': False, 'error': str(response.error)}), 500
+            
+        if not response.data:
+            print("Error: No data returned from Supabase")
+            return jsonify({'success': False, 'error': 'Failed to create column'}), 500
+            
+        print("Successfully created custom column")
         return jsonify({'success': True, 'data': response.data[0]}), 201
     except Exception as e:
+        print(f"\nError creating custom column: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/custom-columns/<column_id>', methods=['PUT'])

@@ -12,24 +12,31 @@ def get_supabase_client() -> Client:
     access_token = session.get('access_token')
     
     print(f"URL: {url}")
-    print(f"Using access token: {'Yes' if access_token else 'No'}")
+    print(f"Access token present: {'Yes' if access_token else 'No'}")
     
-    # Create client with anon key
-    client = create_client(url, key)
+    if not url or not key:
+        print("Error: Missing Supabase configuration")
+        raise ValueError("Missing Supabase configuration")
     
-    # Set the auth token if available
-    if access_token:
-        # Store refresh token in session during login
-        refresh_token = session.get('refresh_token')
-        if not refresh_token:
-            print("Warning: No refresh token found in session")
-            return client
-            
-        print("Setting session with access and refresh tokens")
-        # Pass refresh_token as a separate argument
-        client.auth.set_session(access_token, refresh_token)
-    
-    return client
+    try:
+        # Create client with anon key
+        client = create_client(url, key)
+        print("Created Supabase client with anon key")
+        
+        # Set the auth token if available
+        if access_token:
+            print("Setting auth header with access token")
+            client.postgrest.auth(access_token)
+            print("Successfully set auth header")
+        else:
+            print("Warning: No access token available")
+        
+        return client
+    except Exception as e:
+        print(f"Error creating Supabase client: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 # Initialize default Supabase client
 supabase: Client = create_client(
