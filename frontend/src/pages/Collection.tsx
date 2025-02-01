@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
-import { records } from '../services/api';
-import type { VinylRecord } from '../types';
+import { notifications } from '@mantine/notifications';
+import { records, customColumns as customColumnsApi, customValues } from '../services/api';
+import type { VinylRecord, CustomColumn } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 
 const PAGE_SIZE = 15;
@@ -18,9 +19,12 @@ function Collection() {
   const [editingNotes, setEditingNotes] = useState('');
   const [sortStatus, setSortStatus] = useState<DataTableSortStatus<VinylRecord>>({ columnAccessor: 'artist', direction: 'asc' });
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadRecords();
+    loadCustomColumns();
   }, []);
 
   const loadRecords = async () => {
@@ -40,24 +44,76 @@ function Collection() {
     }
   };
 
-  const handleUpdateNotes = async () => {
+  const loadCustomColumns = async () => {
+    try {
+      const response = await customColumnsApi.getAll();
+      if (response.success && response.data) {
+        setCustomColumns(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to load custom columns:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (editingRecord?.id) {
+      loadCustomValues(editingRecord.id);
+    } else {
+      setCustomValues({});
+    }
+  }, [editingRecord]);
+
+  const loadCustomValues = async (recordId: string) => {
+    try {
+      const response = await customValues.getForRecord(recordId);
+      if (response.success && response.data) {
+        const values: Record<string, string> = {};
+        response.data.forEach(value => {
+          values[value.column_id] = value.value;
+        });
+        setCustomValues(values);
+      }
+    } catch (err) {
+      console.error('Failed to load custom values:', err);
+    }
+  };
+
+  const handleUpdateRecord = async () => {
     if (!editingRecord?.id) return;
     
     setLoading(true);
     try {
-      const response = await records.updateNotes(editingRecord.id, editingNotes);
-      if (response.success && response.data) {
+      // Update notes
+      const notesResponse = await records.updateNotes(editingRecord.id, editingNotes);
+      
+      // Update custom values
+      const valuesResponse = await customValues.update(editingRecord.id, customValues);
+      
+      if (notesResponse.success && valuesResponse.success) {
+        // Update the record in the list
         setUserRecords(prevRecords => 
           prevRecords.map(record => 
-            record.id === editingRecord.id ? response.data! : record
+            record.id === editingRecord.id 
+              ? { 
+                  ...notesResponse.data!, 
+                  customValues: customValues 
+                } 
+              : record
           )
         );
         setEditingRecord(null);
-      } else {
-        setError(response.error || 'Failed to update notes');
+        notifications.show({
+          title: 'Success',
+          message: 'Record updated successfully',
+          color: 'green'
+        });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update notes');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to update record',
+        color: 'red'
+      });
     } finally {
       setLoading(false);
     }
@@ -156,8 +212,8 @@ function Collection() {
   }, [filteredRecords, page]);
 
   const handleDownloadCSV = () => {
-    // Define CSV headers
-    const headers = [
+    // Define standard headers
+    const standardHeaders = [
       'Artist',
       'Album',
       'Original Year',
@@ -172,21 +228,35 @@ function Collection() {
       'Release URL'
     ];
 
+    // Add custom column headers
+    const customHeaders = customColumns.map(col => col.name);
+    const headers = [...standardHeaders, ...customHeaders];
+
     // Convert records to CSV rows
-    const rows = userRecords.map(record => [
-      record.artist,
-      record.album,
-      record.year || '',
-      record.label || '',
-      record.genres?.join('; ') || '',
-      record.styles?.join('; ') || '',
-      record.musicians?.join('; ') || '',
-      record.notes || '',
-      record.created_at ? new Date(record.created_at).toLocaleString() : '',
-      record.current_release_year || '',
-      record.master_url || '',
-      record.current_release_url || ''
-    ]);
+    const rows = userRecords.map(record => {
+      // Standard fields
+      const standardFields = [
+        record.artist,
+        record.album,
+        record.year || '',
+        record.label || '',
+        record.genres?.join('; ') || '',
+        record.styles?.join('; ') || '',
+        record.musicians?.join('; ') || '',
+        record.notes || '',
+        record.created_at ? new Date(record.created_at).toLocaleString() : '',
+        record.current_release_year || '',
+        record.master_url || '',
+        record.current_release_url || ''
+      ];
+
+      // Custom fields
+      const customFields = customColumns.map(col => 
+        record.customValues?.[col.id] || ''
+      );
+
+      return [...standardFields, ...customFields];
+    });
 
     // Combine headers and rows
     const csvContent = [
@@ -238,6 +308,274 @@ function Collection() {
       downloadFile();
     }
   };
+
+  const tableColumns = useMemo(() => {
+    const standardColumns = [
+      { 
+        accessor: 'artist', 
+        title: 'Artist', 
+        sortable: true,
+        width: 200,
+        render: (record) => (
+          <Popover width={400} position="bottom-start" withArrow shadow="md">
+            <Popover.Target>
+              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.artist}>
+                {record.artist}
+              </Text>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                {record.artist}
+              </Text>
+            </Popover.Dropdown>
+          </Popover>
+        )
+      },
+      { 
+        accessor: 'album', 
+        title: 'Album', 
+        sortable: true,
+        width: 250,
+        render: (record) => (
+          <Popover width={400} position="bottom-start" withArrow shadow="md">
+            <Popover.Target>
+              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.album}>
+                {record.album}
+              </Text>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                {record.album}
+              </Text>
+            </Popover.Dropdown>
+          </Popover>
+        )
+      },
+      { accessor: 'year', title: 'Original Year', sortable: true, width: 80 },
+      { 
+        accessor: 'label', 
+        title: 'Label', 
+        sortable: true,
+        width: 150,
+        render: (record) => (
+          <Popover width={400} position="bottom-start" withArrow shadow="md">
+            <Popover.Target>
+              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.label || '-'}>
+                {record.label || '-'}
+              </Text>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                {record.label || '-'}
+              </Text>
+            </Popover.Dropdown>
+          </Popover>
+        )
+      },
+      { 
+        accessor: 'genres', 
+        title: 'Genres', 
+        sortable: true,
+        width: 150,
+        render: (record) => {
+          const genres = record.genres?.join(', ') || '-';
+          return (
+            <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover.Target>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={genres}>
+                  {genres}
+                </Text>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                  {genres}
+                </Text>
+              </Popover.Dropdown>
+            </Popover>
+          );
+        }
+      },
+      { 
+        accessor: 'styles', 
+        title: 'Styles', 
+        sortable: true,
+        width: 180,
+        render: (record) => {
+          const styles = record.styles?.join(', ') || '-';
+          return (
+            <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover.Target>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={styles}>
+                  {styles}
+                </Text>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                  {styles}
+                </Text>
+              </Popover.Dropdown>
+            </Popover>
+          );
+        }
+      },
+      { 
+        accessor: 'musicians', 
+        title: 'Musicians', 
+        sortable: true,
+        width: 200,
+        render: (record) => {
+          const musicians = record.musicians?.join(', ') || '-';
+          return musicians === '-' ? (
+            <Text size="sm">-</Text>
+          ) : (
+            <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover.Target>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={musicians}>
+                  {musicians}
+                </Text>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                  {musicians}
+                </Text>
+              </Popover.Dropdown>
+            </Popover>
+          );
+        }
+      },
+      { 
+        accessor: 'notes', 
+        title: 'Notes', 
+        sortable: true,
+        render: (record) => {
+          const notes = record.notes || '-';
+          return (
+            <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover.Target>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={notes}>
+                  {notes}
+                </Text>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                  {notes}
+                </Text>
+              </Popover.Dropdown>
+            </Popover>
+          );
+        }
+      },
+      { 
+        accessor: 'created_at', 
+        title: 'Added', 
+        sortable: true,
+        width: 150,
+        render: (record) => record.created_at ? 
+          new Date(record.created_at).toLocaleString() : '-'
+      },
+      { 
+        accessor: 'current_release_year', 
+        title: 'Scanned Release Year', 
+        sortable: true, 
+        width: 100,
+        render: (record) => record.current_release_year || '-'
+      },
+      {
+        accessor: 'links',
+        title: 'Links',
+        width: 130,
+        render: (record) => (
+          <Group gap="xs">
+            {record.master_url && (
+              <Tooltip label="View Master Release">
+                <ActionIcon 
+                  component="a" 
+                  href={record.master_url} 
+                  target="_blank" 
+                  variant="light" 
+                  size="sm"
+                >
+                  <IconExternalLink size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+            {record.current_release_url && (
+              <Tooltip label="View Scanned Release">
+                <ActionIcon 
+                  component="a" 
+                  href={record.current_release_url} 
+                  target="_blank" 
+                  variant="light" 
+                  size="sm"
+                  color="blue"
+                >
+                  <IconExternalLink size={16} />
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </Group>
+        ),
+      },
+      {
+        accessor: 'actions',
+        title: 'Actions',
+        width: 100,
+        render: (record) => (
+          <Group gap="xs">
+            <Tooltip label="Edit Notes">
+              <ActionIcon 
+                variant="light" 
+                size="sm"
+                onClick={() => {
+                  setEditingRecord(record);
+                  setEditingNotes(record.notes ?? '');
+                }}
+              >
+                <IconNotes size={16} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Delete">
+              <ActionIcon 
+                color="red" 
+                variant="light"
+                size="sm"
+                onClick={() => handleDelete(record)}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        ),
+      },
+    ];
+
+    // Add custom columns
+    const customColumnDefs = customColumns.map(column => ({
+      accessor: `custom_${column.id}`,
+      title: column.name,
+      sortable: true,
+      width: 150,
+      render: (record: VinylRecord) => {
+        const value = record.customValues?.[column.id] || '-';
+        return (
+          <Popover width={400} position="bottom-start" withArrow shadow="md">
+            <Popover.Target>
+              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={value}>
+                {value}
+              </Text>
+            </Popover.Target>
+            <Popover.Dropdown>
+              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                {value}
+              </Text>
+            </Popover.Dropdown>
+          </Popover>
+        );
+      }
+    }));
+
+    return [...standardColumns, ...customColumnDefs];
+  }, [customColumns]);
 
   return (
     <Container 
@@ -292,244 +630,7 @@ function Collection() {
               }
             }
           }}
-          columns={[
-            { 
-              accessor: 'artist', 
-              title: 'Artist', 
-              sortable: true,
-              width: 200,
-              render: (record) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.artist}>
-                      {record.artist}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {record.artist}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
-            },
-            { 
-              accessor: 'album', 
-              title: 'Album', 
-              sortable: true,
-              width: 250,
-              render: (record) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.album}>
-                      {record.album}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {record.album}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
-            },
-            { accessor: 'year', title: 'Original Year', sortable: true, width: 80 },
-            { 
-              accessor: 'label', 
-              title: 'Label', 
-              sortable: true,
-              width: 150,
-              render: (record) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.label || '-'}>
-                      {record.label || '-'}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {record.label || '-'}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
-            },
-            { 
-              accessor: 'genres', 
-              title: 'Genres', 
-              sortable: true,
-              width: 150,
-              render: (record) => {
-                const genres = record.genres?.join(', ') || '-';
-                return (
-                  <Popover width={400} position="bottom-start" withArrow shadow="md">
-                    <Popover.Target>
-                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={genres}>
-                        {genres}
-                      </Text>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                        {genres}
-                      </Text>
-                    </Popover.Dropdown>
-                  </Popover>
-                );
-              }
-            },
-            { 
-              accessor: 'styles', 
-              title: 'Styles', 
-              sortable: true,
-              width: 180,
-              render: (record) => {
-                const styles = record.styles?.join(', ') || '-';
-                return (
-                  <Popover width={400} position="bottom-start" withArrow shadow="md">
-                    <Popover.Target>
-                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={styles}>
-                        {styles}
-                      </Text>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                        {styles}
-                      </Text>
-                    </Popover.Dropdown>
-                  </Popover>
-                );
-              }
-            },
-            { 
-              accessor: 'musicians', 
-              title: 'Musicians', 
-              sortable: true,
-              width: 200,
-              render: (record) => {
-                const musicians = record.musicians?.join(', ') || '-';
-                return musicians === '-' ? (
-                  <Text size="sm">-</Text>
-                ) : (
-                  <Popover width={400} position="bottom-start" withArrow shadow="md">
-                    <Popover.Target>
-                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={musicians}>
-                        {musicians}
-                      </Text>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                        {musicians}
-                      </Text>
-                    </Popover.Dropdown>
-                  </Popover>
-                );
-              }
-            },
-            { 
-              accessor: 'notes', 
-              title: 'Notes', 
-              sortable: true,
-              render: (record) => {
-                const notes = record.notes || '-';
-                return (
-                  <Popover width={400} position="bottom-start" withArrow shadow="md">
-                    <Popover.Target>
-                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={notes}>
-                        {notes}
-                      </Text>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                        {notes}
-                      </Text>
-                    </Popover.Dropdown>
-                  </Popover>
-                );
-              }
-            },
-            { 
-              accessor: 'created_at', 
-              title: 'Added', 
-              sortable: true,
-              width: 150,
-              render: (record) => record.created_at ? 
-                new Date(record.created_at).toLocaleString() : '-'
-            },
-            { 
-              accessor: 'current_release_year', 
-              title: 'Scanned Release Year', 
-              sortable: true, 
-              width: 100,
-              render: (record) => record.current_release_year || '-'
-            },
-            {
-              accessor: 'links',
-              title: 'Links',
-              width: 130,
-              render: (record) => (
-                <Group gap="xs">
-                  {record.master_url && (
-                    <Tooltip label="View Master Release">
-                      <ActionIcon 
-                        component="a" 
-                        href={record.master_url} 
-                        target="_blank" 
-                        variant="light" 
-                        size="sm"
-                      >
-                        <IconExternalLink size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                  {record.current_release_url && (
-                    <Tooltip label="View Scanned Release">
-                      <ActionIcon 
-                        component="a" 
-                        href={record.current_release_url} 
-                        target="_blank" 
-                        variant="light" 
-                        size="sm"
-                        color="blue"
-                      >
-                        <IconExternalLink size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                </Group>
-              ),
-            },
-            {
-              accessor: 'actions',
-              title: 'Actions',
-              width: 100,
-              render: (record) => (
-                <Group gap="xs">
-                  <Tooltip label="Edit Notes">
-                    <ActionIcon 
-                      variant="light" 
-                      size="sm"
-                      onClick={() => {
-                        setEditingRecord(record);
-                        setEditingNotes(record.notes ?? '');
-                      }}
-                    >
-                      <IconNotes size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                  <Tooltip label="Delete">
-                    <ActionIcon 
-                      color="red" 
-                      variant="light"
-                      size="sm"
-                      onClick={() => handleDelete(record)}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-              ),
-            },
-          ]}
+          columns={tableColumns}
           totalRecords={filteredRecords.length}
           recordsPerPage={PAGE_SIZE}
           page={page}
@@ -564,8 +665,11 @@ function Collection() {
 
         <Modal
           opened={!!editingRecord}
-          onClose={() => setEditingRecord(null)}
-          title="Edit Notes"
+          onClose={() => {
+            setEditingRecord(null);
+            setCustomValues({});
+          }}
+          title="Edit Record"
         >
           <Stack>
             {editingRecord && (
@@ -579,11 +683,54 @@ function Collection() {
               onChange={(e) => setEditingNotes(e.target.value)}
               placeholder="Add notes about this record..."
             />
+            {customColumns.map(column => (
+              <div key={column.id}>
+                {column.type === 'text' && (
+                  <TextInput
+                    label={column.name}
+                    value={customValues[column.id] || ''}
+                    onChange={(e) => setCustomValues(prev => ({
+                      ...prev,
+                      [column.id]: e.target.value
+                    }))}
+                  />
+                )}
+                {column.type === 'number' && (
+                  <TextInput
+                    label={column.name}
+                    type="number"
+                    value={customValues[column.id] || ''}
+                    onChange={(e) => setCustomValues(prev => ({
+                      ...prev,
+                      [column.id]: e.target.value
+                    }))}
+                  />
+                )}
+                {column.type === 'select' && column.options && (
+                  <Select
+                    label={column.name}
+                    value={customValues[column.id] || ''}
+                    onChange={(value: string | null) => setCustomValues(prev => ({
+                      ...prev,
+                      [column.id]: value || ''
+                    }))}
+                    data={column.options.map(opt => ({
+                      value: opt,
+                      label: opt
+                    }))}
+                    clearable
+                  />
+                )}
+              </div>
+            ))}
             <Group justify="flex-end">
-              <Button variant="light" onClick={() => setEditingRecord(null)}>
+              <Button variant="light" onClick={() => {
+                setEditingRecord(null);
+                setCustomValues({});
+              }}>
                 Cancel
               </Button>
-              <Button onClick={handleUpdateNotes} loading={loading}>
+              <Button onClick={handleUpdateRecord} loading={loading}>
                 Save
               </Button>
             </Group>
