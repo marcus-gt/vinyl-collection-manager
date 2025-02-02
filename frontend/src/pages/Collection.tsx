@@ -689,7 +689,7 @@ function Collection() {
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom-start" withArrow shadow="md">
                 <Popover.Target>
-                  <Box style={{ cursor: 'pointer' }}>
+                  <Box style={{ cursor: 'pointer', width: '100%', height: '100%' }}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
@@ -703,6 +703,8 @@ function Collection() {
                             styles={{
                               root: {
                                 height: '22px',
+                                cursor: 'pointer',
+                                pointerEvents: 'none'  // Make chips non-interactive
                               },
                               label: {
                                 padding: '2px 6px',
@@ -718,17 +720,21 @@ function Collection() {
                   </Box>
                 </Popover.Target>
                 <Popover.Dropdown>
-                  <MultiSelect
-                    size="xs"
-                    value={values}
-                    onChange={(newValues) => handleChange(newValues.join(','))}
-                    data={column.options.map(opt => ({
-                      value: opt,
-                      label: opt
-                    }))}
-                    clearable
-                    searchable
-                  />
+                  <Stack gap="xs">
+                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <MultiSelect
+                      size="xs"
+                      value={values}
+                      onChange={(newValues) => handleChange(newValues.join(','))}
+                      data={column.options.map(opt => ({
+                        value: opt,
+                        label: opt
+                      }))}
+                      clearable
+                      searchable
+                      placeholder="Select options..."
+                    />
+                  </Stack>
                 </Popover.Dropdown>
               </Popover>
             </Box>
