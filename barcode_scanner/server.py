@@ -592,11 +592,10 @@ def get_custom_columns():
         response = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
         print(f"Query response: {response}")
         print(f"Response data: {response.data}")
-        print(f"Response error: {response.error}")
         
-        if response.error:
-            print(f"Supabase error: {response.error}")
-            return jsonify({'success': False, 'error': str(response.error)}), 500
+        if not response.data and response.data != []:  # Check if data is None or undefined, but allow empty list
+            print("Error: No data returned from Supabase")
+            return jsonify({'success': False, 'error': 'Failed to get columns'}), 500
             
         return jsonify({'success': True, 'data': response.data}), 200
     except Exception as e:
