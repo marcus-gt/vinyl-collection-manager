@@ -25,7 +25,8 @@ from .db import (
     add_record_to_collection,
     get_user_collection,
     remove_record_from_collection,
-    update_record_notes
+    update_record_notes,
+    get_supabase_client
 )
 
 # Set up static file serving
@@ -574,15 +575,34 @@ def lookup_barcode(barcode):
 @app.route('/api/custom-columns', methods=['GET'])
 def get_custom_columns():
     """Get all custom columns for the current user."""
+    print("\n=== Getting Custom Columns ===")
     user_id = session.get('user_id')
+    print(f"User ID from session: {user_id}")
+    print(f"Session data: {dict(session)}")
+    
     if not user_id:
+        print("Error: User not authenticated")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
+        print("Getting Supabase client...")
         client = get_supabase_client()
+        print("Got Supabase client, executing query...")
+        
         response = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
+        print(f"Query response: {response}")
+        print(f"Response data: {response.data}")
+        print(f"Response error: {response.error}")
+        
+        if response.error:
+            print(f"Supabase error: {response.error}")
+            return jsonify({'success': False, 'error': str(response.error)}), 500
+            
         return jsonify({'success': True, 'data': response.data}), 200
     except Exception as e:
+        print(f"Error getting custom columns: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/custom-columns', methods=['POST'])
@@ -593,6 +613,7 @@ def create_custom_column():
     print(f"User ID: {user_id}")
     access_token = session.get('access_token')
     print(f"Access token present: {'Yes' if access_token else 'No'}")
+    print(f"Session data: {dict(session)}")
     
     if not user_id:
         print("Error: User not authenticated")
@@ -617,6 +638,7 @@ def create_custom_column():
         }
         print(f"Column data to insert: {column_data}")
         
+        print("Getting Supabase client...")
         client = get_supabase_client()
         print("Got Supabase client")
         
