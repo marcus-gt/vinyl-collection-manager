@@ -750,29 +750,43 @@ function Collection() {
                       size="xs"
                       value={values}
                       onChange={(newValues) => handleChange(newValues.join(','))}
-                      data={column.options.map(opt => ({
-                        value: opt,
-                        label: (
-                          <Group gap={4}>
-                            <Chip
-                              checked={false}
-                              variant="filled"
-                              size="xs"
-                              color={getTagColor(opt)}
-                              styles={{
-                                root: { height: '22px' },
-                                label: { padding: '2px 6px' }
-                              }}
-                            >
-                              {opt}
-                            </Chip>
-                          </Group>
-                        )
-                      }))}
+                      data={column.options.map(opt => ({ value: opt, label: opt }))}
                       clearable
                       searchable
                       placeholder="Select options..."
-                    />
+                      styles={(theme) => ({
+                        input: {
+                          minHeight: 'unset'
+                        },
+                        value: {
+                          backgroundColor: 'transparent',
+                          padding: 0,
+                        },
+                        pill: {
+                          backgroundColor: 'transparent',
+                          padding: 0,
+                          margin: 0
+                        }
+                      })}
+                    >
+                      <Group gap={4} wrap="nowrap">
+                        {values.map((value) => (
+                          <Chip
+                            key={value}
+                            checked={false}
+                            variant="filled"
+                            size="xs"
+                            color={getTagColor(value)}
+                            styles={{
+                              root: { height: '22px' },
+                              label: { padding: '2px 6px' }
+                            }}
+                          >
+                            {value}
+                          </Chip>
+                        ))}
+                      </Group>
+                    </MultiSelect>
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
