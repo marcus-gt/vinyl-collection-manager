@@ -596,8 +596,16 @@ def get_custom_columns():
         if not response.data and response.data != []:  # Check if data is None or undefined, but allow empty list
             print("Error: No data returned from Supabase")
             return jsonify({'success': False, 'error': 'Failed to get columns'}), 500
+        
+        # Convert response data to camelCase
+        response_data = []
+        for column in response.data:
+            column_data = dict(column)
+            column_data['defaultValue'] = column_data.pop('default_value', None)
+            column_data['applyToAll'] = column_data.pop('apply_to_all', False)
+            response_data.append(column_data)
             
-        return jsonify({'success': True, 'data': response.data}), 200
+        return jsonify({'success': True, 'data': response_data}), 200
     except Exception as e:
         print(f"Error getting custom columns: {str(e)}")
         import traceback
@@ -632,25 +640,65 @@ def create_custom_column():
             'name': data['name'],
             'type': data['type'],
             'options': data.get('options', []),
+            'defaultValue': data.get('defaultValue'),
+            'applyToAll': data.get('applyToAll', False),
             'created_at': now,
             'updated_at': now
         }
         print(f"Column data to insert: {column_data}")
+        
+        # Convert to snake_case for database
+        db_column_data = {
+            'user_id': column_data['user_id'],
+            'name': column_data['name'],
+            'type': column_data['type'],
+            'options': column_data['options'],
+            'default_value': column_data['defaultValue'],
+            'apply_to_all': column_data['applyToAll'],
+            'created_at': column_data['created_at'],
+            'updated_at': column_data['updated_at']
+        }
         
         print("Getting Supabase client...")
         client = get_supabase_client()
         print("Got Supabase client")
         
         print("Inserting data into custom_columns table...")
-        response = client.table('custom_columns').insert(column_data).execute()
+        response = client.table('custom_columns').insert(db_column_data).execute()
         print(f"Supabase response data: {response.data}")
         
         if not response.data:
             print("Error: No data returned from Supabase")
             return jsonify({'success': False, 'error': 'Failed to create column'}), 500
+        
+        # Convert response data back to camelCase for frontend
+        response_data = response.data[0]
+        response_data['defaultValue'] = response_data.pop('default_value', None)
+        response_data['applyToAll'] = response_data.pop('apply_to_all', False)
+        
+        # If apply_to_all is true and there's a default value, apply it to all records
+        if db_column_data['apply_to_all'] and db_column_data['default_value'] is not None:
+            try:
+                # Get all records for the user
+                records_response = client.table('vinyl_records').select('id').eq('user_id', user_id).execute()
+                if records_response.data:
+                    # Create custom values for each record
+                    values_data = [{
+                        'record_id': record['id'],
+                        'column_id': response.data[0]['id'],
+                        'value': db_column_data['default_value'],
+                        'created_at': now,
+                        'updated_at': now
+                    } for record in records_response.data]
+                    
+                    if values_data:
+                        client.table('custom_column_values').insert(values_data).execute()
+            except Exception as e:
+                print(f"Warning: Failed to apply default values: {str(e)}")
+                # Don't fail the request if applying defaults fails
             
         print("Successfully created custom column")
-        return jsonify({'success': True, 'data': response.data[0]}), 201
+        return jsonify({'success': True, 'data': response_data}), 201
     except Exception as e:
         print(f"\nError creating custom column: {str(e)}")
         import traceback
@@ -673,6 +721,8 @@ def update_custom_column(column_id):
             'name': data.get('name'),
             'type': data.get('type'),
             'options': data.get('options'),
+            'default_value': data.get('defaultValue'),
+            'apply_to_all': data.get('applyToAll'),
             'updated_at': datetime.utcnow().isoformat()
         }
         # Remove None values
@@ -683,6 +733,25 @@ def update_custom_column(column_id):
         
         if not response.data:
             return jsonify({'success': False, 'error': 'Column not found'}), 404
+        
+        # If apply_to_all is true and there's a default value, apply it to all records
+        if update_data.get('apply_to_all') and update_data.get('default_value') is not None:
+            try:
+                # Get all records for the user
+                records_response = client.table('vinyl_records').select('id').eq('user_id', user_id).execute()
+                if records_response.data:
+                    now = datetime.utcnow().isoformat()
+                    # Create or update custom values for each record
+                    for record in records_response.data:
+                        client.table('custom_column_values').upsert({
+                            'record_id': record['id'],
+                            'column_id': column_id,
+                            'value': update_data['default_value'],
+                            'updated_at': now
+                        }).execute()
+            except Exception as e:
+                print(f"Warning: Failed to apply default values: {str(e)}")
+                # Don't fail the request if applying defaults fails
             
         return jsonify({'success': True, 'data': response.data[0]}), 200
     except Exception as e:
