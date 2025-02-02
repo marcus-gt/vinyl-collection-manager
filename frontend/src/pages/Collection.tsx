@@ -768,25 +768,7 @@ function Collection() {
                           margin: 0
                         }
                       }}
-                    >
-                      <Group gap={4} wrap="nowrap">
-                        {values.map((value) => (
-                          <Chip
-                            key={value}
-                            checked={false}
-                            variant="filled"
-                            size="xs"
-                            color={getTagColor(value)}
-                            styles={{
-                              root: { height: '22px' },
-                              label: { padding: '2px 6px' }
-                            }}
-                          >
-                            {value}
-                          </Chip>
-                        ))}
-                      </Group>
-                    </MultiSelect>
+                    />
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
@@ -995,7 +977,6 @@ function Collection() {
                         margin: 0
                       }
                     }}
-                  >
                   />
                 )}
               </div>
