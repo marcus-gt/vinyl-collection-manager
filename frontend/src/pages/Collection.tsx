@@ -689,27 +689,47 @@ function Collection() {
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom-start" withArrow shadow="md">
                 <Popover.Target>
-                  <Box style={{ minWidth: '150px', maxWidth: '600px', width: 'fit-content' }}>
+                  <Box
+                    style={{
+                      minWidth: '150px',
+                      maxWidth: '600px',
+                      width: 'max-content',
+                      maxHeight: '32px',
+                      position: 'relative'
+                    }}
+                  >
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
-                      <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden' }}>
-                        {values.map((value) => (
-                          <Chip
-                            key={value}
-                            checked={false}
-                            variant="filled"
-                            size="xs"
-                            styles={{
-                              label: {
-                                padding: '2px 6px',
-                              }
-                            }}
-                          >
-                            {value}
-                          </Chip>
-                        ))}
-                      </Group>
+                      <Box
+                        style={{
+                          overflow: 'hidden',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0
+                        }}
+                      >
+                        <Group gap={4} wrap="nowrap">
+                          {values.map((value) => (
+                            <Chip
+                              key={value}
+                              checked={false}
+                              variant="filled"
+                              size="xs"
+                              styles={{
+                                label: {
+                                  padding: '2px 6px',
+                                  whiteSpace: 'nowrap'
+                                }
+                              }}
+                            >
+                              {value}
+                            </Chip>
+                          ))}
+                        </Group>
+                      </Box>
                     )}
                   </Box>
                 </Popover.Target>
@@ -803,10 +823,12 @@ function Collection() {
           onSortStatusChange={handleSortStatusChange}
           styles={{
             table: {
+              tableLayout: 'fixed',
               '& tbody tr td': {
                 height: '40px',
                 maxHeight: '40px',
-                overflow: 'hidden'
+                padding: '8px',
+                position: 'relative'
               }
             }
           }}
