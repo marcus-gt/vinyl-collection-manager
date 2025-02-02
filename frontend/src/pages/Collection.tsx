@@ -10,6 +10,29 @@ import { useDebouncedCallback } from 'use-debounce';
 
 const PAGE_SIZE = 15;
 
+// Define theme colors for tags
+const TAG_COLORS = [
+  'blue',    // Primary
+  'teal',    // Secondary
+  'violet',  // Accent
+  'indigo',  // Deep
+  'cyan',    // Bright
+  'green',   // Success
+  'grape',   // Rich
+  'pink',    // Soft
+  'orange',  // Warm
+  'lime'     // Fresh
+] as const;
+
+// Get a consistent color for a value
+const getTagColor = (value: string) => {
+  // Use string hash to get a consistent index
+  const hash = value.split('').reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+};
+
 // Create a service for custom values
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
@@ -700,6 +723,7 @@ function Collection() {
                             checked={false}
                             variant="filled"
                             size="xs"
+                            color={getTagColor(value)}
                             styles={{
                               root: {
                                 height: '22px',
@@ -728,7 +752,22 @@ function Collection() {
                       onChange={(newValues) => handleChange(newValues.join(','))}
                       data={column.options.map(opt => ({
                         value: opt,
-                        label: opt
+                        label: (
+                          <Group gap={4}>
+                            <Chip
+                              checked={false}
+                              variant="filled"
+                              size="xs"
+                              color={getTagColor(opt)}
+                              styles={{
+                                root: { height: '22px' },
+                                label: { padding: '2px 6px' }
+                              }}
+                            >
+                              {opt}
+                            </Chip>
+                          </Group>
+                        )
                       }))}
                       clearable
                       searchable
