@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -658,34 +658,56 @@ function Collection() {
 
         if (column.type === 'single-select' && column.options) {
           return (
-            <Select
-              size="xs"
-              value={localValue}
-              onChange={(newValue) => handleChange(newValue || '')}
-              data={column.options.map(opt => ({
-                value: opt,
-                label: opt
-              }))}
-              clearable
-              searchable
-            />
+            <Box style={{ position: 'relative' }}>
+              <Popover width={400} position="bottom-start" withArrow shadow="md">
+                <Popover.Target>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                    {localValue || '-'}
+                  </Text>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Select
+                    size="xs"
+                    value={localValue}
+                    onChange={(newValue) => handleChange(newValue || '')}
+                    data={column.options.map(opt => ({
+                      value: opt,
+                      label: opt
+                    }))}
+                    clearable
+                    searchable
+                  />
+                </Popover.Dropdown>
+              </Popover>
+            </Box>
           );
         }
         
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
           return (
-            <MultiSelect
-              size="xs"
-              value={values}
-              onChange={(newValues) => handleChange(newValues.join(','))}
-              data={column.options.map(opt => ({
-                value: opt,
-                label: opt
-              }))}
-              clearable
-              searchable
-            />
+            <Box style={{ position: 'relative' }}>
+              <Popover width={400} position="bottom-start" withArrow shadow="md">
+                <Popover.Target>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                    {values.join(', ') || '-'}
+                  </Text>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <MultiSelect
+                    size="xs"
+                    value={values}
+                    onChange={(newValues) => handleChange(newValues.join(','))}
+                    data={column.options.map(opt => ({
+                      value: opt,
+                      label: opt
+                    }))}
+                    clearable
+                    searchable
+                  />
+                </Popover.Dropdown>
+              </Popover>
+            </Box>
           );
         }
         
