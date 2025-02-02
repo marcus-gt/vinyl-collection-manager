@@ -43,7 +43,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
       return;
     }
 
-    if (type === 'select' && options.length === 0) {
+    if ((type === 'single-select' || type === 'multi-select') && options.length === 0) {
       alert('Select type requires at least one option');
       return;
     }
@@ -55,7 +55,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         const response = await customColumns.update(editingColumn.id, {
           name,
           type,
-          options: type === 'select' ? options : undefined
+          options: (type === 'single-select' || type === 'multi-select') ? options : undefined
         });
         if (response.success) {
           alert('Column updated successfully');
@@ -65,7 +65,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         const response = await customColumns.create({
           name,
           type,
-          options: type === 'select' ? options : undefined
+          options: (type === 'single-select' || type === 'multi-select') ? options : undefined
         });
         if (response.success) {
           alert('Column created successfully');
@@ -145,10 +145,11 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               data={[
                 { value: 'text', label: 'Text' },
                 { value: 'number', label: 'Number' },
-                { value: 'select', label: 'Select' }
+                { value: 'single-select', label: 'Single Select' },
+                { value: 'multi-select', label: 'Multi Select' }
               ]}
             />
-            {type === 'select' && (
+            {(type === 'single-select' || type === 'multi-select') && (
               <>
                 <TextInput
                   label="Add Option"
@@ -202,7 +203,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                   <Table.Td>{column.name}</Table.Td>
                   <Table.Td style={{ textTransform: 'capitalize' }}>{column.type}</Table.Td>
                   <Table.Td>
-                    {column.type === 'select' && column.options?.join(', ')}
+                    {(column.type === 'single-select' || column.type === 'multi-select') && column.options?.join(', ')}
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">

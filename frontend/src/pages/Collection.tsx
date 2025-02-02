@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -656,12 +656,29 @@ function Collection() {
           debouncedUpdate(value);  // Debounce the API call
         };
 
-        if (column.type === 'select' && column.options) {
+        if (column.type === 'single-select' && column.options) {
           return (
             <Select
               size="xs"
               value={localValue}
               onChange={(newValue) => handleChange(newValue || '')}
+              data={column.options.map(opt => ({
+                value: opt,
+                label: opt
+              }))}
+              clearable
+              searchable
+            />
+          );
+        }
+        
+        if (column.type === 'multi-select' && column.options) {
+          const values = localValue ? localValue.split(',') : [];
+          return (
+            <MultiSelect
+              size="xs"
+              value={values}
+              onChange={(newValues) => handleChange(newValues.join(','))}
               data={column.options.map(opt => ({
                 value: opt,
                 label: opt

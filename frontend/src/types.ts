@@ -47,7 +47,7 @@ export interface AuthResponse {
   error?: string;
 }
 
-export type CustomColumnType = 'text' | 'number' | 'select';
+export type CustomColumnType = 'text' | 'number' | 'single-select' | 'multi-select';
 
 export interface CustomColumn {
   id: string;
