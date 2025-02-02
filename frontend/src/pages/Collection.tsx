@@ -10,29 +10,6 @@ import { useDebouncedCallback } from 'use-debounce';
 
 const PAGE_SIZE = 15;
 
-// Define theme colors for tags
-const TAG_COLORS = [
-  'blue',    // Primary
-  'teal',    // Secondary
-  'violet',  // Accent
-  'indigo',  // Deep
-  'cyan',    // Bright
-  'green',   // Success
-  'grape',   // Rich
-  'pink',    // Soft
-  'orange',  // Warm
-  'lime'     // Fresh
-] as const;
-
-// Get a consistent color for a value
-const getTagColor = (value: string) => {
-  // Use string hash to get a consistent index
-  const hash = value.split('').reduce((acc, char) => {
-    return char.charCodeAt(0) + ((acc << 5) - acc);
-  }, 0);
-  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
-};
-
 // Create a service for custom values
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
@@ -723,7 +700,6 @@ function Collection() {
                             checked={false}
                             variant="filled"
                             size="xs"
-                            color={getTagColor(value)}
                             styles={{
                               root: {
                                 height: '22px',
@@ -749,45 +725,15 @@ function Collection() {
                     <MultiSelect
                       size="xs"
                       value={values}
-                      onChange={(newValues: string[]) => handleChange(newValues.join(','))}
-                      data={column.options}
+                      onChange={(newValues) => handleChange(newValues.join(','))}
+                      data={column.options.map(opt => ({
+                        value: opt,
+                        label: opt
+                      }))}
                       clearable
                       searchable
                       placeholder="Select options..."
-                      styles={{
-                        wrapper: {
-                          minHeight: 'unset'
-                        },
-                        input: {
-                          backgroundColor: 'transparent',
-                          padding: 0,
-                        },
-                        pillsList: {
-                          backgroundColor: 'transparent',
-                          padding: 0,
-                          margin: 0,
-                          gap: 4
-                        }
-                      }}
-                    >
-                      <Group gap={4} wrap="nowrap">
-                        {(values || []).map((value: string) => (
-                          <Chip
-                            key={value}
-                            checked={false}
-                            variant="filled"
-                            size="xs"
-                            color={getTagColor(value)}
-                            styles={{
-                              root: { height: '22px' },
-                              label: { padding: '2px 6px' }
-                            }}
-                          >
-                            {value}
-                          </Chip>
-                        ))}
-                      </Group>
-                    </MultiSelect>
+                    />
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
@@ -975,44 +921,12 @@ function Collection() {
                       ...prev,
                       [column.id]: values.join(',')
                     }))}
-                    data={column.options}
+                    data={column.options.map(opt => ({
+                      value: opt,
+                      label: opt
+                    }))}
                     clearable
-                    searchable
-                    placeholder="Select options..."
-                    styles={{
-                      wrapper: {
-                        minHeight: 'unset'
-                      },
-                      input: {
-                        backgroundColor: 'transparent',
-                        padding: 0,
-                      },
-                      pillsList: {
-                        backgroundColor: 'transparent',
-                        padding: 0,
-                        margin: 0,
-                        gap: 4
-                      }
-                    }}
-                  >
-                    <Group gap={4} wrap="nowrap">
-                      {(customValues[column.id]?.split(',').filter(Boolean) || []).map((value: string) => (
-                        <Chip
-                          key={value}
-                          checked={false}
-                          variant="filled"
-                          size="xs"
-                          color={getTagColor(value)}
-                          styles={{
-                            root: { height: '22px' },
-                            label: { padding: '2px 6px' }
-                          }}
-                        >
-                          {value}
-                        </Chip>
-                      ))}
-                    </Group>
-                  </MultiSelect>
+                  />
                 )}
               </div>
             ))}
