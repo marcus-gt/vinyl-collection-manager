@@ -749,12 +749,12 @@ function Collection() {
                     <MultiSelect
                       size="xs"
                       value={values}
-                      onChange={(newValues) => handleChange(newValues.join(','))}
+                      onChange={(newValues: string[]) => handleChange(newValues.join(','))}
                       data={column.options}
                       clearable
                       searchable
                       placeholder="Select options..."
-                      styles={(theme) => ({
+                      styles={{
                         wrapper: {
                           minHeight: 'unset'
                         },
@@ -762,26 +762,32 @@ function Collection() {
                           backgroundColor: 'transparent',
                           padding: 0,
                         },
-                        pill: {
-                          backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
-                          color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`,
-                          border: 'none',
-                          padding: '2px 6px',
-                          height: '22px',
-                          margin: '0 4px 0 0',
-                          '&[data-checked]': {
-                            backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
-                            color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`
-                          }
-                        },
                         pillsList: {
                           backgroundColor: 'transparent',
                           padding: 0,
                           margin: 0,
                           gap: 4
                         }
-                      })}
-                    />
+                      }}
+                    >
+                      <Group gap={4} wrap="nowrap">
+                        {(values || []).map((value: string) => (
+                          <Chip
+                            key={value}
+                            checked={false}
+                            variant="filled"
+                            size="xs"
+                            color={getTagColor(value)}
+                            styles={{
+                              root: { height: '22px' },
+                              label: { padding: '2px 6px' }
+                            }}
+                          >
+                            {value}
+                          </Chip>
+                        ))}
+                      </Group>
+                    </MultiSelect>
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
@@ -973,7 +979,7 @@ function Collection() {
                     clearable
                     searchable
                     placeholder="Select options..."
-                    styles={(theme) => ({
+                    styles={{
                       wrapper: {
                         minHeight: 'unset'
                       },
@@ -981,26 +987,32 @@ function Collection() {
                         backgroundColor: 'transparent',
                         padding: 0,
                       },
-                      pill: {
-                        backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
-                        color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`,
-                        border: 'none',
-                        padding: '2px 6px',
-                        height: '22px',
-                        margin: '0 4px 0 0',
-                        '&[data-checked]': {
-                          backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
-                          color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`
-                        }
-                      },
                       pillsList: {
                         backgroundColor: 'transparent',
                         padding: 0,
                         margin: 0,
                         gap: 4
                       }
-                    })}
-                  />
+                    }}
+                  >
+                    <Group gap={4} wrap="nowrap">
+                      {(values || []).map((value: string) => (
+                        <Chip
+                          key={value}
+                          checked={false}
+                          variant="filled"
+                          size="xs"
+                          color={getTagColor(value)}
+                          styles={{
+                            root: { height: '22px' },
+                            label: { padding: '2px 6px' }
+                          }}
+                        >
+                          {value}
+                        </Chip>
+                      ))}
+                    </Group>
+                  </MultiSelect>
                 )}
               </div>
             ))}
