@@ -750,11 +750,11 @@ function Collection() {
                       size="xs"
                       value={values}
                       onChange={(newValues) => handleChange(newValues.join(','))}
-                      data={column.options.map(opt => ({ value: opt, label: opt }))}
+                      data={column.options}
                       clearable
                       searchable
                       placeholder="Select options..."
-                      styles={{
+                      styles={(theme) => ({
                         wrapper: {
                           minHeight: 'unset'
                         },
@@ -762,12 +762,25 @@ function Collection() {
                           backgroundColor: 'transparent',
                           padding: 0,
                         },
+                        pill: {
+                          backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
+                          color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`,
+                          border: 'none',
+                          padding: '2px 6px',
+                          height: '22px',
+                          margin: '0 4px 0 0',
+                          '&[data-checked]': {
+                            backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
+                            color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`
+                          }
+                        },
                         pillsList: {
                           backgroundColor: 'transparent',
                           padding: 0,
-                          margin: 0
+                          margin: 0,
+                          gap: 4
                         }
-                      }}
+                      })}
                     />
                   </Stack>
                 </Popover.Dropdown>
@@ -956,14 +969,11 @@ function Collection() {
                       ...prev,
                       [column.id]: values.join(',')
                     }))}
-                    data={column.options.map(opt => ({
-                      value: opt,
-                      label: opt
-                    }))}
+                    data={column.options}
                     clearable
                     searchable
                     placeholder="Select options..."
-                    styles={{
+                    styles={(theme) => ({
                       wrapper: {
                         minHeight: 'unset'
                       },
@@ -971,12 +981,25 @@ function Collection() {
                         backgroundColor: 'transparent',
                         padding: 0,
                       },
+                      pill: {
+                        backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
+                        color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`,
+                        border: 'none',
+                        padding: '2px 6px',
+                        height: '22px',
+                        margin: '0 4px 0 0',
+                        '&[data-checked]': {
+                          backgroundColor: ({ value }) => `${theme.colors[getTagColor(value)][1]} !important`,
+                          color: ({ value }) => `${theme.colors[getTagColor(value)][9]} !important`
+                        }
+                      },
                       pillsList: {
                         backgroundColor: 'transparent',
                         padding: 0,
-                        margin: 0
+                        margin: 0,
+                        gap: 4
                       }
-                    }}
+                    })}
                   />
                 )}
               </div>
