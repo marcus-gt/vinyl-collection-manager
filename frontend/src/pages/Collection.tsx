@@ -844,13 +844,28 @@ function Collection() {
                     }))}
                   />
                 )}
-                {column.type === 'select' && column.options && (
+                {column.type === 'single-select' && column.options && (
                   <Select
                     label={column.name}
                     value={customValues[column.id] || ''}
                     onChange={(value: string | null) => setCustomValues(prev => ({
                       ...prev,
                       [column.id]: value || ''
+                    }))}
+                    data={column.options.map(opt => ({
+                      value: opt,
+                      label: opt
+                    }))}
+                    clearable
+                  />
+                )}
+                {column.type === 'multi-select' && column.options && (
+                  <MultiSelect
+                    label={column.name}
+                    value={customValues[column.id]?.split(',').filter(Boolean) || []}
+                    onChange={(values: string[]) => setCustomValues(prev => ({
+                      ...prev,
+                      [column.id]: values.join(',')
                     }))}
                     data={column.options.map(opt => ({
                       value: opt,
