@@ -220,13 +220,22 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 </Box>
               </>
             )}
-            {type !== 'multi-select' && (
+            {/* Default value fields based on type */}
+            {type === 'text' && (
               <TextInput
                 label="Default Value"
                 placeholder="Optional default value for new records"
                 value={defaultValue}
                 onChange={(e) => setDefaultValue(e.target.value)}
-                type={type === 'number' ? 'number' : 'text'}
+              />
+            )}
+            {type === 'number' && (
+              <TextInput
+                label="Default Value"
+                placeholder="Optional default value for new records"
+                value={defaultValue}
+                onChange={(e) => setDefaultValue(e.target.value)}
+                type="number"
               />
             )}
             {type === 'single-select' && options.length > 0 && (
@@ -249,11 +258,14 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 clearable
               />
             )}
-            <Switch
-              label="Apply default value to all existing records"
-              checked={applyToAll}
-              onChange={(e) => setApplyToAll(e.currentTarget.checked)}
-            />
+            {/* Apply to all switch */}
+            {defaultValue && (
+              <Switch
+                label="Apply default value to all existing records"
+                checked={applyToAll}
+                onChange={(e) => setApplyToAll(e.currentTarget.checked)}
+              />
+            )}
             <Group justify="flex-end">
               {editingColumn && (
                 <Button variant="light" onClick={resetForm}>
