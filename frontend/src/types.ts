@@ -55,6 +55,8 @@ export interface CustomColumn {
   name: string;
   type: CustomColumnType;
   options?: string[];
+  defaultValue?: string;
+  applyToAll?: boolean;
   created_at?: string;
   updated_at?: string;
 }
