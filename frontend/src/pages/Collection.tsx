@@ -752,19 +752,7 @@ function Collection() {
                       onChange={(newValues) => handleChange(newValues.join(','))}
                       data={column.options.map(opt => ({
                         value: opt,
-                        label: (
-                          <Group gap={4}>
-                            <Box
-                              style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: `var(--mantine-color-${getTagColor(opt)}-filled)`,
-                              }}
-                            />
-                            {opt}
-                          </Group>
-                        )
+                        label: opt
                       }))}
                       clearable
                       searchable
@@ -962,6 +950,8 @@ function Collection() {
                       label: opt
                     }))}
                     clearable
+                    searchable
+                    placeholder="Select options..."
                   />
                 )}
               </div>
