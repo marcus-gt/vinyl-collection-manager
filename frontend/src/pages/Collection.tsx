@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -689,9 +689,29 @@ function Collection() {
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom-start" withArrow shadow="md">
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
-                    {values.join(', ') || '-'}
-                  </Text>
+                  <Box style={{ minWidth: '150px', maxWidth: '600px', width: 'fit-content' }}>
+                    {values.length === 0 ? (
+                      <Text size="sm" c="dimmed">-</Text>
+                    ) : (
+                      <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden' }}>
+                        {values.map((value) => (
+                          <Chip
+                            key={value}
+                            checked={false}
+                            variant="filled"
+                            size="xs"
+                            styles={{
+                              label: {
+                                padding: '2px 6px',
+                              }
+                            }}
+                          >
+                            {value}
+                          </Chip>
+                        ))}
+                      </Group>
+                    )}
+                  </Box>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <MultiSelect
