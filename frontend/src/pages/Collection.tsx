@@ -13,9 +13,12 @@ const PAGE_SIZE = 15;
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
     try {
-      console.log(`Getting custom values for record: ${recordId}`);
-      // TODO: Implement actual API call
-      return { success: true, data: [] };
+      const response = await fetch(`/api/records/${recordId}/custom-values`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error(`Failed to get custom values for record ${recordId}:`, err);
       return { success: false };
@@ -23,9 +26,16 @@ const customValuesService = {
   },
   update: async (recordId: string, values: Record<string, string>): Promise<{ success: boolean }> => {
     try {
-      console.log(`Updating custom values for record ${recordId}:`, values);
-      // TODO: Implement actual API call
-      return { success: true };
+      const response = await fetch(`/api/records/${recordId}/custom-values`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(values)
+      });
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error(`Failed to update custom values for record ${recordId}:`, err);
       return { success: false };
@@ -580,20 +590,83 @@ function Collection() {
       sortable: true,
       width: 150,
       render: (record: VinylRecord) => {
-        const value = record.customValues?.[column.id] || '-';
+        const value = record.customValues?.[column.id] || '';
+        
+        const handleValueChange = async (newValue: string) => {
+          if (!record.id) return;
+          
+          try {
+            const response = await customValuesService.update(record.id, {
+              ...record.customValues,
+              [column.id]: newValue
+            });
+            
+            if (response.success) {
+              // Update the record in the local state
+              setUserRecords(prevRecords =>
+                prevRecords.map(r =>
+                  r.id === record.id
+                    ? {
+                        ...r,
+                        customValues: {
+                          ...r.customValues,
+                          [column.id]: newValue
+                        }
+                      }
+                    : r
+                )
+              );
+              
+              notifications.show({
+                title: 'Success',
+                message: 'Value updated successfully',
+                color: 'green'
+              });
+            }
+          } catch (err) {
+            notifications.show({
+              title: 'Error',
+              message: 'Failed to update value',
+              color: 'red'
+            });
+          }
+        };
+
+        if (column.type === 'select' && column.options) {
+          return (
+            <Select
+              size="xs"
+              value={value}
+              onChange={(newValue) => handleValueChange(newValue || '')}
+              data={column.options.map(opt => ({
+                value: opt,
+                label: opt
+              }))}
+              clearable
+              searchable
+            />
+          );
+        }
+        
+        if (column.type === 'number') {
+          return (
+            <TextInput
+              size="xs"
+              type="number"
+              value={value}
+              onChange={(e) => handleValueChange(e.target.value)}
+              styles={{ input: { minHeight: 'unset' } }}
+            />
+          );
+        }
+        
         return (
-          <Popover width={400} position="bottom-start" withArrow shadow="md">
-            <Popover.Target>
-              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={value}>
-                {value}
-              </Text>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                {value}
-              </Text>
-            </Popover.Dropdown>
-          </Popover>
+          <TextInput
+            size="xs"
+            value={value}
+            onChange={(e) => handleValueChange(e.target.value)}
+            styles={{ input: { minHeight: 'unset' } }}
+          />
         );
       }
     }));
