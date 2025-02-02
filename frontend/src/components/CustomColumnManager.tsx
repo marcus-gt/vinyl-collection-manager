@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch } from '@mantine/core';
+import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch, Popover } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
@@ -197,26 +197,37 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 />
                 <Box>
                   <Text size="sm" mb="xs">Options:</Text>
-                  <Group gap="xs">
-                    {options.map((opt) => (
-                      <Chip
-                        key={opt}
-                        checked={false}
-                        variant="filled"
-                      >
-                        <Group gap={4} wrap="nowrap">
-                          {opt}
-                          <ActionIcon 
-                            size="xs" 
-                            variant="transparent" 
-                            onClick={() => handleRemoveOption(opt)}
-                          >
-                            <IconX size={12} />
-                          </ActionIcon>
-                        </Group>
-                      </Chip>
-                    ))}
-                  </Group>
+                  <Box
+                    style={{
+                      maxHeight: '100px',
+                      overflowY: 'auto',
+                      border: '1px solid #eee',
+                      borderRadius: '4px',
+                      padding: '8px'
+                    }}
+                  >
+                    <Group gap="xs">
+                      {options.map((opt) => (
+                        <Chip
+                          key={opt}
+                          checked={false}
+                          variant="filled"
+                          size="xs"
+                        >
+                          <Group gap={4} wrap="nowrap">
+                            {opt}
+                            <ActionIcon 
+                              size="xs" 
+                              variant="transparent" 
+                              onClick={() => handleRemoveOption(opt)}
+                            >
+                              <IconX size={12} />
+                            </ActionIcon>
+                          </Group>
+                        </Chip>
+                      ))}
+                    </Group>
+                  </Box>
                 </Box>
               </>
             )}
@@ -281,7 +292,18 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
         <Box>
           <Text size="sm" fw={500} mb="xs">Existing Columns</Text>
-          <Table>
+          <Table
+            styles={{
+              td: {
+                height: '40px',
+                maxHeight: '40px',
+                padding: '8px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }
+            }}
+          >
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Name</Table.Th>
@@ -298,26 +320,27 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                   <Table.Td style={{ textTransform: 'capitalize' }}>{column.type}</Table.Td>
                   <Table.Td>
                     {(column.type === 'single-select' || column.type === 'multi-select') && (
-                      <Group gap="xs">
-                        {column.options?.map((opt) => (
-                          <Chip
-                            key={opt}
-                            checked={false}
-                            variant="filled"
-                          >
-                            <Group gap={4} wrap="nowrap">
-                              {opt}
-                              <ActionIcon 
-                                size="xs" 
-                                variant="transparent" 
-                                onClick={() => handleRemoveOption(opt)}
+                      <Popover width={400} position="bottom-start" withArrow shadow="md">
+                        <Popover.Target>
+                          <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                            {column.options?.join(', ') || '-'}
+                          </Text>
+                        </Popover.Target>
+                        <Popover.Dropdown>
+                          <Group gap="xs">
+                            {column.options?.map((opt) => (
+                              <Chip
+                                key={opt}
+                                checked={false}
+                                variant="filled"
+                                size="xs"
                               >
-                                <IconX size={12} />
-                              </ActionIcon>
-                            </Group>
-                          </Chip>
-                        ))}
-                      </Group>
+                                {opt}
+                              </Chip>
+                            ))}
+                          </Group>
+                        </Popover.Dropdown>
+                      </Popover>
                     )}
                   </Table.Td>
                   <Table.Td>{column.defaultValue || '-'}</Table.Td>
