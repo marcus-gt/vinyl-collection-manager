@@ -6,6 +6,7 @@ import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
+import { useDebouncedCallback } from 'use-debounce';
 
 const PAGE_SIZE = 15;
 
@@ -40,6 +41,22 @@ const customValuesService = {
       console.error(`Failed to update custom values for record ${recordId}:`, err);
       return { success: false };
     }
+  },
+  getAllForRecords: async (recordIds: string[]): Promise<Record<string, CustomColumnValue[]>> => {
+    try {
+      const results: Record<string, CustomColumnValue[]> = {};
+      // Fetch custom values for each record in parallel
+      await Promise.all(recordIds.map(async (recordId) => {
+        const response = await customValuesService.getForRecord(recordId);
+        if (response.success && response.data) {
+          results[recordId] = response.data;
+        }
+      }));
+      return results;
+    } catch (err) {
+      console.error('Failed to load custom values for records:', err);
+      return {};
+    }
   }
 };
 
@@ -67,7 +84,31 @@ function Collection() {
     try {
       const response = await records.getAll();
       if (response.success && response.data) {
-        setUserRecords(response.data);
+        const recordsData = response.data;
+        
+        // Load custom values for all records
+        const recordIds = recordsData.map(r => r.id).filter((id): id is string => !!id);
+        const customValuesData = await customValuesService.getAllForRecords(recordIds);
+        
+        // Attach custom values to records
+        const recordsWithCustomValues = recordsData.map(record => {
+          if (!record.id) return record;
+          
+          const values = customValuesData[record.id];
+          if (!values) return record;
+          
+          const customValues: Record<string, string> = {};
+          values.forEach(value => {
+            customValues[value.column_id] = value.value;
+          });
+          
+          return {
+            ...record,
+            customValues
+          };
+        });
+        
+        setUserRecords(recordsWithCustomValues);
       } else {
         setError(response.error || 'Failed to load records');
       }
@@ -86,29 +127,6 @@ function Collection() {
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (editingRecord?.id) {
-      loadCustomValues(editingRecord.id);
-    } else {
-      setCustomValues({});
-    }
-  }, [editingRecord]);
-
-  const loadCustomValues = async (recordId: string) => {
-    try {
-      const response = await customValuesService.getForRecord(recordId);
-      if (response.success && response.data) {
-        const values: Record<string, string> = {};
-        response.data.forEach((value: CustomColumnValue) => {
-          values[value.column_id] = value.value;
-        });
-        setCustomValues(values);
-      }
-    } catch (err) {
-      console.error('Failed to load custom values:', err);
     }
   };
 
@@ -592,7 +610,7 @@ function Collection() {
       render: (record: VinylRecord) => {
         const value = record.customValues?.[column.id] || '';
         
-        const handleValueChange = async (newValue: string) => {
+        const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
           if (!record.id) return;
           
           try {
@@ -630,14 +648,14 @@ function Collection() {
               color: 'red'
             });
           }
-        };
+        }, 500);  // 500ms debounce
 
         if (column.type === 'select' && column.options) {
           return (
             <Select
               size="xs"
               value={value}
-              onChange={(newValue) => handleValueChange(newValue || '')}
+              onChange={(newValue) => debouncedUpdate(newValue || '')}
               data={column.options.map(opt => ({
                 value: opt,
                 label: opt
@@ -654,7 +672,7 @@ function Collection() {
               size="xs"
               type="number"
               value={value}
-              onChange={(e) => handleValueChange(e.target.value)}
+              onChange={(e) => debouncedUpdate(e.target.value)}
               styles={{ input: { minHeight: 'unset' } }}
             />
           );
@@ -664,7 +682,7 @@ function Collection() {
           <TextInput
             size="xs"
             value={value}
-            onChange={(e) => handleValueChange(e.target.value)}
+            onChange={(e) => debouncedUpdate(e.target.value)}
             styles={{ input: { minHeight: 'unset' } }}
           />
         );
