@@ -754,20 +754,20 @@ function Collection() {
                       clearable
                       searchable
                       placeholder="Select options..."
-                      styles={(theme) => ({
-                        input: {
+                      styles={{
+                        wrapper: {
                           minHeight: 'unset'
                         },
-                        value: {
+                        input: {
                           backgroundColor: 'transparent',
                           padding: 0,
                         },
-                        pill: {
+                        pillsList: {
                           backgroundColor: 'transparent',
                           padding: 0,
                           margin: 0
                         }
-                      })}
+                      }}
                     >
                       <Group gap={4} wrap="nowrap">
                         {values.map((value) => (
@@ -979,6 +979,23 @@ function Collection() {
                       label: opt
                     }))}
                     clearable
+                    searchable
+                    placeholder="Select options..."
+                    styles={{
+                      wrapper: {
+                        minHeight: 'unset'
+                      },
+                      input: {
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                      },
+                      pillsList: {
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        margin: 0
+                      }
+                    }}
+                  >
                   />
                 )}
               </div>
