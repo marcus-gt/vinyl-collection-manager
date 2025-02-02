@@ -10,29 +10,6 @@ import { useDebouncedCallback } from 'use-debounce';
 
 const PAGE_SIZE = 15;
 
-// Add at the top with other constants
-const TAG_COLORS = [
-  'blue',
-  'teal',
-  'green',
-  'yellow',
-  'orange',
-  'red',
-  'pink',
-  'grape',
-  'violet',
-  'indigo'
-] as const;
-
-// Add this function before the Collection component
-function getTagColor(value: string): typeof TAG_COLORS[number] {
-  // Use a hash function to get a consistent color for each value
-  const hash = value.split('').reduce((acc, char) => {
-    return char.charCodeAt(0) + ((acc << 5) - acc);
-  }, 0);
-  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
-}
-
 // Create a service for custom values
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
@@ -723,7 +700,6 @@ function Collection() {
                             checked={false}
                             variant="filled"
                             size="xs"
-                            color={getTagColor(value)}
                             styles={{
                               root: {
                                 height: '22px',
@@ -767,23 +743,52 @@ function Collection() {
         
         if (column.type === 'number') {
           return (
-            <TextInput
-              size="xs"
-              type="number"
-              value={localValue}
-              onChange={(e) => handleChange(e.target.value)}
-              styles={{ input: { minHeight: 'unset' } }}
-            />
+            <Box style={{ position: 'relative' }}>
+              <Popover width={400} position="bottom-start" withArrow shadow="md">
+                <Popover.Target>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                    {localValue || '-'}
+                  </Text>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <TextInput
+                      size="xs"
+                      type="number"
+                      value={localValue}
+                      onChange={(e) => handleChange(e.target.value)}
+                      placeholder={`Enter ${column.name.toLowerCase()}`}
+                    />
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            </Box>
           );
         }
         
+        // Default text input
         return (
-          <TextInput
-            size="xs"
-            value={localValue}
-            onChange={(e) => handleChange(e.target.value)}
-            styles={{ input: { minHeight: 'unset' } }}
-          />
+          <Box style={{ position: 'relative' }}>
+            <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover.Target>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                  {localValue || '-'}
+                </Text>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Stack gap="xs">
+                  <Text size="sm" fw={500}>Edit {column.name}</Text>
+                  <TextInput
+                    size="xs"
+                    value={localValue}
+                    onChange={(e) => handleChange(e.target.value)}
+                    placeholder={`Enter ${column.name.toLowerCase()}`}
+                  />
+                </Stack>
+              </Popover.Dropdown>
+            </Popover>
+          </Box>
         );
       }
     }));
@@ -950,8 +955,6 @@ function Collection() {
                       label: opt
                     }))}
                     clearable
-                    searchable
-                    placeholder="Select options..."
                   />
                 )}
               </div>
