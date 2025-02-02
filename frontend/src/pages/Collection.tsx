@@ -606,7 +606,7 @@ function Collection() {
       accessor: `custom_${column.id}` as keyof VinylRecord,
       title: column.name,
       sortable: true,
-      width: 150,
+      width: column.type === 'multi-select' ? 300 : 150,  // Double width for multi-select
       render: (record: VinylRecord) => {
         const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
         
@@ -689,47 +689,31 @@ function Collection() {
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom-start" withArrow shadow="md">
                 <Popover.Target>
-                  <Box
-                    style={{
-                      minWidth: '150px',
-                      maxWidth: '600px',
-                      width: 'max-content',
-                      maxHeight: '32px',
-                      position: 'relative'
-                    }}
-                  >
+                  <Box style={{ cursor: 'pointer' }}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
-                      <Box
-                        style={{
-                          overflow: 'hidden',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0
-                        }}
-                      >
-                        <Group gap={4} wrap="nowrap">
-                          {values.map((value) => (
-                            <Chip
-                              key={value}
-                              checked={false}
-                              variant="filled"
-                              size="xs"
-                              styles={{
-                                label: {
-                                  padding: '2px 6px',
-                                  whiteSpace: 'nowrap'
-                                }
-                              }}
-                            >
-                              {value}
-                            </Chip>
-                          ))}
-                        </Group>
-                      </Box>
+                      <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden' }}>
+                        {values.map((value) => (
+                          <Chip
+                            key={value}
+                            checked={false}
+                            variant="filled"
+                            size="xs"
+                            styles={{
+                              root: {
+                                height: '22px',
+                              },
+                              label: {
+                                padding: '2px 6px',
+                                whiteSpace: 'nowrap'
+                              }
+                            }}
+                          >
+                            {value}
+                          </Chip>
+                        ))}
+                      </Group>
                     )}
                   </Box>
                 </Popover.Target>
