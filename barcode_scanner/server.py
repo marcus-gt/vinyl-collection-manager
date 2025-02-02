@@ -645,12 +645,7 @@ def create_custom_column():
         print("Inserting data into custom_columns table...")
         response = client.table('custom_columns').insert(column_data).execute()
         print(f"Supabase response data: {response.data}")
-        print(f"Supabase response error: {response.error}")
         
-        if response.error:
-            print(f"Error from Supabase: {response.error}")
-            return jsonify({'success': False, 'error': str(response.error)}), 500
-            
         if not response.data:
             print("Error: No data returned from Supabase")
             return jsonify({'success': False, 'error': 'Failed to create column'}), 500
