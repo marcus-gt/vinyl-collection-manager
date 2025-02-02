@@ -687,7 +687,7 @@ function Collection() {
           const values = localValue ? localValue.split(',') : [];
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover width={400} position="bottom-start" withArrow shadow="md" trapFocus>
                 <Popover.Target>
                   <Box style={{ cursor: 'pointer', width: '100%', height: '100%' }}>
                     {values.length === 0 ? (
