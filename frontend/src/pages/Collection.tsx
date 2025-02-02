@@ -608,7 +608,12 @@ function Collection() {
       sortable: true,
       width: 150,
       render: (record: VinylRecord) => {
-        const value = record.customValues?.[column.id] || '';
+        const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
+        
+        // Effect to sync local value with record value
+        useEffect(() => {
+          setLocalValue(record.customValues?.[column.id] || '');
+        }, [record.customValues, column.id]);
         
         const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
           if (!record.id) return;
@@ -634,12 +639,6 @@ function Collection() {
                     : r
                 )
               );
-              
-              notifications.show({
-                title: 'Success',
-                message: 'Value updated successfully',
-                color: 'green'
-              });
             }
           } catch (err) {
             notifications.show({
@@ -647,15 +646,22 @@ function Collection() {
               message: 'Failed to update value',
               color: 'red'
             });
+            // Revert local value on error
+            setLocalValue(record.customValues?.[column.id] || '');
           }
-        }, 500);  // 500ms debounce
+        }, 1000);  // 1 second debounce
+
+        const handleChange = (value: string) => {
+          setLocalValue(value);  // Update UI immediately
+          debouncedUpdate(value);  // Debounce the API call
+        };
 
         if (column.type === 'select' && column.options) {
           return (
             <Select
               size="xs"
-              value={value}
-              onChange={(newValue) => debouncedUpdate(newValue || '')}
+              value={localValue}
+              onChange={(newValue) => handleChange(newValue || '')}
               data={column.options.map(opt => ({
                 value: opt,
                 label: opt
@@ -671,8 +677,8 @@ function Collection() {
             <TextInput
               size="xs"
               type="number"
-              value={value}
-              onChange={(e) => debouncedUpdate(e.target.value)}
+              value={localValue}
+              onChange={(e) => handleChange(e.target.value)}
               styles={{ input: { minHeight: 'unset' } }}
             />
           );
@@ -681,8 +687,8 @@ function Collection() {
         return (
           <TextInput
             size="xs"
-            value={value}
-            onChange={(e) => debouncedUpdate(e.target.value)}
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
             styles={{ input: { minHeight: 'unset' } }}
           />
         );
