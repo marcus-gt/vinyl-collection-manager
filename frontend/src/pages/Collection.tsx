@@ -606,7 +606,7 @@ function Collection() {
       accessor: `custom_${column.id}` as keyof VinylRecord,
       title: column.name,
       sortable: true,
-      width: column.type === 'multi-select' ? 300 : 150,  // Double width for multi-select
+      width: ['multi-select', 'text'].includes(column.type) ? 300 : 150,  // Use wider width for both multi-select and text
       render: (record: VinylRecord) => {
         const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
         
