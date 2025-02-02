@@ -996,7 +996,7 @@ function Collection() {
                     }}
                   >
                     <Group gap={4} wrap="nowrap">
-                      {(values || []).map((value: string) => (
+                      {(customValues[column.id]?.split(',').filter(Boolean) || []).map((value: string) => (
                         <Chip
                           key={value}
                           checked={false}
