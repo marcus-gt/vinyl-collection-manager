@@ -308,8 +308,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               <Table.Tr>
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Type</Table.Th>
-                <Table.Th>Options</Table.Th>
-                <Table.Th>Default Value</Table.Th>
                 <Table.Th style={{ width: 100 }}>Actions</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -318,32 +316,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 <Table.Tr key={column.id}>
                   <Table.Td>{column.name}</Table.Td>
                   <Table.Td style={{ textTransform: 'capitalize' }}>{column.type}</Table.Td>
-                  <Table.Td>
-                    {(column.type === 'single-select' || column.type === 'multi-select') && (
-                      <Popover width={400} position="bottom-start" withArrow shadow="md">
-                        <Popover.Target>
-                          <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
-                            {column.options?.join(', ') || '-'}
-                          </Text>
-                        </Popover.Target>
-                        <Popover.Dropdown>
-                          <Group gap="xs">
-                            {column.options?.map((opt) => (
-                              <Chip
-                                key={opt}
-                                checked={false}
-                                variant="filled"
-                                size="xs"
-                              >
-                                {opt}
-                              </Chip>
-                            ))}
-                          </Group>
-                        </Popover.Dropdown>
-                      </Popover>
-                    )}
-                  </Table.Td>
-                  <Table.Td>{column.defaultValue || '-'}</Table.Td>
                   <Table.Td>
                     <Group gap="xs">
                       <ActionIcon
@@ -367,7 +339,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               ))}
               {columns.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={5} style={{ textAlign: 'center' }}>
+                  <Table.Td colSpan={3} style={{ textAlign: 'center' }}>
                     <Text c="dimmed" size="sm">No custom columns yet</Text>
                   </Table.Td>
                 </Table.Tr>
