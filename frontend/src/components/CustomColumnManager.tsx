@@ -10,11 +10,6 @@ interface CustomColumnManagerProps {
   onClose: () => void;
 }
 
-interface CustomColumnValue {
-  record_id: string;
-  value: string;
-}
-
 export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProps) {
   const [columns, setColumns] = useState<CustomColumn[]>([]);
   const [loading, setLoading] = useState(false);
