@@ -257,6 +257,8 @@ export const customColumns = {
   update: async (id: string, data: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
     try {
       console.log('API: Starting column update:', { id, data });
+      console.log('API: Request payload:', JSON.stringify(data, null, 2));
+      
       const response = await fetch(`/api/custom-columns/${id}`, {
         method: 'PUT',
         credentials: 'include',
@@ -265,8 +267,12 @@ export const customColumns = {
         },
         body: JSON.stringify(data)
       });
+      
       console.log('API: Raw response:', response);
-      const responseData = await response.json();
+      const responseText = await response.text();
+      console.log('API: Raw response body:', responseText);
+      
+      const responseData = JSON.parse(responseText);
       console.log('API: Parsed response data:', responseData);
       return responseData;
     } catch (err) {
