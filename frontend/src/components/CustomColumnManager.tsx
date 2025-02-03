@@ -373,35 +373,20 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                         <Group key={opt} gap={4} wrap="nowrap">
                           <Menu shadow="md" width={200} position="bottom-start">
                             <Menu.Target>
-                              <Group gap={4} wrap="nowrap" style={{ cursor: 'pointer' }}>
-                                <Chip
-                                  checked={false}
-                                  variant="filled"
-                                  size="sm"
-                                  color={optionColors[opt] || PILL_COLORS.default}
-                                >
-                                  <Group gap={4} wrap="nowrap">
-                                    {opt}
-                                    <ActionIcon 
-                                      size="xs" 
-                                      variant="subtle"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <IconPalette size={12} />
-                                    </ActionIcon>
-                                  </Group>
-                                </Chip>
-                                <ActionIcon 
-                                  size="xs" 
-                                  variant="transparent" 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveOption(opt);
-                                  }}
-                                >
-                                  <IconX size={12} />
-                                </ActionIcon>
-                              </Group>
+                              <Chip
+                                checked={false}
+                                variant="filled"
+                                size="sm"
+                                color={optionColors[opt] || PILL_COLORS.default}
+                                styles={{
+                                  label: {
+                                    cursor: 'pointer',
+                                    paddingRight: 25 // Make room for the X button
+                                  }
+                                }}
+                              >
+                                {opt}
+                              </Chip>
                             </Menu.Target>
                             <Menu.Dropdown>
                               <Menu.Label>Select Color</Menu.Label>
@@ -419,6 +404,18 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                               </Group>
                             </Menu.Dropdown>
                           </Menu>
+                          <ActionIcon 
+                            size="xs" 
+                            variant="subtle"
+                            onClick={() => handleRemoveOption(opt)}
+                            style={{
+                              position: 'relative',
+                              right: 25,
+                              zIndex: 2
+                            }}
+                          >
+                            <IconX size={12} />
+                          </ActionIcon>
                         </Group>
                       ))}
                     </Group>
