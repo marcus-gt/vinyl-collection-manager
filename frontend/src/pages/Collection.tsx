@@ -76,6 +76,23 @@ function Collection() {
   useEffect(() => {
     loadRecords();
     loadCustomColumns();
+
+    // Add event listeners for data updates
+    const handleCustomValuesUpdate = () => {
+      loadRecords();
+    };
+
+    const handleTableRefresh = () => {
+      loadRecords();
+    };
+
+    window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
+    window.addEventListener('refresh-table-data', handleTableRefresh);
+
+    return () => {
+      window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
+      window.removeEventListener('refresh-table-data', handleTableRefresh);
+    };
   }, []);
 
   const loadRecords = async () => {

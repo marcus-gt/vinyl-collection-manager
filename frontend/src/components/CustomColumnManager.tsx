@@ -168,6 +168,9 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
         // Wait for all updates to complete
         await Promise.all(updates);
+
+        // Notify parent component to refresh data
+        window.dispatchEvent(new CustomEvent('custom-values-updated'));
       }
 
       // Now remove the option from the column options
@@ -202,7 +205,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           message: 'Option removed and values updated',
           color: 'green'
         });
-        await loadColumns(); // Refresh the columns list
+        
+        // Refresh both the columns and the table data
+        await loadColumns();
+        window.dispatchEvent(new CustomEvent('refresh-table-data'));
       }
     } catch (err) {
       console.error('Failed to remove option:', err);
