@@ -673,6 +673,27 @@ function Collection() {
           debouncedUpdate(value);  // Debounce the API call
         };
 
+        if (column.type === 'boolean') {
+          return (
+            <Box style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <ActionIcon 
+                variant={localValue === 'true' ? 'light' : 'subtle'}
+                color={localValue === 'true' ? 'blue' : 'gray'}
+                size="sm"
+                onClick={() => handleChange(localValue === 'true' ? 'false' : 'true')}
+                style={{ 
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)'
+                }}
+              >
+                {localValue === 'true' ? '✓' : ''}
+              </ActionIcon>
+            </Box>
+          );
+        }
+
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
           const [opened, setOpened] = useState(false);

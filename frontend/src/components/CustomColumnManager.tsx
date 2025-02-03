@@ -285,7 +285,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 { value: 'text', label: 'Text' },
                 { value: 'number', label: 'Number' },
                 { value: 'single-select', label: 'Single Select' },
-                { value: 'multi-select', label: 'Multi Select' }
+                { value: 'multi-select', label: 'Multi Select' },
+                { value: 'boolean', label: 'Checkbox' }
               ]}
               size="sm"
               styles={{
