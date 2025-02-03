@@ -156,6 +156,21 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
         console.log('Records to update:', recordsToUpdate);
 
+        // First update the column definition to remove the option
+        const updateColumnResponse = await customColumns.update(editingColumn.id, {
+          name: editingColumn.name || '',
+          type: editingColumn.type || 'text',
+          options: options.filter(opt => opt !== optionToRemove),
+          defaultValue: defaultValue === optionToRemove ? undefined : 
+            type === 'multi-select' ? defaultValue.split(',').filter(v => v !== optionToRemove).join(',') : 
+            defaultValue
+        });
+
+        if (!updateColumnResponse.success) {
+          throw new Error('Failed to update column options');
+        }
+
+        // Then update all records that use this option
         const updates = recordsToUpdate.map(record => {
           if (type === 'multi-select' && record.customValues) {
             // Remove the option from the comma-separated list while preserving other options
@@ -178,46 +193,31 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         const updateResults = await Promise.all(updates);
         console.log('Update results:', updateResults);
 
-        // Notify parent component to refresh data
-        window.dispatchEvent(new CustomEvent('custom-values-updated'));
-      }
-
-      // Now remove the option from the column options
-      const updatedOptions = options.filter(opt => opt !== optionToRemove);
-      setOptions(updatedOptions);
-      
-      // If this was the default value, clear it
-      if (defaultValue === optionToRemove) {
-        setDefaultValue('');
-      } else if (type === 'multi-select' && defaultValue) {
-        // For multi-select, remove the option from the default value if it exists
-        const defaultValues = defaultValue.split(',').filter(Boolean);
-        if (defaultValues.includes(optionToRemove)) {
-          const newDefaultValues = defaultValues.filter(v => v !== optionToRemove);
-          setDefaultValue(newDefaultValues.join(','));
+        // Update local state
+        const updatedOptions = options.filter(opt => opt !== optionToRemove);
+        setOptions(updatedOptions);
+        
+        // If this was the default value, clear it
+        if (defaultValue === optionToRemove) {
+          setDefaultValue('');
+        } else if (type === 'multi-select' && defaultValue) {
+          // For multi-select, remove the option from the default value if it exists
+          const defaultValues = defaultValue.split(',').filter(Boolean);
+          if (defaultValues.includes(optionToRemove)) {
+            const newDefaultValues = defaultValues.filter(v => v !== optionToRemove);
+            setDefaultValue(newDefaultValues.join(','));
+          }
         }
-      }
 
-      // Update the column definition
-      const updateResponse = await customColumns.update(editingColumn.id, {
-        name: editingColumn.name || '',
-        type: editingColumn.type || 'text',
-        options: updatedOptions,
-        defaultValue: defaultValue === optionToRemove ? undefined : 
-          type === 'multi-select' ? defaultValue.split(',').filter(v => v !== optionToRemove).join(',') : 
-          defaultValue
-      });
-      
-      if (updateResponse.success) {
+        // Refresh the data
+        await loadColumns();
+        window.dispatchEvent(new CustomEvent('refresh-table-data'));
+
         notifications.show({
           title: 'Success',
           message: 'Option removed and values updated',
           color: 'green'
         });
-        
-        // Refresh both the columns and the table data
-        await loadColumns();
-        window.dispatchEvent(new CustomEvent('refresh-table-data'));
       }
     } catch (err) {
       console.error('Failed to remove option:', err);
