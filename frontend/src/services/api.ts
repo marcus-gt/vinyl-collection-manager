@@ -230,8 +230,7 @@ export const customColumns = {
           [columnId]: value
         })
       });
-      const data = await response.json();
-      return data;
+      return handleApiResponse(response);
     } catch (err) {
       console.error('Failed to update custom column value:', err);
       return { success: false, error: 'Failed to update custom column value' };
@@ -257,7 +256,7 @@ export const customColumns = {
 
   update: async (id: string, data: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
     try {
-      console.log('Updating column with data:', data);
+      console.log('API: Starting column update:', { id, data });
       const response = await fetch(`/api/custom-columns/${id}`, {
         method: 'PUT',
         credentials: 'include',
@@ -266,11 +265,12 @@ export const customColumns = {
         },
         body: JSON.stringify(data)
       });
+      console.log('API: Raw response:', response);
       const responseData = await response.json();
-      console.log('Update response:', responseData);
+      console.log('API: Parsed response data:', responseData);
       return responseData;
     } catch (err) {
-      console.error('Failed to update custom column:', err);
+      console.error('API: Failed to update custom column:', err);
       return { success: false, error: 'Failed to update custom column' };
     }
   },

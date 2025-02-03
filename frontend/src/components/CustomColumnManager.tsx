@@ -155,13 +155,15 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   };
 
   const handleSetOptionColor = async (option: string, color: PillColor) => {
-    console.log('Setting color:', { option, color, before: optionColors });
+    console.log('Starting color update:', { option, color, before: optionColors });
     
     // Create the updated colors object
     const updatedColors = {
       ...optionColors,
       [option]: color
     };
+    
+    console.log('Updated colors object:', updatedColors);
     
     // Update local state first
     setOptionColors(updatedColors);
@@ -175,9 +177,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           throw new Error('Column not found');
         }
 
+        console.log('Current column data:', currentColumn);
+
         // Prepare the complete update data
         const updateData = {
-          ...currentColumn,
           name: currentColumn.name,
           type: currentColumn.type,
           options: currentColumn.options,
@@ -186,8 +189,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         };
 
         console.log('Sending update with data:', updateData);
+        
+        // Make the API call
         const response = await customColumns.update(editingColumn.id, updateData);
-        console.log('Update response:', response);
+        console.log('API response:', response);
 
         if (response.success) {
           notifications.show({
@@ -195,9 +200,11 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Color updated successfully',
             color: 'green'
           });
-          // Refresh the columns to ensure we have the latest data
+          console.log('Reloading columns...');
           await loadColumns();
+          console.log('Columns reloaded');
         } else {
+          console.error('Update failed:', response.error);
           // If the update failed, revert the local state
           setOptionColors(optionColors);
           notifications.show({
@@ -207,15 +214,17 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           });
         }
       } catch (err) {
+        console.error('Error during color update:', err);
         // If there was an error, revert the local state
         setOptionColors(optionColors);
-        console.error('Failed to update column colors:', err);
         notifications.show({
           title: 'Error',
           message: 'Failed to update color: ' + (err instanceof Error ? err.message : 'Unknown error'),
           color: 'red'
         });
       }
+    } else {
+      console.log('No column being edited, only updating local state');
     }
   };
 
