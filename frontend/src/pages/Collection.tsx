@@ -660,9 +660,9 @@ function Collection() {
           const values = localValue ? localValue.split(',') : [];
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md" closeOnClickOutside={false}>
+              <Popover width={400} position="bottom" withArrow shadow="md" closeOnClickOutside={false}>
                 <Popover.Target>
-                  <Box style={{ cursor: 'pointer', width: '100%', height: '100%' }}>
+                  <Box style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
@@ -709,6 +709,9 @@ function Collection() {
                       styles={{
                         input: {
                           minHeight: '36px'
+                        },
+                        dropdown: {
+                          maxWidth: '90vw'
                         }
                       }}
                     />
@@ -722,9 +725,9 @@ function Collection() {
         if (column.type === 'single-select' && column.options) {
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md">
+              <Popover width={400} position="bottom" withArrow shadow="md">
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }}>
                     {localValue || '-'}
                   </Text>
                 </Popover.Target>
@@ -744,6 +747,9 @@ function Collection() {
                       styles={{
                         input: {
                           minHeight: '36px'
+                        },
+                        dropdown: {
+                          maxWidth: '90vw'
                         }
                       }}
                     />
@@ -757,9 +763,9 @@ function Collection() {
         if (column.type === 'number') {
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md">
+              <Popover width={400} position="bottom" withArrow shadow="md">
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }}>
                     {localValue || '-'}
                   </Text>
                 </Popover.Target>
@@ -775,6 +781,9 @@ function Collection() {
                       styles={{
                         input: {
                           minHeight: '36px'
+                        },
+                        root: {
+                          maxWidth: '90vw'
                         }
                       }}
                     />
@@ -788,9 +797,9 @@ function Collection() {
         // Default text input
         return (
           <Box style={{ position: 'relative' }}>
-            <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md">
+            <Popover width={400} position="bottom" withArrow shadow="md">
               <Popover.Target>
-                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }}>
                   {localValue || '-'}
                 </Text>
               </Popover.Target>
@@ -805,6 +814,9 @@ function Collection() {
                     styles={{
                       input: {
                         minHeight: '36px'
+                      },
+                      root: {
+                        maxWidth: '90vw'
                       }
                     }}
                   />
