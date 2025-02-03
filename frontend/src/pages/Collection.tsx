@@ -656,38 +656,11 @@ function Collection() {
           debouncedUpdate(value);  // Debounce the API call
         };
 
-        if (column.type === 'single-select' && column.options) {
-          return (
-            <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom-start" withArrow shadow="md">
-                <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
-                    {localValue || '-'}
-                  </Text>
-                </Popover.Target>
-                <Popover.Dropdown>
-                  <Select
-                    size="xs"
-                    value={localValue}
-                    onChange={(newValue) => handleChange(newValue || '')}
-                    data={column.options.map(opt => ({
-                      value: opt,
-                      label: opt
-                    }))}
-                    clearable
-                    searchable
-                  />
-                </Popover.Dropdown>
-              </Popover>
-            </Box>
-          );
-        }
-        
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom-start" withArrow shadow="md" closeOnClickOutside={false}>
+              <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md" closeOnClickOutside={false}>
                 <Popover.Target>
                   <Box style={{ cursor: 'pointer', width: '100%', height: '100%' }}>
                     {values.length === 0 ? (
@@ -704,7 +677,7 @@ function Collection() {
                               root: {
                                 height: '22px',
                                 cursor: 'pointer',
-                                pointerEvents: 'none'  // Make chips non-interactive
+                                pointerEvents: 'none'
                               },
                               label: {
                                 padding: '2px 6px',
@@ -723,7 +696,7 @@ function Collection() {
                   <Stack gap="xs">
                     <Text size="sm" fw={500}>Edit {column.name}</Text>
                     <MultiSelect
-                      size="xs"
+                      size="sm"
                       value={values}
                       onChange={(newValues) => handleChange(newValues.join(','))}
                       data={column.options.map(opt => ({
@@ -733,6 +706,46 @@ function Collection() {
                       clearable
                       searchable
                       placeholder="Select options..."
+                      styles={{
+                        input: {
+                          minHeight: '36px'
+                        }
+                      }}
+                    />
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            </Box>
+          );
+        }
+        
+        if (column.type === 'single-select' && column.options) {
+          return (
+            <Box style={{ position: 'relative' }}>
+              <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md">
+                <Popover.Target>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
+                    {localValue || '-'}
+                  </Text>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <Select
+                      size="sm"
+                      value={localValue}
+                      onChange={(newValue) => handleChange(newValue || '')}
+                      data={column.options.map(opt => ({
+                        value: opt,
+                        label: opt
+                      }))}
+                      clearable
+                      searchable
+                      styles={{
+                        input: {
+                          minHeight: '36px'
+                        }
+                      }}
                     />
                   </Stack>
                 </Popover.Dropdown>
@@ -744,7 +757,7 @@ function Collection() {
         if (column.type === 'number') {
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom-start" withArrow shadow="md">
+              <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md">
                 <Popover.Target>
                   <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
                     {localValue || '-'}
@@ -754,11 +767,16 @@ function Collection() {
                   <Stack gap="xs">
                     <Text size="sm" fw={500}>Edit {column.name}</Text>
                     <TextInput
-                      size="xs"
+                      size="sm"
                       type="number"
                       value={localValue}
                       onChange={(e) => handleChange(e.target.value)}
                       placeholder={`Enter ${column.name.toLowerCase()}`}
+                      styles={{
+                        input: {
+                          minHeight: '36px'
+                        }
+                      }}
                     />
                   </Stack>
                 </Popover.Dropdown>
@@ -770,7 +788,7 @@ function Collection() {
         // Default text input
         return (
           <Box style={{ position: 'relative' }}>
-            <Popover width={400} position="bottom-start" withArrow shadow="md">
+            <Popover width={{ base: '90vw', sm: 400 }} position={{ base: 'bottom', sm: 'bottom-start' }} withArrow shadow="md">
               <Popover.Target>
                 <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }}>
                   {localValue || '-'}
@@ -780,10 +798,15 @@ function Collection() {
                 <Stack gap="xs">
                   <Text size="sm" fw={500}>Edit {column.name}</Text>
                   <TextInput
-                    size="xs"
+                    size="sm"
                     value={localValue}
                     onChange={(e) => handleChange(e.target.value)}
                     placeholder={`Enter ${column.name.toLowerCase()}`}
+                    styles={{
+                      input: {
+                        minHeight: '36px'
+                      }
+                    }}
                   />
                 </Stack>
               </Popover.Dropdown>

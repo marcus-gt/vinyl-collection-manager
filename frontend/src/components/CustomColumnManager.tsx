@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch } from '@mantine/core';
+import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch, MantineTheme } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
@@ -144,6 +144,19 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
       onClose={onClose}
       title="Manage Custom Columns"
       size="lg"
+      fullScreen
+      styles={{
+        inner: {
+          '@media (max-width: 48em)': {
+            padding: 0
+          }
+        },
+        body: {
+          '@media (max-width: 48em)': {
+            padding: '0.5rem'
+          }
+        }
+      }}
     >
       <Stack>
         <Box mb="md">
@@ -154,13 +167,18 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               placeholder="e.g., Rating, Comments, Location"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              size="sm"
+              styles={{
+                input: {
+                  minHeight: '36px'
+                }
+              }}
             />
             <Select
               label="Column Type"
               value={type}
               onChange={(value) => {
                 setType(value as CustomColumnType);
-                // Clear options and default value when changing type
                 setOptions([]);
                 setDefaultValue('');
               }}
@@ -170,6 +188,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 { value: 'single-select', label: 'Single Select' },
                 { value: 'multi-select', label: 'Multi Select' }
               ]}
+              size="sm"
+              styles={{
+                input: {
+                  minHeight: '36px'
+                }
+              }}
             />
             {(type === 'single-select' || type === 'multi-select') && (
               <>
@@ -182,6 +206,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       handleAddOption();
+                    }
+                  }}
+                  size="sm"
+                  styles={{
+                    input: {
+                      minHeight: '36px'
                     }
                   }}
                   rightSection={
@@ -212,7 +242,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                           key={opt}
                           checked={false}
                           variant="filled"
-                          size="xs"
+                          size="sm"
                         >
                           <Group gap={4} wrap="nowrap">
                             {opt}
@@ -238,6 +268,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 placeholder="Optional default value for new records"
                 value={defaultValue}
                 onChange={(e) => setDefaultValue(e.target.value)}
+                size="sm"
+                styles={{
+                  input: {
+                    minHeight: '36px'
+                  }
+                }}
               />
             )}
             {type === 'number' && (
@@ -247,6 +283,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 value={defaultValue}
                 onChange={(e) => setDefaultValue(e.target.value)}
                 type="number"
+                size="sm"
+                styles={{
+                  input: {
+                    minHeight: '36px'
+                  }
+                }}
               />
             )}
             {type === 'single-select' && options.length > 0 && (
@@ -257,6 +299,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 onChange={(value) => setDefaultValue(value || '')}
                 data={options.map(opt => ({ value: opt, label: opt }))}
                 clearable
+                size="sm"
+                styles={{
+                  input: {
+                    minHeight: '36px'
+                  }
+                }}
               />
             )}
             {type === 'multi-select' && options.length > 0 && (
@@ -267,6 +315,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 onChange={(values) => setDefaultValue(values.join(','))}
                 data={options.map(opt => ({ value: opt, label: opt }))}
                 clearable
+                size="sm"
+                styles={{
+                  input: {
+                    minHeight: '36px'
+                  }
+                }}
               />
             )}
             {/* Apply to all switch */}
@@ -275,15 +329,16 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 label="Apply default value to all existing records"
                 checked={applyToAll}
                 onChange={(e) => setApplyToAll(e.currentTarget.checked)}
+                size="sm"
               />
             )}
             <Group justify="flex-end">
               {editingColumn && (
-                <Button variant="light" onClick={resetForm}>
+                <Button variant="light" onClick={resetForm} size="sm">
                   Cancel
                 </Button>
               )}
-              <Button onClick={handleSubmit} loading={loading}>
+              <Button onClick={handleSubmit} loading={loading} size="sm">
                 {editingColumn ? 'Update Column' : 'Add Column'}
               </Button>
             </Group>
@@ -294,6 +349,9 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           <Text size="sm" fw={500} mb="xs">Existing Columns</Text>
           <Table
             styles={{
+              table: {
+                overflowX: 'auto'
+              },
               td: {
                 height: '40px',
                 maxHeight: '40px',
