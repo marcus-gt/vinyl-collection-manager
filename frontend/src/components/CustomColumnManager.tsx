@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
-import { customColumns, customValues } from '../services/api';
+import { customColumns, customValues, records } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
 import { notifications } from '@mantine/notifications';
 
@@ -140,38 +140,40 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     if (!editingColumn?.id) return;
 
     try {
-      // First, get all records that have this column value
-      const valuesResponse = await customColumns.getAllValues(editingColumn.id);
-      console.log('Values response:', valuesResponse);
+      // Get all records to find ones that use this option
+      const recordsResponse = await records.getAll();
+      console.log('Records response:', recordsResponse);
       
-      if (valuesResponse.success && valuesResponse.data) {
-        // For each record that has this value
-        const recordsToUpdate = valuesResponse.data
-          .filter((value: CustomColumnValue) => {
-            if (type === 'single-select') {
-              return value.value === optionToRemove;
-            } else if (type === 'multi-select') {
-              const values = value.value.split(',').filter(Boolean);
-              return values.includes(optionToRemove);
-            }
-            return false;
-          });
+      if (recordsResponse.success && recordsResponse.data) {
+        // Filter records that have this value
+        const recordsToUpdate = recordsResponse.data.filter(record => {
+          const value = record.customValues?.[editingColumn.id!];
+          if (!value) return false;
+
+          if (type === 'single-select') {
+            return value === optionToRemove;
+          } else if (type === 'multi-select') {
+            const values = value.split(',').filter(Boolean);
+            return values.includes(optionToRemove);
+          }
+          return false;
+        });
 
         console.log('Records to update:', recordsToUpdate);
 
-        const updates = recordsToUpdate.map((value: CustomColumnValue) => {
-          if (type === 'multi-select') {
+        const updates = recordsToUpdate.map(record => {
+          if (type === 'multi-select' && record.customValues) {
             // Remove the option from the comma-separated list while preserving other options
-            const values = value.value.split(',').filter(Boolean);
+            const values = record.customValues[editingColumn.id!].split(',').filter(Boolean);
             const newValues = values.filter(v => v !== optionToRemove);
-            console.log(`Updating record ${value.record_id} from values [${values.join(',')}] to [${newValues.join(',')}]`);
-            return customValues.update(value.record_id, {
+            console.log(`Updating record ${record.id} from values [${values.join(',')}] to [${newValues.join(',')}]`);
+            return customValues.update(record.id!, {
               [editingColumn.id!]: newValues.join(',')
             });
           } else {
             // For single-select, just clear the value
-            console.log(`Clearing value for record ${value.record_id} (was: ${value.value})`);
-            return customValues.update(value.record_id, {
+            console.log(`Clearing value for record ${record.id}`);
+            return customValues.update(record.id!, {
               [editingColumn.id!]: ''
             });
           }
