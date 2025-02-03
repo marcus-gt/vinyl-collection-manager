@@ -72,7 +72,6 @@ function Collection() {
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
-  const [activePopover, setActivePopover] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -676,7 +675,6 @@ function Collection() {
 
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
-          const popoverId = `${record.id}-${column.id}`;
           const [opened, setOpened] = useState(false);
           
           const handleKeyDown = (e: React.KeyboardEvent) => {
