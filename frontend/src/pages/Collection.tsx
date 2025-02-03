@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
-import { IconTrash, IconExternalLink, IconNotes, IconDownload } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -658,11 +658,22 @@ function Collection() {
 
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
+          const [opened, setOpened] = useState(false);
+          
+          const handleKeyDown = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter') {
+              setOpened(false);
+            }
+            if (e.key === 'Escape') {
+              setOpened(false);
+            }
+          };
+
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom" withArrow shadow="md" closeOnClickOutside={false}>
+              <Popover width={400} position="bottom" withArrow shadow="md" closeOnClickOutside={false} opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Box style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }}>
+                  <Box style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
@@ -694,11 +705,18 @@ function Collection() {
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
-                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <Group justify="space-between" align="center">
+                      <Text size="sm" fw={500}>Edit {column.name}</Text>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Group>
                     <MultiSelect
                       size="sm"
                       value={values}
-                      onChange={(newValues) => handleChange(newValues.join(','))}
+                      onChange={(newValues) => {
+                        handleChange(newValues.join(','));
+                      }}
                       data={column.options.map(opt => ({
                         value: opt,
                         label: opt
@@ -714,6 +732,7 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
+                      onKeyDown={handleKeyDown}
                     />
                   </Stack>
                 </Popover.Dropdown>
@@ -723,21 +742,40 @@ function Collection() {
         }
         
         if (column.type === 'single-select' && column.options) {
+          const [opened, setOpened] = useState(false);
+          
+          const handleKeyDown = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter') {
+              setOpened(false);
+            }
+            if (e.key === 'Escape') {
+              setOpened(false);
+            }
+          };
+
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom" withArrow shadow="md">
+              <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }}>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
                     {localValue || '-'}
                   </Text>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
-                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <Group justify="space-between" align="center">
+                      <Text size="sm" fw={500}>Edit {column.name}</Text>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Group>
                     <Select
                       size="sm"
                       value={localValue}
-                      onChange={(newValue) => handleChange(newValue || '')}
+                      onChange={(newValue) => {
+                        handleChange(newValue || '');
+                        setOpened(false);
+                      }}
                       data={column.options.map(opt => ({
                         value: opt,
                         label: opt
@@ -752,6 +790,7 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
+                      onKeyDown={handleKeyDown}
                     />
                   </Stack>
                 </Popover.Dropdown>
@@ -761,17 +800,33 @@ function Collection() {
         }
         
         if (column.type === 'number') {
+          const [opened, setOpened] = useState(false);
+          
+          const handleKeyDown = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter') {
+              setOpened(false);
+            }
+            if (e.key === 'Escape') {
+              setOpened(false);
+            }
+          };
+
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom" withArrow shadow="md">
+              <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }}>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
                     {localValue || '-'}
                   </Text>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
-                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <Group justify="space-between" align="center">
+                      <Text size="sm" fw={500}>Edit {column.name}</Text>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Group>
                     <TextInput
                       size="sm"
                       type="number"
@@ -786,6 +841,7 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
+                      onKeyDown={handleKeyDown}
                     />
                   </Stack>
                 </Popover.Dropdown>
@@ -795,17 +851,33 @@ function Collection() {
         }
         
         // Default text input
+        const [opened, setOpened] = useState(false);
+        
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            setOpened(false);
+          }
+          if (e.key === 'Escape') {
+            setOpened(false);
+          }
+        };
+
         return (
           <Box style={{ position: 'relative' }}>
-            <Popover width={400} position="bottom" withArrow shadow="md">
+            <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
               <Popover.Target>
-                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }}>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
                   {localValue || '-'}
                 </Text>
               </Popover.Target>
               <Popover.Dropdown>
                 <Stack gap="xs">
-                  <Text size="sm" fw={500}>Edit {column.name}</Text>
+                  <Group justify="space-between" align="center">
+                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                      <IconX size={16} />
+                    </ActionIcon>
+                  </Group>
                   <TextInput
                     size="sm"
                     value={localValue}
@@ -819,6 +891,7 @@ function Collection() {
                         maxWidth: '90vw'
                       }
                     }}
+                    onKeyDown={handleKeyDown}
                   />
                 </Stack>
               </Popover.Dropdown>
