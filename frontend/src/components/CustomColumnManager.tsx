@@ -3,10 +3,16 @@ import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
+import { notifications } from '@mantine/notifications';
 
 interface CustomColumnManagerProps {
   opened: boolean;
   onClose: () => void;
+}
+
+interface CustomColumnValue {
+  record_id: string;
+  value: string;
 }
 
 export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProps) {
@@ -130,11 +136,71 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     }
   };
 
-  const handleRemoveOption = (optionToRemove: string) => {
-    setOptions(options.filter(opt => opt !== optionToRemove));
-    // If the removed option was the default value, clear it
-    if (defaultValue === optionToRemove) {
-      setDefaultValue('');
+  const handleRemoveOption = async (optionToRemove: string) => {
+    if (!editingColumn?.id) return;
+
+    // First, get all records that have this column value
+    try {
+      const response = await customColumns.getAllValues(editingColumn.id);
+      if (response.success && response.data) {
+        // For each record that has this value
+        const updates = response.data
+          .filter((value: CustomColumnValue) => {
+            if (type === 'single-select') {
+              return value.value === optionToRemove;
+            } else if (type === 'multi-select') {
+              const values = value.value.split(',');
+              return values.includes(optionToRemove);
+            }
+            return false;
+          })
+          .map((value: CustomColumnValue) => {
+            let newValue = '';
+            if (type === 'multi-select') {
+              // Remove the option from the comma-separated list
+              const values = value.value.split(',');
+              newValue = values.filter((v: string) => v !== optionToRemove).join(',');
+            }
+            // For single-select, we just set it to empty string
+            return customColumns.updateValue(value.record_id, editingColumn.id, newValue);
+          });
+
+        // Wait for all updates to complete
+        await Promise.all(updates);
+      }
+
+      // Now remove the option from the column options
+      const updatedOptions = options.filter(opt => opt !== optionToRemove);
+      setOptions(updatedOptions);
+      
+      // If this was the default value, clear it
+      if (defaultValue === optionToRemove) {
+        setDefaultValue('');
+      }
+
+      // Update the column definition
+      const response = await customColumns.update(editingColumn.id, {
+        name: editingColumn.name,
+        type: editingColumn.type,
+        options: updatedOptions,
+        defaultValue: defaultValue === optionToRemove ? '' : defaultValue || undefined
+      });
+      
+      if (response.success) {
+        notifications.show({
+          title: 'Success',
+          message: 'Option removed and values updated',
+          color: 'green'
+        });
+        await loadColumns(); // Refresh the columns list
+      }
+    } catch (err) {
+      console.error('Failed to remove option:', err);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to remove option',
+        color: 'red'
+      });
     }
   };
 

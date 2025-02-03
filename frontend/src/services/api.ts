@@ -139,23 +139,101 @@ export const lookup = {
 
 export const customColumns = {
   getAll: async (): Promise<ApiResponse<CustomColumn[]>> => {
-    const response = await api.get<ApiResponse<CustomColumn[]>>('/api/custom-columns');
-    return response.data;
+    try {
+      const response = await fetch('/api/custom-columns', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Failed to get custom columns:', err);
+      return { success: false, error: 'Failed to get custom columns' };
+    }
+  },
+
+  getAllValues: async (columnId: string): Promise<ApiResponse<Array<{ record_id: string; value: string }>>> => {
+    try {
+      const response = await fetch(`/api/custom-columns/${columnId}/values`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Failed to get custom column values:', err);
+      return { success: false, error: 'Failed to get custom column values' };
+    }
+  },
+
+  updateValue: async (recordId: string, columnId: string, value: string): Promise<ApiResponse<void>> => {
+    try {
+      const response = await fetch(`/api/records/${recordId}/custom-values`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          [columnId]: value
+        })
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Failed to update custom column value:', err);
+      return { success: false, error: 'Failed to update custom column value' };
+    }
   },
 
   create: async (column: Omit<CustomColumn, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<CustomColumn>> => {
-    const response = await api.post<ApiResponse<CustomColumn>>('/api/custom-columns', column);
-    return response.data;
+    try {
+      const response = await fetch('/api/custom-columns', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(column)
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Failed to create custom column:', err);
+      return { success: false, error: 'Failed to create custom column' };
+    }
   },
 
-  update: async (id: string, column: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
-    const response = await api.put<ApiResponse<CustomColumn>>(`/api/custom-columns/${id}`, column);
-    return response.data;
+  update: async (id: string, column: Partial<Omit<CustomColumn, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<ApiResponse<CustomColumn>> => {
+    try {
+      const response = await fetch(`/api/custom-columns/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(column)
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Failed to update custom column:', err);
+      return { success: false, error: 'Failed to update custom column' };
+    }
   },
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
-    const response = await api.delete<ApiResponse<void>>(`/api/custom-columns/${id}`);
-    return response.data;
+    try {
+      const response = await fetch(`/api/custom-columns/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error('Failed to delete custom column:', err);
+      return { success: false, error: 'Failed to delete custom column' };
+    }
   }
 };
 
