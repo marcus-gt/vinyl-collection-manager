@@ -373,35 +373,35 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                         <Group key={opt} gap={4} wrap="nowrap">
                           <Menu shadow="md" width={200} position="bottom-start">
                             <Menu.Target>
-                              <Chip
-                                checked={false}
-                                variant="filled"
-                                size="sm"
-                                color={optionColors[opt] || PILL_COLORS.default}
-                                rightSection={
-                                  <ActionIcon 
-                                    size="xs" 
-                                    variant="transparent" 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveOption(opt);
-                                    }}
-                                  >
-                                    <IconX size={12} />
-                                  </ActionIcon>
-                                }
-                              >
-                                <Group gap={4} wrap="nowrap">
-                                  {opt}
-                                  <ActionIcon 
-                                    size="xs" 
-                                    variant="subtle"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <IconPalette size={12} />
-                                  </ActionIcon>
-                                </Group>
-                              </Chip>
+                              <Group gap={4} wrap="nowrap" style={{ cursor: 'pointer' }}>
+                                <Chip
+                                  checked={false}
+                                  variant="filled"
+                                  size="sm"
+                                  color={optionColors[opt] || PILL_COLORS.default}
+                                >
+                                  <Group gap={4} wrap="nowrap">
+                                    {opt}
+                                    <ActionIcon 
+                                      size="xs" 
+                                      variant="subtle"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <IconPalette size={12} />
+                                    </ActionIcon>
+                                  </Group>
+                                </Chip>
+                                <ActionIcon 
+                                  size="xs" 
+                                  variant="transparent" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveOption(opt);
+                                  }}
+                                >
+                                  <IconX size={12} />
+                                </ActionIcon>
+                              </Group>
                             </Menu.Target>
                             <Menu.Dropdown>
                               <Menu.Label>Select Color</Menu.Label>
