@@ -371,7 +371,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                     <Group gap="xs">
                       {options.map((opt) => (
                         <Group key={opt} gap={4} wrap="nowrap">
-                          <Menu shadow="md" width={200} position="bottom-start">
+                          <Menu shadow="md" width={200} position="bottom-start" closeOnItemClick>
                             <Menu.Target>
                               <Chip
                                 checked={false}
@@ -392,14 +392,18 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                               <Menu.Label>Select Color</Menu.Label>
                               <Group gap="xs" p="xs">
                                 {PILL_COLORS.colors.map((color) => (
-                                  <ColorSwatch
+                                  <Menu.Item 
                                     key={color}
-                                    component="button"
-                                    color={color}
                                     onClick={() => handleSetOptionColor(opt, color)}
-                                    style={{ cursor: 'pointer' }}
-                                    size={24}
-                                  />
+                                    p={0}
+                                    style={{ border: 'none', background: 'none' }}
+                                  >
+                                    <ColorSwatch
+                                      color={color}
+                                      style={{ cursor: 'pointer' }}
+                                      size={24}
+                                    />
+                                  </Menu.Item>
                                 ))}
                               </Group>
                             </Menu.Dropdown>
