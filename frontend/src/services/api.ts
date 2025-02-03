@@ -154,7 +154,7 @@ export const customColumns = {
 
   getAllValues: async (columnId: string): Promise<ApiResponse<Array<{ record_id: string; value: string }>>> => {
     try {
-      const response = await fetch(`/api/custom-values/${columnId}`, {
+      const response = await fetch(`/api/custom-columns/${columnId}/all-values`, {
         method: 'GET',
         credentials: 'include'
       });
