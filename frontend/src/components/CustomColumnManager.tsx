@@ -142,9 +142,11 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     try {
       // First, get all records that have this column value
       const valuesResponse = await customColumns.getAllValues(editingColumn.id);
+      console.log('Values response:', valuesResponse);
+      
       if (valuesResponse.success && valuesResponse.data) {
         // For each record that has this value
-        const updates = valuesResponse.data
+        const recordsToUpdate = valuesResponse.data
           .filter((value: CustomColumnValue) => {
             if (type === 'single-select') {
               return value.value === optionToRemove;
@@ -153,25 +155,31 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               return values.includes(optionToRemove);
             }
             return false;
-          })
-          .map((value: CustomColumnValue) => {
-            if (type === 'multi-select') {
-              // Remove the option from the comma-separated list while preserving other options
-              const values = value.value.split(',').filter(Boolean);
-              const newValues = values.filter(v => v !== optionToRemove);
-              return customValues.update(value.record_id, {
-                [editingColumn.id!]: newValues.join(',')
-              });
-            } else {
-              // For single-select, just clear the value
-              return customValues.update(value.record_id, {
-                [editingColumn.id!]: ''
-              });
-            }
           });
 
+        console.log('Records to update:', recordsToUpdate);
+
+        const updates = recordsToUpdate.map((value: CustomColumnValue) => {
+          if (type === 'multi-select') {
+            // Remove the option from the comma-separated list while preserving other options
+            const values = value.value.split(',').filter(Boolean);
+            const newValues = values.filter(v => v !== optionToRemove);
+            console.log(`Updating record ${value.record_id} from values [${values.join(',')}] to [${newValues.join(',')}]`);
+            return customValues.update(value.record_id, {
+              [editingColumn.id!]: newValues.join(',')
+            });
+          } else {
+            // For single-select, just clear the value
+            console.log(`Clearing value for record ${value.record_id} (was: ${value.value})`);
+            return customValues.update(value.record_id, {
+              [editingColumn.id!]: ''
+            });
+          }
+        });
+
         // Wait for all updates to complete
-        await Promise.all(updates);
+        const updateResults = await Promise.all(updates);
+        console.log('Update results:', updateResults);
 
         // Notify parent component to refresh data
         window.dispatchEvent(new CustomEvent('custom-values-updated'));
