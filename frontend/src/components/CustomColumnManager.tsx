@@ -169,13 +169,25 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     // If we're editing an existing column, update it
     if (editingColumn?.id) {
       try {
-        const response = await customColumns.update(editingColumn.id, {
-          name: editingColumn.name || '',
-          type: editingColumn.type || 'text',
-          options,
-          option_colors: updatedColors,  // Use the new colors object
-          defaultValue
-        });
+        // Get the current column data to ensure we have the latest
+        const currentColumn = columns.find(col => col.id === editingColumn.id);
+        if (!currentColumn) {
+          throw new Error('Column not found');
+        }
+
+        // Prepare the complete update data
+        const updateData = {
+          ...currentColumn,
+          name: currentColumn.name,
+          type: currentColumn.type,
+          options: currentColumn.options,
+          option_colors: updatedColors,
+          defaultValue: currentColumn.defaultValue
+        };
+
+        console.log('Sending update with data:', updateData);
+        const response = await customColumns.update(editingColumn.id, updateData);
+        console.log('Update response:', response);
 
         if (response.success) {
           notifications.show({
@@ -190,7 +202,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           setOptionColors(optionColors);
           notifications.show({
             title: 'Error',
-            message: 'Failed to update color',
+            message: 'Failed to update color: ' + (response.error || 'Unknown error'),
             color: 'red'
           });
         }
@@ -200,7 +212,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         console.error('Failed to update column colors:', err);
         notifications.show({
           title: 'Error',
-          message: 'Failed to update color',
+          message: 'Failed to update color: ' + (err instanceof Error ? err.message : 'Unknown error'),
           color: 'red'
         });
       }
