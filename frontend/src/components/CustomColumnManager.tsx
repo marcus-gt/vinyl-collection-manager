@@ -141,10 +141,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
     // First, get all records that have this column value
     try {
-      const response = await customColumns.getAllValues(editingColumn.id);
-      if (response.success && response.data) {
+      const valuesResponse = await customColumns.getAllValues(editingColumn.id);
+      if (valuesResponse.success && valuesResponse.data) {
         // For each record that has this value
-        const updates = response.data
+        const updates = valuesResponse.data
           .filter((value: CustomColumnValue) => {
             if (type === 'single-select') {
               return value.value === optionToRemove;
@@ -162,7 +162,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               newValue = values.filter((v: string) => v !== optionToRemove).join(',');
             }
             // For single-select, we just set it to empty string
-            return customColumns.updateValue(value.record_id, editingColumn.id, newValue);
+            return customColumns.updateValue(value.record_id, editingColumn.id!, newValue);
           });
 
         // Wait for all updates to complete
@@ -179,14 +179,14 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
       }
 
       // Update the column definition
-      const response = await customColumns.update(editingColumn.id, {
-        name: editingColumn.name,
-        type: editingColumn.type,
+      const updateResponse = await customColumns.update(editingColumn.id, {
+        name: editingColumn.name || '',
+        type: editingColumn.type || 'text',
         options: updatedOptions,
-        defaultValue: defaultValue === optionToRemove ? '' : defaultValue || undefined
+        defaultValue: defaultValue === optionToRemove ? undefined : defaultValue
       });
       
-      if (response.success) {
+      if (updateResponse.success) {
         notifications.show({
           title: 'Success',
           message: 'Option removed and values updated',
