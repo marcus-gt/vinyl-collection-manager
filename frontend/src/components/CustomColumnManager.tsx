@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch, Popover } from '@mantine/core';
+import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
