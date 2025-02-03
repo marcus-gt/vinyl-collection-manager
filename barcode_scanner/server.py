@@ -717,10 +717,13 @@ def update_custom_column(column_id):
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'}), 400
         
+        print("Received update data:", data)  # Debug log
+        
         update_data = {
             'name': data.get('name'),
             'type': data.get('type'),
             'options': data.get('options'),
+            'option_colors': data.get('option_colors'),  # Add option_colors
             'default_value': data.get('defaultValue'),
             'apply_to_all': data.get('applyToAll'),
             'updated_at': datetime.utcnow().isoformat()
@@ -728,8 +731,12 @@ def update_custom_column(column_id):
         # Remove None values
         update_data = {k: v for k, v in update_data.items() if v is not None}
         
+        print("Processed update data:", update_data)  # Debug log
+        
         client = get_supabase_client()
         response = client.table('custom_columns').update(update_data).eq('id', column_id).eq('user_id', user_id).execute()
+        
+        print("Supabase response:", response.data)  # Debug log
         
         if not response.data:
             return jsonify({'success': False, 'error': 'Column not found'}), 404
