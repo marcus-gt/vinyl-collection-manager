@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch } from '@mantine/core';
-import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
+import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch, Menu, ColorSwatch } from '@mantine/core';
+import { IconTrash, IconEdit, IconX, IconPalette } from '@tabler/icons-react';
 import { customColumns, customValues, records } from '../services/api';
-import type { CustomColumn, CustomColumnType } from '../types';
+import type { CustomColumn, CustomColumnType, PillColor } from '../types';
 import { notifications } from '@mantine/notifications';
+import { PILL_COLORS } from '../types';
 
 interface CustomColumnManagerProps {
   opened: boolean;
@@ -17,6 +18,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const [name, setName] = useState('');
   const [type, setType] = useState<CustomColumnType>('text');
   const [options, setOptions] = useState<string[]>([]);
+  const [optionColors, setOptionColors] = useState<Record<string, string>>({});
   const [defaultValue, setDefaultValue] = useState('');
   const [applyToAll, setApplyToAll] = useState(false);
   const [currentOption, setCurrentOption] = useState('');
@@ -58,6 +60,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         name,
         type,
         options: (type === 'single-select' || type === 'multi-select') ? options : undefined,
+        option_colors: (type === 'single-select' || type === 'multi-select') ? optionColors : undefined,
         defaultValue: defaultValue || undefined,
         applyToAll
       };
@@ -124,6 +127,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     setName(column.name);
     setType(column.type);
     setOptions(column.options || []);
+    setOptionColors(column.option_colors || {});
     setDefaultValue(column.defaultValue || '');
     setApplyToAll(column.applyToAll || false);
   };
@@ -133,6 +137,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     setName('');
     setType('text');
     setOptions([]);
+    setOptionColors({});
     setDefaultValue('');
     setApplyToAll(false);
     setCurrentOption('');
@@ -141,8 +146,19 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const handleAddOption = () => {
     if (currentOption && !options.includes(currentOption)) {
       setOptions([...options, currentOption]);
+      setOptionColors(prev => ({
+        ...prev,
+        [currentOption]: PILL_COLORS.default
+      }));
       setCurrentOption('');
     }
+  };
+
+  const handleSetOptionColor = (option: string, color: PillColor) => {
+    setOptionColors(prev => ({
+      ...prev,
+      [option]: color
+    }));
   };
 
   const handleRemoveOption = async (optionToRemove: string) => {
@@ -175,6 +191,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           name: editingColumn.name || '',
           type: editingColumn.type || 'text',
           options: options.filter(opt => opt !== optionToRemove),
+          option_colors: optionColors,
           defaultValue: defaultValue === optionToRemove ? undefined : 
             type === 'multi-select' ? defaultValue.split(',').filter(v => v !== optionToRemove).join(',') : 
             defaultValue
@@ -293,6 +310,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               onChange={(value) => {
                 setType(value as CustomColumnType);
                 setOptions([]);
+                setOptionColors({});
                 setDefaultValue('');
               }}
               data={[
@@ -343,7 +361,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                   <Text size="sm" mb="xs">Options:</Text>
                   <Box
                     style={{
-                      maxHeight: '100px',
+                      maxHeight: '200px',
                       overflowY: 'auto',
                       border: '1px solid #eee',
                       borderRadius: '4px',
@@ -352,23 +370,56 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                   >
                     <Group gap="xs">
                       {options.map((opt) => (
-                        <Chip
-                          key={opt}
-                          checked={false}
-                          variant="filled"
-                          size="sm"
-                        >
-                          <Group gap={4} wrap="nowrap">
-                            {opt}
-                            <ActionIcon 
-                              size="xs" 
-                              variant="transparent" 
-                              onClick={() => handleRemoveOption(opt)}
-                            >
-                              <IconX size={12} />
-                            </ActionIcon>
-                          </Group>
-                        </Chip>
+                        <Group key={opt} gap={4} wrap="nowrap">
+                          <Menu shadow="md" width={200} position="bottom-start">
+                            <Menu.Target>
+                              <Chip
+                                checked={false}
+                                variant="filled"
+                                size="sm"
+                                color={optionColors[opt] || PILL_COLORS.default}
+                                rightSection={
+                                  <ActionIcon 
+                                    size="xs" 
+                                    variant="transparent" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveOption(opt);
+                                    }}
+                                  >
+                                    <IconX size={12} />
+                                  </ActionIcon>
+                                }
+                              >
+                                <Group gap={4} wrap="nowrap">
+                                  {opt}
+                                  <ActionIcon 
+                                    size="xs" 
+                                    variant="subtle"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <IconPalette size={12} />
+                                  </ActionIcon>
+                                </Group>
+                              </Chip>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Label>Select Color</Menu.Label>
+                              <Group gap="xs" p="xs">
+                                {PILL_COLORS.colors.map((color) => (
+                                  <ColorSwatch
+                                    key={color}
+                                    component="button"
+                                    color={color}
+                                    onClick={() => handleSetOptionColor(opt, color)}
+                                    style={{ cursor: 'pointer' }}
+                                    size={24}
+                                  />
+                                ))}
+                              </Group>
+                            </Menu.Dropdown>
+                          </Menu>
+                        </Group>
                       ))}
                     </Group>
                   </Box>

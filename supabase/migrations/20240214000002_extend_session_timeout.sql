@@ -1,8 +1,6 @@
--- Extend session timeout to 24 hours (in seconds)
-ALTER TABLE auth.sessions
-  ALTER COLUMN max_age_seconds SET DEFAULT 86400;  -- 24 hours = 86400 seconds
+-- Set JWT expiration time to 24 hours (in seconds)
+SELECT set_config('jwt.expiry', '86400', false);
 
--- Update existing sessions to use the new timeout
-UPDATE auth.sessions
-SET max_age_seconds = 86400
-WHERE max_age_seconds < 86400; 
+-- Note: This setting might need to be applied through the Supabase dashboard:
+-- 1. Go to Authentication > Policies
+-- 2. Set "JWT expiry" to 86400 (24 hours) 

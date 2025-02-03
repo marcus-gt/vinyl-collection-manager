@@ -7,6 +7,7 @@ import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
+import { PILL_COLORS } from '../types';
 
 const PAGE_SIZE = 15;
 
@@ -719,6 +720,7 @@ function Collection() {
                             checked={false}
                             variant="filled"
                             size="xs"
+                            color={column.option_colors?.[value] || PILL_COLORS.default}
                             styles={{
                               root: {
                                 height: '22px',

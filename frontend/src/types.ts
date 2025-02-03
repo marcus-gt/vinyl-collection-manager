@@ -55,6 +55,7 @@ export interface CustomColumn {
   name: string;
   type: CustomColumnType;
   options?: string[];
+  option_colors?: Record<string, string>;
   defaultValue?: string;
   applyToAll?: boolean;
   created_at?: string;
@@ -68,4 +69,23 @@ export interface CustomColumnValue {
   value: string;
   created_at?: string;
   updated_at?: string;
-} 
+}
+
+// Available theme colors for pills
+export const PILL_COLORS = {
+  default: 'blue',
+  colors: [
+    'blue',    // Default
+    'red',     // Error/Important
+    'green',   // Success/Done
+    'yellow',  // Warning/In Progress
+    'purple',  // Creative/Special
+    'pink',    // Fun/Personal
+    'orange',  // Energy/Active
+    'teal',    // Professional
+    'cyan',    // Information
+    'grape'    // Exclusive/VIP
+  ]
+} as const;
+
+export type PillColor = typeof PILL_COLORS.colors[number]; 
