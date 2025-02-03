@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip, Switch } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -676,20 +676,17 @@ function Collection() {
         if (column.type === 'boolean') {
           return (
             <Box style={{ position: 'relative', width: '100%', height: '100%' }}>
-              <ActionIcon 
-                variant={localValue === 'true' ? 'light' : 'subtle'}
-                color={localValue === 'true' ? 'blue' : 'gray'}
+              <Switch
+                checked={localValue === 'true'}
+                onChange={(e) => handleChange(e.currentTarget.checked.toString())}
                 size="sm"
-                onClick={() => handleChange(localValue === 'true' ? 'false' : 'true')}
                 style={{ 
                   position: 'absolute',
                   top: '50%',
                   left: '50%',
                   transform: 'translate(-50%, -50%)'
                 }}
-              >
-                {localValue === 'true' ? '✓' : ''}
-              </ActionIcon>
+              />
             </Box>
           );
         }
@@ -1071,6 +1068,17 @@ function Collection() {
                       ...prev,
                       [column.id]: e.target.value
                     }))}
+                  />
+                )}
+                {column.type === 'boolean' && (
+                  <Switch
+                    label={column.name}
+                    checked={customValues[column.id] === 'true'}
+                    onChange={(e) => setCustomValues(prev => ({
+                      ...prev,
+                      [column.id]: e.currentTarget.checked.toString()
+                    }))}
+                    size="md"
                   />
                 )}
                 {column.type === 'single-select' && column.options && (
