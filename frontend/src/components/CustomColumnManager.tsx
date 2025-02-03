@@ -235,7 +235,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
       onClose={onClose}
       title="Manage Custom Columns"
       size="lg"
-      fullScreen
       styles={{
         inner: {
           '@media (max-width: 48em)': {
@@ -245,6 +244,15 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         body: {
           '@media (max-width: 48em)': {
             padding: '0.5rem'
+          }
+        },
+        content: {
+          '@media (max-width: 48em)': {
+            width: '100vw',
+            height: '100vh',
+            margin: 0,
+            maxWidth: 'none',
+            maxHeight: 'none'
           }
         }
       }}

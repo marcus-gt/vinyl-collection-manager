@@ -72,6 +72,7 @@ function Collection() {
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
+  const [activePopover, setActivePopover] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -675,22 +676,30 @@ function Collection() {
 
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
-          const [opened, setOpened] = useState(false);
+          const popoverId = `${record.id}-${column.id}`;
           
-          const handleKeyDown = (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter') {
-              setOpened(false);
-            }
-            if (e.key === 'Escape') {
-              setOpened(false);
-            }
-          };
-
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover width={400} position="bottom" withArrow shadow="md" closeOnClickOutside={false} opened={opened} onChange={setOpened}>
+              <Popover 
+                width={400} 
+                position="bottom" 
+                withArrow 
+                shadow="md" 
+                closeOnClickOutside={false}
+                opened={activePopover === popoverId}
+                onChange={(opened) => {
+                  if (opened) {
+                    setActivePopover(popoverId);
+                  } else {
+                    setActivePopover(null);
+                  }
+                }}
+              >
                 <Popover.Target>
-                  <Box style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
+                  <Box 
+                    style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }} 
+                    onClick={() => setActivePopover(popoverId)}
+                  >
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
@@ -724,7 +733,7 @@ function Collection() {
                   <Stack gap="xs">
                     <Group justify="space-between" align="center">
                       <Text size="sm" fw={500}>Edit {column.name}</Text>
-                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setActivePopover(null)}>
                         <IconX size={16} />
                       </ActionIcon>
                     </Group>
@@ -749,7 +758,11 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
-                      onKeyDown={handleKeyDown}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === 'Escape') {
+                          setActivePopover(null);
+                        }
+                      }}
                     />
                   </Stack>
                 </Popover.Dropdown>
