@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue } from '../types';
+import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
   ? 'https://vinyl-collection-manager.onrender.com'
@@ -55,6 +56,30 @@ api.interceptors.response.use(
   }
 );
 
+// Helper to handle session timeouts
+const handleSessionTimeout = () => {
+  notifications.show({
+    title: 'Session Expired',
+    message: 'Your session has expired. Please log in again.',
+    color: 'yellow'
+  });
+  // Clear any auth state if you're using it
+  localStorage.removeItem('session');
+  // Redirect to login page
+  window.location.href = '/login';
+};
+
+// Helper to handle API responses
+const handleApiResponse = async (response: Response) => {
+  if (response.status === 400 || response.status === 401) {
+    handleSessionTimeout();
+    return { success: false, error: 'Session expired' };
+  }
+  
+  const data = await response.json();
+  return data;
+};
+
 export const auth = {
   register: async (email: string, password: string): Promise<AuthResponse> => {
     try {
@@ -107,8 +132,16 @@ export const auth = {
 
 export const records = {
   getAll: async (): Promise<ApiResponse<VinylRecord[]>> => {
-    const response = await api.get<ApiResponse<VinylRecord[]>>('/api/records');
-    return response.data;
+    try {
+      const response = await fetch('/api/records', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      return handleApiResponse(response);
+    } catch (err) {
+      console.error('Failed to get records:', err);
+      return { success: false, error: 'Failed to get records' };
+    }
   },
 
   add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
@@ -116,14 +149,34 @@ export const records = {
     return response.data;
   },
 
-  delete: async (recordId: string): Promise<ApiResponse<void>> => {
-    const response = await api.delete<ApiResponse<void>>(`/api/records/${recordId}`);
-    return response.data;
+  delete: async (id: string): Promise<ApiResponse<void>> => {
+    try {
+      const response = await fetch(`/api/records/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      return handleApiResponse(response);
+    } catch (err) {
+      console.error('Failed to delete record:', err);
+      return { success: false, error: 'Failed to delete record' };
+    }
   },
 
-  updateNotes: async (recordId: string, notes: string): Promise<ApiResponse<VinylRecord>> => {
-    const response = await api.put<ApiResponse<VinylRecord>>(`/api/records/${recordId}/notes`, { notes });
-    return response.data;
+  updateNotes: async (id: string, notes: string): Promise<ApiResponse<VinylRecord>> => {
+    try {
+      const response = await fetch(`/api/records/${id}/notes`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notes })
+      });
+      return handleApiResponse(response);
+    } catch (err) {
+      console.error('Failed to update notes:', err);
+      return { success: false, error: 'Failed to update notes' };
+    }
   },
 };
 
@@ -144,8 +197,7 @@ export const customColumns = {
         method: 'GET',
         credentials: 'include'
       });
-      const data = await response.json();
-      return data;
+      return handleApiResponse(response);
     } catch (err) {
       console.error('Failed to get custom columns:', err);
       return { success: false, error: 'Failed to get custom columns' };
@@ -186,7 +238,7 @@ export const customColumns = {
     }
   },
 
-  create: async (column: Omit<CustomColumn, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<CustomColumn>> => {
+  create: async (data: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
     try {
       const response = await fetch('/api/custom-columns', {
         method: 'POST',
@@ -194,17 +246,16 @@ export const customColumns = {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(column)
+        body: JSON.stringify(data)
       });
-      const data = await response.json();
-      return data;
+      return handleApiResponse(response);
     } catch (err) {
       console.error('Failed to create custom column:', err);
       return { success: false, error: 'Failed to create custom column' };
     }
   },
 
-  update: async (id: string, column: Partial<Omit<CustomColumn, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<ApiResponse<CustomColumn>> => {
+  update: async (id: string, data: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
     try {
       const response = await fetch(`/api/custom-columns/${id}`, {
         method: 'PUT',
@@ -212,10 +263,9 @@ export const customColumns = {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(column)
+        body: JSON.stringify(data)
       });
-      const data = await response.json();
-      return data;
+      return handleApiResponse(response);
     } catch (err) {
       console.error('Failed to update custom column:', err);
       return { success: false, error: 'Failed to update custom column' };
@@ -228,8 +278,7 @@ export const customColumns = {
         method: 'DELETE',
         credentials: 'include'
       });
-      const data = await response.json();
-      return data;
+      return handleApiResponse(response);
     } catch (err) {
       console.error('Failed to delete custom column:', err);
       return { success: false, error: 'Failed to delete custom column' };
@@ -243,8 +292,20 @@ export const customValues = {
     return response.data;
   },
 
-  update: async (recordId: string, values: { [columnId: string]: string }): Promise<ApiResponse<CustomColumnValue[]>> => {
-    const response = await api.put<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`, values);
-    return response.data;
+  update: async (recordId: string, values: Record<string, string>): Promise<ApiResponse<void>> => {
+    try {
+      const response = await fetch(`/api/records/${recordId}/custom-values`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(values)
+      });
+      return handleApiResponse(response);
+    } catch (err) {
+      console.error('Failed to update custom values:', err);
+      return { success: false, error: 'Failed to update custom values' };
+    }
   }
 }; 
