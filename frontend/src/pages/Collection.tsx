@@ -678,27 +678,19 @@ function Collection() {
           const [opened, setOpened] = useState(false);
           
           const handleKeyDown = (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === 'Escape') {
+            if (e.key === 'Enter') {
+              setOpened(false);
+            }
+            if (e.key === 'Escape') {
               setOpened(false);
             }
           };
 
           return (
             <Box style={{ position: 'relative' }}>
-              <Popover 
-                width={400} 
-                position="bottom" 
-                withArrow 
-                shadow="md" 
-                closeOnClickOutside={false}
-                opened={opened}
-                onChange={setOpened}
-              >
+              <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Box 
-                    style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }} 
-                    onClick={() => setOpened(true)}
-                  >
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
@@ -726,7 +718,7 @@ function Collection() {
                         ))}
                       </Group>
                     )}
-                  </Box>
+                  </Text>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
