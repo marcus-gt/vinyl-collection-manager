@@ -1129,7 +1129,10 @@ function Collection() {
 
         <CustomColumnManager
           opened={customColumnManagerOpened}
-          onClose={() => setCustomColumnManagerOpened(false)}
+          onClose={() => {
+            setCustomColumnManagerOpened(false);
+            loadCustomColumns();  // Refresh columns when modal is closed
+          }}
         />
       </Stack>
     </Container>

@@ -66,19 +66,33 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         // Update existing column
         const response = await customColumns.update(editingColumn.id, columnData);
         if (response.success) {
-          alert('Column updated successfully');
+          notifications.show({
+            title: 'Success',
+            message: 'Column updated successfully',
+            color: 'green'
+          });
         }
       } else {
         // Create new column
         const response = await customColumns.create(columnData);
         if (response.success) {
-          alert('Column created successfully');
+          notifications.show({
+            title: 'Success',
+            message: 'Column created successfully',
+            color: 'green'
+          });
         }
       }
       await loadColumns();
+      // Trigger table refresh
+      window.dispatchEvent(new CustomEvent('refresh-table-data'));
       resetForm();
     } catch (err) {
-      alert('Failed to save column');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save column',
+        color: 'red'
+      });
       console.error(err);
     } finally {
       setLoading(false);
