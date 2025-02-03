@@ -156,14 +156,15 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
   const handleSetOptionColor = async (option: string, color: PillColor) => {
     console.log('Setting color:', { option, color, before: optionColors });
-    setOptionColors(prev => {
-      const updated = {
-        ...prev,
-        [option]: color
-      };
-      console.log('Updated colors:', updated);
-      return updated;
-    });
+    
+    // Create the updated colors object
+    const updatedColors = {
+      ...optionColors,
+      [option]: color
+    };
+    
+    // Update local state first
+    setOptionColors(updatedColors);
 
     // If we're editing an existing column, update it
     if (editingColumn?.id) {
@@ -172,10 +173,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           name: editingColumn.name || '',
           type: editingColumn.type || 'text',
           options,
-          option_colors: {
-            ...optionColors,
-            [option]: color
-          },
+          option_colors: updatedColors,  // Use the new colors object
           defaultValue
         });
 
@@ -185,9 +183,20 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Color updated successfully',
             color: 'green'
           });
+          // Refresh the columns to ensure we have the latest data
           await loadColumns();
+        } else {
+          // If the update failed, revert the local state
+          setOptionColors(optionColors);
+          notifications.show({
+            title: 'Error',
+            message: 'Failed to update color',
+            color: 'red'
+          });
         }
       } catch (err) {
+        // If there was an error, revert the local state
+        setOptionColors(optionColors);
         console.error('Failed to update column colors:', err);
         notifications.show({
           title: 'Error',
