@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
-import { customColumns } from '../services/api';
+import { customColumns, customValues } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
 import { notifications } from '@mantine/notifications';
 
@@ -159,10 +159,14 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
               // Remove the option from the comma-separated list while preserving other options
               const values = value.value.split(',').filter(Boolean);
               const newValues = values.filter(v => v !== optionToRemove);
-              return customColumns.updateValue(value.record_id, editingColumn.id!, newValues.join(','));
+              return customValues.update(value.record_id, {
+                [editingColumn.id!]: newValues.join(',')
+              });
             } else {
               // For single-select, just clear the value
-              return customColumns.updateValue(value.record_id, editingColumn.id!, '');
+              return customValues.update(value.record_id, {
+                [editingColumn.id!]: ''
+              });
             }
           });
 
