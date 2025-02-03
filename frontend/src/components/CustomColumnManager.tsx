@@ -154,11 +154,48 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     }
   };
 
-  const handleSetOptionColor = (option: string, color: PillColor) => {
-    setOptionColors(prev => ({
-      ...prev,
-      [option]: color
-    }));
+  const handleSetOptionColor = async (option: string, color: PillColor) => {
+    console.log('Setting color:', { option, color, before: optionColors });
+    setOptionColors(prev => {
+      const updated = {
+        ...prev,
+        [option]: color
+      };
+      console.log('Updated colors:', updated);
+      return updated;
+    });
+
+    // If we're editing an existing column, update it
+    if (editingColumn?.id) {
+      try {
+        const response = await customColumns.update(editingColumn.id, {
+          name: editingColumn.name || '',
+          type: editingColumn.type || 'text',
+          options,
+          option_colors: {
+            ...optionColors,
+            [option]: color
+          },
+          defaultValue
+        });
+
+        if (response.success) {
+          notifications.show({
+            title: 'Success',
+            message: 'Color updated successfully',
+            color: 'green'
+          });
+          await loadColumns();
+        }
+      } catch (err) {
+        console.error('Failed to update column colors:', err);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to update color',
+          color: 'red'
+        });
+      }
+    }
   };
 
   const handleRemoveOption = async (optionToRemove: string) => {
@@ -394,7 +431,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                                 {PILL_COLORS.colors.map((color) => (
                                   <Menu.Item 
                                     key={color}
-                                    onClick={() => handleSetOptionColor(opt, color)}
+                                    onClick={() => {
+                                      console.log('Color clicked:', color);
+                                      handleSetOptionColor(opt, color);
+                                    }}
                                     p={0}
                                     style={{ border: 'none', background: 'none' }}
                                   >
