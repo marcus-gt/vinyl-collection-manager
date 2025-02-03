@@ -139,8 +139,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const handleRemoveOption = async (optionToRemove: string) => {
     if (!editingColumn?.id) return;
 
-    // First, get all records that have this column value
     try {
+      // First, get all records that have this column value
       const valuesResponse = await customColumns.getAllValues(editingColumn.id);
       if (valuesResponse.success && valuesResponse.data) {
         // For each record that has this value
@@ -149,20 +149,21 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             if (type === 'single-select') {
               return value.value === optionToRemove;
             } else if (type === 'multi-select') {
-              const values = value.value.split(',');
+              const values = value.value.split(',').filter(Boolean);
               return values.includes(optionToRemove);
             }
             return false;
           })
           .map((value: CustomColumnValue) => {
-            let newValue = '';
             if (type === 'multi-select') {
-              // Remove the option from the comma-separated list
-              const values = value.value.split(',');
-              newValue = values.filter((v: string) => v !== optionToRemove).join(',');
+              // Remove the option from the comma-separated list while preserving other options
+              const values = value.value.split(',').filter(Boolean);
+              const newValues = values.filter(v => v !== optionToRemove);
+              return customColumns.updateValue(value.record_id, editingColumn.id!, newValues.join(','));
+            } else {
+              // For single-select, just clear the value
+              return customColumns.updateValue(value.record_id, editingColumn.id!, '');
             }
-            // For single-select, we just set it to empty string
-            return customColumns.updateValue(value.record_id, editingColumn.id!, newValue);
           });
 
         // Wait for all updates to complete
@@ -176,6 +177,13 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
       // If this was the default value, clear it
       if (defaultValue === optionToRemove) {
         setDefaultValue('');
+      } else if (type === 'multi-select' && defaultValue) {
+        // For multi-select, remove the option from the default value if it exists
+        const defaultValues = defaultValue.split(',').filter(Boolean);
+        if (defaultValues.includes(optionToRemove)) {
+          const newDefaultValues = defaultValues.filter(v => v !== optionToRemove);
+          setDefaultValue(newDefaultValues.join(','));
+        }
       }
 
       // Update the column definition
@@ -183,7 +191,9 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         name: editingColumn.name || '',
         type: editingColumn.type || 'text',
         options: updatedOptions,
-        defaultValue: defaultValue === optionToRemove ? undefined : defaultValue
+        defaultValue: defaultValue === optionToRemove ? undefined : 
+          type === 'multi-select' ? defaultValue.split(',').filter(v => v !== optionToRemove).join(',') : 
+          defaultValue
       });
       
       if (updateResponse.success) {
