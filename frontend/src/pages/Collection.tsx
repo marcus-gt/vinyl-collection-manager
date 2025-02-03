@@ -677,7 +677,14 @@ function Collection() {
         if (column.type === 'multi-select' && column.options) {
           const values = localValue ? localValue.split(',') : [];
           const popoverId = `${record.id}-${column.id}`;
+          const [opened, setOpened] = useState(false);
           
+          const handleKeyDown = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === 'Escape') {
+              setOpened(false);
+            }
+          };
+
           return (
             <Box style={{ position: 'relative' }}>
               <Popover 
@@ -686,19 +693,13 @@ function Collection() {
                 withArrow 
                 shadow="md" 
                 closeOnClickOutside={false}
-                opened={activePopover === popoverId}
-                onChange={(opened) => {
-                  if (opened) {
-                    setActivePopover(popoverId);
-                  } else {
-                    setActivePopover(null);
-                  }
-                }}
+                opened={opened}
+                onChange={setOpened}
               >
                 <Popover.Target>
                   <Box 
                     style={{ cursor: 'pointer', width: '100%', height: '100%', maxWidth: '90vw' }} 
-                    onClick={() => setActivePopover(popoverId)}
+                    onClick={() => setOpened(true)}
                   >
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
@@ -733,7 +734,7 @@ function Collection() {
                   <Stack gap="xs">
                     <Group justify="space-between" align="center">
                       <Text size="sm" fw={500}>Edit {column.name}</Text>
-                      <ActionIcon size="sm" variant="subtle" onClick={() => setActivePopover(null)}>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
                         <IconX size={16} />
                       </ActionIcon>
                     </Group>
@@ -758,11 +759,7 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === 'Escape') {
-                          setActivePopover(null);
-                        }
-                      }}
+                      onKeyDown={handleKeyDown}
                     />
                   </Stack>
                 </Popover.Dropdown>
