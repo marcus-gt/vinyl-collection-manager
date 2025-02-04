@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge, Combobox, InputBase } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -8,6 +8,7 @@ import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
+import { useCombobox } from '@mantine/hooks';
 
 const PAGE_SIZE = 15;
 
@@ -743,31 +744,24 @@ function Collection() {
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
                       <Group gap={4} wrap="wrap" style={{ overflow: 'hidden', maxHeight: '44px' }}>
-                        {values.map((value) => {
-                          console.log('Rendering pill:', {
-                            value,
-                            color: column.option_colors?.[value] || PILL_COLORS.default,
-                            optionColors: column.option_colors
-                          });
-                          return (
-                            <Badge
-                              key={value}
-                              variant="filled"
-                              size="sm"
-                              radius="sm"
-                              color={column.option_colors?.[value] || PILL_COLORS.default}
-                              styles={{
-                                root: {
-                                  textTransform: 'none',
-                                  cursor: 'default',
-                                  padding: '3px 8px'
-                                }
-                              }}
-                            >
-                              {value}
-                            </Badge>
-                          );
-                        })}
+                        {values.map((value) => (
+                          <Badge
+                            key={value}
+                            variant="filled"
+                            size="sm"
+                            radius="sm"
+                            color={column.option_colors?.[value] || PILL_COLORS.default}
+                            styles={{
+                              root: {
+                                textTransform: 'none',
+                                cursor: 'default',
+                                padding: '3px 8px'
+                              }
+                            }}
+                          >
+                            {value}
+                          </Badge>
+                        ))}
                       </Group>
                     )}
                   </Text>
@@ -786,27 +780,7 @@ function Collection() {
                       onChange={(newValues) => {
                         handleChange(newValues.join(','));
                       }}
-                      data={column.options.map(opt => ({
-                        value: opt,
-                        label: (
-                          <Badge
-                            variant="filled"
-                            size="sm"
-                            radius="sm"
-                            color={column.option_colors?.[opt] || PILL_COLORS.default}
-                            styles={{
-                              root: {
-                                textTransform: 'none',
-                                cursor: 'pointer',
-                                padding: '3px 8px',
-                                width: '100%'
-                              }
-                            }}
-                          >
-                            {opt}
-                          </Badge>
-                        )
-                      }))}
+                      data={column.options}
                       clearable
                       searchable
                       placeholder="Select options..."
@@ -816,25 +790,15 @@ function Collection() {
                         },
                         dropdown: {
                           maxWidth: '90vw'
+                        },
+                        pill: {
+                          backgroundColor: (theme) => {
+                            const value = theme.colors[column.option_colors?.[values[0]] || PILL_COLORS.default][6];
+                            return value;
+                          },
+                          color: 'white'
                         }
                       }}
-                      valueComponent={({ value }: { value: string }) => (
-                        <Badge
-                          variant="filled"
-                          size="sm"
-                          radius="sm"
-                          color={column.option_colors?.[value] || PILL_COLORS.default}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
-                          }}
-                        >
-                          {value}
-                        </Badge>
-                      )}
                       onKeyDown={handleKeyDown}
                     />
                   </Stack>
@@ -884,16 +848,6 @@ function Collection() {
                         label: opt
                       }))}
                       clearable
-                      searchable
-                      styles={{
-                        input: {
-                          minHeight: '36px'
-                        },
-                        dropdown: {
-                          maxWidth: '90vw'
-                        }
-                      }}
-                      onKeyDown={handleKeyDown}
                     />
                   </Stack>
                 </Popover.Dropdown>
