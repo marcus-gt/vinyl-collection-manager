@@ -727,7 +727,8 @@ function Collection() {
                         {values.map((value) => {
                           console.log('Rendering pill:', {
                             value,
-                            color: column.option_colors?.[value] || PILL_COLORS.default
+                            color: column.option_colors?.[value] || PILL_COLORS.default,
+                            optionColors: column.option_colors
                           });
                           return (
                             <Chip
