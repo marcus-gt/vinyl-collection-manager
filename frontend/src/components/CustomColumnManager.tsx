@@ -451,26 +451,17 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                               </Chip>
                             </Menu.Target>
                             <Menu.Dropdown>
-                              <Menu.Label>Select Color</Menu.Label>
-                              <Group gap="xs" p="xs">
-                                {PILL_COLORS.colors.map((color) => (
-                                  <Menu.Item 
-                                    key={color}
-                                    onClick={() => {
-                                      console.log('Color clicked:', color);
-                                      handleSetOptionColor(opt, color);
-                                    }}
-                                    p={0}
-                                    style={{ border: 'none', background: 'none' }}
-                                  >
-                                    <ColorSwatch
-                                      color={color}
-                                      style={{ cursor: 'pointer' }}
-                                      size={24}
-                                    />
-                                  </Menu.Item>
-                                ))}
-                              </Group>
+                              {PILL_COLORS.options.map(({ value, label }) => (
+                                <Menu.Item
+                                  key={value}
+                                  onClick={() => handleSetOptionColor(opt, value)}
+                                  leftSection={
+                                    <ColorSwatch color={value} size={14} />
+                                  }
+                                >
+                                  {label}
+                                </Menu.Item>
+                              ))}
                             </Menu.Dropdown>
                           </Menu>
                           <ActionIcon 

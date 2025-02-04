@@ -72,20 +72,38 @@ export interface CustomColumnValue {
 }
 
 // Available theme colors for pills
+export type PillColor = 
+  | 'dark' 
+  | 'gray' 
+  | 'red' 
+  | 'pink' 
+  | 'grape' 
+  | 'violet' 
+  | 'indigo' 
+  | 'blue' 
+  | 'cyan' 
+  | 'teal' 
+  | 'green' 
+  | 'lime' 
+  | 'yellow' 
+  | 'orange';
+
 export const PILL_COLORS = {
   default: 'blue',
-  colors: [
-    'blue',    // Default
-    'red',     // Error/Important
-    'green',   // Success/Done
-    'yellow',  // Warning/In Progress
-    'purple',  // Creative/Special
-    'pink',    // Fun/Personal
-    'orange',  // Energy/Active
-    'teal',    // Professional
-    'cyan',    // Information
-    'grape'    // Exclusive/VIP
+  options: [
+    { value: 'dark', label: 'Dark' },
+    { value: 'gray', label: 'Gray' },
+    { value: 'red', label: 'Red' },
+    { value: 'pink', label: 'Pink' },
+    { value: 'grape', label: 'Grape' },
+    { value: 'violet', label: 'Violet' },
+    { value: 'indigo', label: 'Indigo' },
+    { value: 'blue', label: 'Blue' },
+    { value: 'cyan', label: 'Cyan' },
+    { value: 'teal', label: 'Teal' },
+    { value: 'green', label: 'Green' },
+    { value: 'lime', label: 'Lime' },
+    { value: 'yellow', label: 'Yellow' },
+    { value: 'orange', label: 'Orange' }
   ]
-} as const;
-
-export type PillColor = typeof PILL_COLORS.colors[number]; 
+} as const; 

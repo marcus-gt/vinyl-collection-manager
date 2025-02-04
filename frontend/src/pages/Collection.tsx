@@ -738,7 +738,7 @@ function Collection() {
                               variant="filled"
                               size="xs"
                               color={column.option_colors?.[value] || PILL_COLORS.default}
-                              styles={{
+                              styles={(theme) => ({
                                 root: {
                                   height: '22px',
                                   cursor: 'pointer',
@@ -746,9 +746,10 @@ function Collection() {
                                 },
                                 label: {
                                   padding: '2px 6px',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
+                                  color: theme.white
                                 }
-                              }}
+                              })}
                             >
                               {value}
                             </Chip>
