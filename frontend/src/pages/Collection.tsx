@@ -755,17 +755,24 @@ function Collection() {
                               checked={false}
                               variant="filled"
                               size="xs"
+                              radius="sm"
                               color={column.option_colors?.[value] || PILL_COLORS.default}
                               styles={(theme) => ({
                                 root: {
                                   height: '22px',
                                   cursor: 'pointer',
-                                  pointerEvents: 'none'
+                                  pointerEvents: 'none',
+                                  backgroundColor: `var(--mantine-color-${column.option_colors?.[value] || PILL_COLORS.default}-filled)`,
+                                  border: 'none'
                                 },
                                 label: {
                                   padding: '2px 6px',
                                   whiteSpace: 'nowrap',
-                                  color: theme.white
+                                  color: theme.white,
+                                  fontWeight: 500
+                                },
+                                checkIcon: {
+                                  display: 'none'
                                 }
                               })}
                             >
