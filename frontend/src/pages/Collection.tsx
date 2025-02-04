@@ -788,8 +788,24 @@ function Collection() {
                       }}
                       data={column.options.map(opt => ({
                         value: opt,
-                        label: opt,
-                        color: column.option_colors?.[opt] || PILL_COLORS.default
+                        label: (
+                          <Badge
+                            variant="filled"
+                            size="sm"
+                            radius="sm"
+                            color={column.option_colors?.[opt] || PILL_COLORS.default}
+                            styles={{
+                              root: {
+                                textTransform: 'none',
+                                cursor: 'pointer',
+                                padding: '3px 8px',
+                                width: '100%'
+                              }
+                            }}
+                          >
+                            {opt}
+                          </Badge>
+                        )
                       }))}
                       clearable
                       searchable
@@ -802,6 +818,23 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
+                      valueComponent={({ value }: { value: string }) => (
+                        <Badge
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={column.option_colors?.[value] || PILL_COLORS.default}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'default',
+                              padding: '3px 8px'
+                            }
+                          }}
+                        >
+                          {value}
+                        </Badge>
+                      )}
                       onKeyDown={handleKeyDown}
                     />
                   </Stack>
