@@ -217,7 +217,7 @@ function Collection() {
         setSortStatus({ ...newSortStatus, direction: 'desc' });
       } else {
         // Reset to default sorting
-        setSortStatus({ columnAccessor: 'artist', direction: 'asc' });
+      setSortStatus({ columnAccessor: 'artist', direction: 'asc' });
       }
     } else {
       // Clicking a new column, start with ascending
@@ -309,18 +309,18 @@ function Collection() {
     const rows = userRecords.map(record => {
       // Standard fields
       const standardFields = [
-        record.artist,
-        record.album,
-        record.year || '',
-        record.label || '',
-        record.genres?.join('; ') || '',
-        record.styles?.join('; ') || '',
-        record.musicians?.join('; ') || '',
-        record.notes || '',
-        record.created_at ? new Date(record.created_at).toLocaleString() : '',
-        record.current_release_year || '',
-        record.master_url || '',
-        record.current_release_url || ''
+      record.artist,
+      record.album,
+      record.year || '',
+      record.label || '',
+      record.genres?.join('; ') || '',
+      record.styles?.join('; ') || '',
+      record.musicians?.join('; ') || '',
+      record.notes || '',
+      record.created_at ? new Date(record.created_at).toLocaleString() : '',
+      record.current_release_year || '',
+      record.master_url || '',
+      record.current_release_url || ''
       ];
 
       // Custom fields
@@ -384,242 +384,242 @@ function Collection() {
 
   const tableColumns = useMemo(() => {
     const standardColumns = [
-      { 
-        accessor: 'artist', 
-        title: 'Artist', 
-        sortable: true,
-        width: 200,
+            { 
+              accessor: 'artist', 
+              title: 'Artist', 
+              sortable: true,
+              width: 200,
         render: (record: VinylRecord) => (
-          <Popover width={400} position="bottom-start" withArrow shadow="md">
-            <Popover.Target>
-              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.artist}>
-                {record.artist}
-              </Text>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                {record.artist}
-              </Text>
-            </Popover.Dropdown>
-          </Popover>
-        )
-      },
-      { 
-        accessor: 'album', 
-        title: 'Album', 
-        sortable: true,
-        width: 250,
+                <Popover width={400} position="bottom-start" withArrow shadow="md">
+                  <Popover.Target>
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.artist}>
+                      {record.artist}
+                    </Text>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                      {record.artist}
+                    </Text>
+                  </Popover.Dropdown>
+                </Popover>
+              )
+            },
+            { 
+              accessor: 'album', 
+              title: 'Album', 
+              sortable: true,
+              width: 250,
         render: (record: VinylRecord) => (
-          <Popover width={400} position="bottom-start" withArrow shadow="md">
-            <Popover.Target>
-              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.album}>
-                {record.album}
-              </Text>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                {record.album}
-              </Text>
-            </Popover.Dropdown>
-          </Popover>
-        )
-      },
-      { accessor: 'year', title: 'Original Year', sortable: true, width: 80 },
-      { 
-        accessor: 'label', 
-        title: 'Label', 
-        sortable: true,
-        width: 150,
+                <Popover width={400} position="bottom-start" withArrow shadow="md">
+                  <Popover.Target>
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.album}>
+                      {record.album}
+                    </Text>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                      {record.album}
+                    </Text>
+                  </Popover.Dropdown>
+                </Popover>
+              )
+            },
+            { accessor: 'year', title: 'Original Year', sortable: true, width: 80 },
+            { 
+              accessor: 'label', 
+              title: 'Label', 
+              sortable: true,
+              width: 150,
         render: (record: VinylRecord) => (
-          <Popover width={400} position="bottom-start" withArrow shadow="md">
-            <Popover.Target>
-              <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.label || '-'}>
-                {record.label || '-'}
-              </Text>
-            </Popover.Target>
-            <Popover.Dropdown>
-              <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                {record.label || '-'}
-              </Text>
-            </Popover.Dropdown>
-          </Popover>
-        )
-      },
-      { 
-        accessor: 'genres', 
-        title: 'Genres', 
-        sortable: true,
-        width: 150,
+                <Popover width={400} position="bottom-start" withArrow shadow="md">
+                  <Popover.Target>
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.label || '-'}>
+                      {record.label || '-'}
+                    </Text>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                      {record.label || '-'}
+                    </Text>
+                  </Popover.Dropdown>
+                </Popover>
+              )
+            },
+            { 
+              accessor: 'genres', 
+              title: 'Genres', 
+              sortable: true,
+              width: 150,
         render: (record: VinylRecord) => {
-          const genres = record.genres?.join(', ') || '-';
-          return (
-            <Popover width={400} position="bottom-start" withArrow shadow="md">
-              <Popover.Target>
-                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={genres}>
-                  {genres}
-                </Text>
-              </Popover.Target>
-              <Popover.Dropdown>
-                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                  {genres}
-                </Text>
-              </Popover.Dropdown>
-            </Popover>
-          );
-        }
-      },
-      { 
-        accessor: 'styles', 
-        title: 'Styles', 
-        sortable: true,
-        width: 180,
+                const genres = record.genres?.join(', ') || '-';
+                return (
+                  <Popover width={400} position="bottom-start" withArrow shadow="md">
+                    <Popover.Target>
+                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={genres}>
+                        {genres}
+                      </Text>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                        {genres}
+                      </Text>
+                    </Popover.Dropdown>
+                  </Popover>
+                );
+              }
+            },
+            { 
+              accessor: 'styles', 
+              title: 'Styles', 
+              sortable: true,
+              width: 180,
         render: (record: VinylRecord) => {
-          const styles = record.styles?.join(', ') || '-';
-          return (
-            <Popover width={400} position="bottom-start" withArrow shadow="md">
-              <Popover.Target>
-                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={styles}>
-                  {styles}
-                </Text>
-              </Popover.Target>
-              <Popover.Dropdown>
-                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                  {styles}
-                </Text>
-              </Popover.Dropdown>
-            </Popover>
-          );
-        }
-      },
-      { 
-        accessor: 'musicians', 
-        title: 'Musicians', 
-        sortable: true,
-        width: 200,
+                const styles = record.styles?.join(', ') || '-';
+                return (
+                  <Popover width={400} position="bottom-start" withArrow shadow="md">
+                    <Popover.Target>
+                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={styles}>
+                        {styles}
+                      </Text>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                        {styles}
+                      </Text>
+                    </Popover.Dropdown>
+                  </Popover>
+                );
+              }
+            },
+            { 
+              accessor: 'musicians', 
+              title: 'Musicians', 
+              sortable: true,
+              width: 200,
         render: (record: VinylRecord) => {
-          const musicians = record.musicians?.join(', ') || '-';
-          return musicians === '-' ? (
-            <Text size="sm">-</Text>
-          ) : (
-            <Popover width={400} position="bottom-start" withArrow shadow="md">
-              <Popover.Target>
-                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={musicians}>
-                  {musicians}
-                </Text>
-              </Popover.Target>
-              <Popover.Dropdown>
-                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                  {musicians}
-                </Text>
-              </Popover.Dropdown>
-            </Popover>
-          );
-        }
-      },
-      { 
-        accessor: 'notes', 
-        title: 'Notes', 
-        sortable: true,
+                const musicians = record.musicians?.join(', ') || '-';
+                return musicians === '-' ? (
+                  <Text size="sm">-</Text>
+                ) : (
+                  <Popover width={400} position="bottom-start" withArrow shadow="md">
+                    <Popover.Target>
+                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={musicians}>
+                        {musicians}
+                      </Text>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                        {musicians}
+                      </Text>
+                    </Popover.Dropdown>
+                  </Popover>
+                );
+              }
+            },
+            { 
+              accessor: 'notes', 
+              title: 'Notes', 
+              sortable: true,
         render: (record: VinylRecord) => {
-          const notes = record.notes || '-';
-          return (
-            <Popover width={400} position="bottom-start" withArrow shadow="md">
-              <Popover.Target>
-                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={notes}>
-                  {notes}
-                </Text>
-              </Popover.Target>
-              <Popover.Dropdown>
-                <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                  {notes}
-                </Text>
-              </Popover.Dropdown>
-            </Popover>
-          );
-        }
-      },
-      { 
-        accessor: 'created_at', 
-        title: 'Added', 
-        sortable: true,
-        width: 150,
+                const notes = record.notes || '-';
+                return (
+                  <Popover width={400} position="bottom-start" withArrow shadow="md">
+                    <Popover.Target>
+                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={notes}>
+                        {notes}
+                      </Text>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                        {notes}
+                      </Text>
+                    </Popover.Dropdown>
+                  </Popover>
+                );
+              }
+            },
+            { 
+              accessor: 'created_at', 
+              title: 'Added', 
+              sortable: true,
+              width: 150,
         render: (record: VinylRecord) => record.created_at ? 
-          new Date(record.created_at).toLocaleString() : '-'
-      },
-      { 
-        accessor: 'current_release_year', 
-        title: 'Scanned Release Year', 
-        sortable: true, 
-        width: 100,
+                new Date(record.created_at).toLocaleString() : '-'
+            },
+            { 
+              accessor: 'current_release_year', 
+              title: 'Scanned Release Year', 
+              sortable: true, 
+              width: 100,
         render: (record: VinylRecord) => record.current_release_year || '-'
-      },
-      {
-        accessor: 'links',
-        title: 'Links',
-        width: 130,
+            },
+            {
+              accessor: 'links',
+              title: 'Links',
+              width: 130,
         render: (record: VinylRecord) => (
-          <Group gap="xs">
-            {record.master_url && (
-              <Tooltip label="View Master Release">
-                <ActionIcon 
-                  component="a" 
-                  href={record.master_url} 
-                  target="_blank" 
-                  variant="light" 
-                  size="sm"
-                >
-                  <IconExternalLink size={16} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-            {record.current_release_url && (
-              <Tooltip label="View Scanned Release">
-                <ActionIcon 
-                  component="a" 
-                  href={record.current_release_url} 
-                  target="_blank" 
-                  variant="light" 
-                  size="sm"
-                  color="blue"
-                >
-                  <IconExternalLink size={16} />
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </Group>
-        ),
-      },
-      {
-        accessor: 'actions',
-        title: 'Actions',
-        width: 100,
+                <Group gap="xs">
+                  {record.master_url && (
+                    <Tooltip label="View Master Release">
+                      <ActionIcon 
+                        component="a" 
+                        href={record.master_url} 
+                        target="_blank" 
+                        variant="light" 
+                        size="sm"
+                      >
+                        <IconExternalLink size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  {record.current_release_url && (
+                    <Tooltip label="View Scanned Release">
+                      <ActionIcon 
+                        component="a" 
+                        href={record.current_release_url} 
+                        target="_blank" 
+                        variant="light" 
+                        size="sm"
+                        color="blue"
+                      >
+                        <IconExternalLink size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </Group>
+              ),
+            },
+            {
+              accessor: 'actions',
+              title: 'Actions',
+              width: 100,
         render: (record: VinylRecord) => (
-          <Group gap="xs">
-            <Tooltip label="Edit Notes">
-              <ActionIcon 
-                variant="light" 
-                size="sm"
-                onClick={() => {
-                  setEditingRecord(record);
-                  setEditingNotes(record.notes ?? '');
-                }}
-              >
-                <IconNotes size={16} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Delete">
-              <ActionIcon 
-                color="red" 
-                variant="light"
-                size="sm"
-                onClick={() => handleDelete(record)}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        ),
-      },
+                <Group gap="xs">
+                  <Tooltip label="Edit Notes">
+                    <ActionIcon 
+                      variant="light" 
+                      size="sm"
+                      onClick={() => {
+                        setEditingRecord(record);
+                        setEditingNotes(record.notes ?? '');
+                      }}
+                    >
+                      <IconNotes size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Delete">
+                    <ActionIcon 
+                      color="red" 
+                      variant="light"
+                      size="sm"
+                      onClick={() => handleDelete(record)}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              ),
+            },
     ];
 
     // Add custom columns

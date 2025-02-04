@@ -400,82 +400,85 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                 />
                 <Box>
                   <Text size="sm" mb="xs">Options:</Text>
+                  <Text size="xs" c="dimmed" mb="sm">Click an option to change color</Text>
                   <Box
                     style={{
                       maxHeight: '200px',
                       overflowY: 'auto',
-                      border: '1px solid #eee',
-                      borderRadius: '4px',
                       padding: '8px'
                     }}
                   >
-                    <Group gap={2}>
-                      {options.map((opt) => (
-                        <Group key={opt} gap={0} wrap="nowrap">
-                          <Menu shadow="md" width={150} position="bottom-start" closeOnItemClick>
-                            <Menu.Target>
-                              <Badge
-                                variant="filled"
-                                size="sm"
-                                radius="sm"
-                                color={optionColors[opt] || PILL_COLORS.default}
-                                styles={{
-                                  root: {
-                                    textTransform: 'none',
-                                    cursor: 'pointer',
-                                    padding: '3px 8px',
-                                    paddingRight: 25 // Make room for the X button
-                                  }
-                                }}
-                              >
-                                {opt}
-                              </Badge>
-                            </Menu.Target>
-                            <Menu.Dropdown>
-                              <Group gap={4} p="xs" wrap="wrap">
-                                {PILL_COLORS.options.map(({ value, label }) => (
-                                  <Badge
-                                    key={value}
-                                    variant="filled"
-                                    size="sm"
-                                    radius="sm"
-                                    color={value}
-                                    styles={{
-                                      root: {
-                                        textTransform: 'none',
-                                        cursor: 'pointer',
-                                        padding: '3px 8px',
-                                        opacity: optionColors[opt] === value ? 1 : 0.5
-                                      }
-                                    }}
-                                    onClick={() => {
-                                      if (!editingColumn) {
-                                        handleSubmit();  // Save current state
-                                      }
-                                      handleColorChange(opt, value);
-                                    }}
-                                  >
-                                    {label}
-                                  </Badge>
-                                ))}
-                              </Group>
-                            </Menu.Dropdown>
-                          </Menu>
-                          <ActionIcon 
-                            size="xs" 
-                            variant="subtle"
-                            onClick={() => handleRemoveOption(opt)}
-                            style={{
-                              position: 'relative',
-                              right: 25,
-                              zIndex: 2
-                            }}
-                          >
-                            <IconX size={12} />
-                          </ActionIcon>
-                        </Group>
-                      ))}
-                    </Group>
+                    {options.length === 0 ? (
+                      <Text size="sm" c="dimmed" ta="center">No options added yet</Text>
+                    ) : (
+                      <Group gap={2}>
+                        {options.map((opt) => (
+                          <Group key={opt} gap={0} wrap="nowrap">
+                            <Menu shadow="md" width={150} position="bottom-start" closeOnItemClick>
+                              <Menu.Target>
+                                <Badge
+                                  variant="filled"
+                                  size="sm"
+                                  radius="sm"
+                                  color={optionColors[opt] || PILL_COLORS.default}
+                                  styles={{
+                                    root: {
+                                      textTransform: 'none',
+                                      cursor: 'pointer',
+                                      padding: '3px 8px',
+                                      paddingRight: 25 // Make room for the X button
+                                    }
+                                  }}
+                                >
+                                  {opt}
+                                </Badge>
+                              </Menu.Target>
+                              <Menu.Dropdown>
+                                <Group gap={4} p="xs" wrap="wrap">
+                                  {PILL_COLORS.options.map(({ value, label }) => (
+                                    <Badge
+                                      key={value}
+                                      variant="filled"
+                                      size="sm"
+                                      radius="sm"
+                                      color={value}
+                                      styles={{
+                                        root: {
+                                          textTransform: 'none',
+                                          cursor: 'pointer',
+                                          padding: '3px 8px',
+                                          opacity: optionColors[opt] === value ? 1 : 0.5
+                                        }
+                                      }}
+                                      onClick={() => {
+                                        if (!editingColumn) {
+                                          handleSubmit();  // Save current state
+                                        }
+                                        handleColorChange(opt, value);
+                                      }}
+                                    >
+                                      {label}
+                                    </Badge>
+                                  ))}
+                                </Group>
+                              </Menu.Dropdown>
+                            </Menu>
+                            <ActionIcon 
+                              size="xs" 
+                              variant="subtle"
+                              onClick={() => handleRemoveOption(opt)}
+                              style={{
+                                position: 'relative',
+                                right: 25,
+                                zIndex: 2
+                              }}
+                            >
+                              <IconX size={12} />
+                            </ActionIcon>
+                          </Group>
+                        ))}
+                      </Group>
+                    )}
                   </Box>
                 </Box>
               </>
