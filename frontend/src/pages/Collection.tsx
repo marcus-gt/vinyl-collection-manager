@@ -8,7 +8,6 @@ import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
-import type { MantineTheme } from '@mantine/core';
 
 const PAGE_SIZE = 15;
 
@@ -725,15 +724,6 @@ function Collection() {
             optionColors: column.option_colors,
             localValue
           });
-          
-          const handleKeyDown = (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter') {
-              setOpened(false);
-            }
-            if (e.key === 'Escape') {
-              setOpened(false);
-            }
-          };
 
           return (
             <Box style={{ position: 'relative' }}>
@@ -806,15 +796,6 @@ function Collection() {
         
         if (column.type === 'single-select' && column.options) {
           const [opened, setOpened] = useState(false);
-          
-          const handleKeyDown = (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter') {
-              setOpened(false);
-            }
-            if (e.key === 'Escape') {
-              setOpened(false);
-            }
-          };
 
           return (
             <Box style={{ position: 'relative' }}>
