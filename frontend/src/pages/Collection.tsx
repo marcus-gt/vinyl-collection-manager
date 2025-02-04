@@ -140,12 +140,11 @@ function Collection() {
 
   const loadCustomColumns = async () => {
     try {
-      console.log('Loading custom columns...');
       const response = await customColumnsApi.getAll();
-      console.log('Custom columns response:', response);
       if (response.success && response.data) {
-        console.log('Setting custom columns:', response.data);
-        setCustomColumns(response.data);
+        // Force a re-render by creating a new array
+        setCustomColumns([...response.data]);
+        console.log('Custom columns loaded:', response.data);
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
@@ -641,10 +640,18 @@ function Collection() {
           if (!record.id) return;
           
           try {
-            const response = await customValuesService.update(record.id, {
-              ...record.customValues,
-              [column.id]: newValue
+            console.log('Updating custom value:', {
+              columnId: column.id,
+              newValue,
+              recordId: record.id
             });
+            
+            // For the API, we need to send an object with column_id as key and value as value
+            const valueToSend = {
+              [column.id]: newValue
+            };
+
+            const response = await customValuesService.update(record.id, valueToSend);
             
             if (response.success) {
               // Update the record in the local state
@@ -661,8 +668,19 @@ function Collection() {
                     : r
                 )
               );
+              console.log('Successfully updated custom value');
+            } else {
+              console.error('Failed to update custom value');
+              notifications.show({
+                title: 'Error',
+                message: 'Failed to update value',
+                color: 'red'
+              });
+              // Revert local value on error
+              setLocalValue(record.customValues?.[column.id] || '');
             }
           } catch (err) {
+            console.error('Error updating custom value:', err);
             notifications.show({
               title: 'Error',
               message: 'Failed to update value',

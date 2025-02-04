@@ -156,53 +156,27 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     }
   };
 
-  const handleSetOptionColor = async (option: string, color: PillColor) => {
-    // Ensure we're using a Mantine-supported color
-    const mantineColor = PILL_COLORS.options.find(c => c.value === color)?.value || PILL_COLORS.default;
-    
-    console.log('Starting color update:', { option, color, mantineColor, before: optionColors, editingColumn });
-    
-    // Create the updated colors object
-    const updatedColors = {
-      ...optionColors,
-      [option]: mantineColor
-    };
-    
-    console.log('Updated colors object:', updatedColors);
-    
-    // Update local state first
-    setOptionColors(updatedColors);
-
-    // If we're editing a column, update it in the backend
+  const handleColorChange = async (option: string, color: string) => {
     if (editingColumn?.id) {
       try {
-        // Prepare the complete update data
-        const updateData = {
-          name: editingColumn.name,
-          type: editingColumn.type,
-          options: editingColumn.options,
-          option_colors: updatedColors,
-          defaultValue: editingColumn.defaultValue || undefined,
-          applyToAll: editingColumn.applyToAll || false
-        };
+        // Update local state first for immediate feedback
+        const newOptionColors = { ...optionColors, [option]: color };
+        setOptionColors(newOptionColors);
 
-        console.log('Sending update with data:', updateData);
+        // Update in the backend
+        const response = await customColumns.update(editingColumn.id, {
+          ...editingColumn,
+          option_colors: newOptionColors
+        });
         
-        // Make the API call
-        const response = await customColumns.update(editingColumn.id, updateData);
-        console.log('API response:', response);
-
         if (response.success) {
-          notifications.show({
-            title: 'Success',
-            message: 'Color updated successfully',
-            color: 'green'
-          });
-          console.log('Reloading columns...');
+          console.log('Color updated successfully');
+          // Reload columns and trigger table refresh
           await loadColumns();
-          // Trigger table refresh to update the pills
-          window.dispatchEvent(new CustomEvent('refresh-table-data'));
-          console.log('Columns reloaded');
+          // Ensure the table refresh happens after the columns are loaded
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('refresh-table-data'));
+          }, 100);
         } else {
           console.error('Update failed:', response.error);
           // If the update failed, revert the local state
@@ -464,7 +438,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                                     if (!editingColumn) {
                                       handleSubmit();  // Save current state
                                     }
-                                    handleSetOptionColor(opt, value);
+                                    handleColorChange(opt, value);
                                   }}
                                   leftSection={
                                     <ColorSwatch color={value} size={14} />
