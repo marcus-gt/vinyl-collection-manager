@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch, Menu, ColorSwatch } from '@mantine/core';
+import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Switch, Menu, ColorSwatch, Badge } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns, customValues, records } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
@@ -414,20 +414,22 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                         <Group key={opt} gap={4} wrap="nowrap">
                           <Menu shadow="md" width={200} position="bottom-start" closeOnItemClick>
                             <Menu.Target>
-                              <Chip
-                                checked={false}
+                              <Badge
                                 variant="filled"
                                 size="sm"
+                                radius="sm"
                                 color={optionColors[opt] || PILL_COLORS.default}
                                 styles={{
-                                  label: {
+                                  root: {
+                                    textTransform: 'none',
                                     cursor: 'pointer',
+                                    padding: '3px 8px',
                                     paddingRight: 25 // Make room for the X button
                                   }
                                 }}
                               >
                                 {opt}
-                              </Chip>
+                              </Badge>
                             </Menu.Target>
                             <Menu.Dropdown>
                               {PILL_COLORS.options.map(({ value, label }: { value: string; label: string }) => (
