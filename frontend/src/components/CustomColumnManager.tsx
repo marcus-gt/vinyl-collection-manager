@@ -3,8 +3,8 @@ import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns, customValues, records } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
+import { PILL_COLORS } from '../types';
 import { notifications } from '@mantine/notifications';
-import { PILL_COLORS } from '../constants/colors';
 
 interface CustomColumnManagerProps {
   opened: boolean;
