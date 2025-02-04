@@ -430,7 +430,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                               </Chip>
                             </Menu.Target>
                             <Menu.Dropdown>
-                              {PILL_COLORS.options.map(({ value, label }) => (
+                              {PILL_COLORS.options.map(({ value, label }: { value: string; label: string }) => (
                                 <Menu.Item
                                   key={value}
                                   onClick={() => {
