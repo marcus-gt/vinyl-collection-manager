@@ -760,7 +760,8 @@ function Collection() {
                                 root: {
                                   height: '22px',
                                   cursor: 'pointer',
-                                  pointerEvents: 'none'
+                                  pointerEvents: 'none',
+                                  backgroundColor: theme.colors[column.option_colors?.[value] || PILL_COLORS.default][6]
                                 },
                                 label: {
                                   padding: '2px 6px',
