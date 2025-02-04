@@ -227,12 +227,16 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
         console.log('Records to update:', recordsToUpdate);
 
+        // Remove the option and its color
+        const newOptionColors = { ...optionColors };
+        delete newOptionColors[optionToRemove];
+
         // First update the column definition to remove the option
         const updateColumnResponse = await customColumns.update(editingColumn.id, {
           name: editingColumn.name || '',
           type: editingColumn.type || 'text',
           options: options.filter(opt => opt !== optionToRemove),
-          option_colors: optionColors,
+          option_colors: newOptionColors,
           defaultValue: defaultValue === optionToRemove ? undefined : 
             type === 'multi-select' ? defaultValue.split(',').filter(v => v !== optionToRemove).join(',') : 
             defaultValue
@@ -241,6 +245,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         if (!updateColumnResponse.success) {
           throw new Error('Failed to update column options');
         }
+
+        // Update local state
+        setOptions(options.filter(opt => opt !== optionToRemove));
+        setOptionColors(newOptionColors);
 
         // Then update all records that use this option
         const updates = recordsToUpdate.map(record => {
@@ -264,22 +272,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         // Wait for all updates to complete
         const updateResults = await Promise.all(updates);
         console.log('Update results:', updateResults);
-
-        // Update local state
-        const updatedOptions = options.filter(opt => opt !== optionToRemove);
-        setOptions(updatedOptions);
-        
-        // If this was the default value, clear it
-        if (defaultValue === optionToRemove) {
-          setDefaultValue('');
-        } else if (type === 'multi-select' && defaultValue) {
-          // For multi-select, remove the option from the default value if it exists
-          const defaultValues = defaultValue.split(',').filter(Boolean);
-          if (defaultValues.includes(optionToRemove)) {
-            const newDefaultValues = defaultValues.filter(v => v !== optionToRemove);
-            setDefaultValue(newDefaultValues.join(','));
-          }
-        }
 
         // Refresh the data
         await loadColumns();
