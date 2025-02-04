@@ -409,9 +409,9 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                       padding: '8px'
                     }}
                   >
-                    <Group gap="xs">
+                    <Group gap={2}>
                       {options.map((opt) => (
-                        <Group key={opt} gap={4} wrap="nowrap">
+                        <Group key={opt} gap={0} wrap="nowrap">
                           <Menu shadow="md" width={200} position="bottom-start" closeOnItemClick>
                             <Menu.Target>
                               <Badge

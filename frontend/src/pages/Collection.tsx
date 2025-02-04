@@ -742,7 +742,7 @@ function Collection() {
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
-                      <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden' }}>
+                      <Group gap={4} wrap="wrap" style={{ overflow: 'hidden', maxHeight: '44px' }}>
                         {values.map((value) => {
                           console.log('Rendering pill:', {
                             value,
@@ -799,8 +799,28 @@ function Collection() {
                         },
                         dropdown: {
                           maxWidth: '90vw'
+                        },
+                        value: {
+                          backgroundColor: 'transparent'
                         }
                       }}
+                      valueComponent={({ value }) => (
+                        <Badge
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={column.option_colors?.[value] || PILL_COLORS.default}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'default',
+                              padding: '3px 8px'
+                            }
+                          }}
+                        >
+                          {value}
+                        </Badge>
+                      )}
                       onKeyDown={handleKeyDown}
                     />
                   </Stack>
