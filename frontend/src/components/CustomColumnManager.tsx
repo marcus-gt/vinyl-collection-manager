@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Chip, Switch, Menu, ColorSwatch } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns, customValues, records } from '../services/api';
-import type { CustomColumn, CustomColumnType, PillColor } from '../types';
+import type { CustomColumn, CustomColumnType } from '../types';
 import { notifications } from '@mantine/notifications';
-import { PILL_COLORS } from '../types';
+import { PILL_COLORS } from '../constants/colors';
 
 interface CustomColumnManagerProps {
   opened: boolean;
