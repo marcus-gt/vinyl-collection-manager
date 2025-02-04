@@ -793,20 +793,20 @@ function Collection() {
                       clearable
                       searchable
                       placeholder="Select options..."
-                      styles={(theme: MantineTheme) => ({
+                      styles={{
                         input: {
                           minHeight: '36px'
                         },
                         dropdown: {
                           maxWidth: '90vw'
                         }
-                      })}
-                      valueComponent={({ value }: { value: string }) => (
+                      }}
+                      renderOption={({ option }) => (
                         <Badge
                           variant="filled"
                           size="sm"
                           radius="sm"
-                          color={column.option_colors?.[value] || PILL_COLORS.default}
+                          color={column.option_colors?.[option.value] || PILL_COLORS.default}
                           styles={{
                             root: {
                               textTransform: 'none',
@@ -815,7 +815,7 @@ function Collection() {
                             }
                           }}
                         >
-                          {value}
+                          {option.label}
                         </Badge>
                       )}
                       onKeyDown={handleKeyDown}
