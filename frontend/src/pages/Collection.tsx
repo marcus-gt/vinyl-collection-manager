@@ -699,6 +699,13 @@ function Collection() {
           const values = localValue ? localValue.split(',') : [];
           const [opened, setOpened] = useState(false);
           
+          console.log('Rendering multi-select column:', {
+            columnName: column.name,
+            values,
+            optionColors: column.option_colors,
+            localValue
+          });
+          
           const handleKeyDown = (e: React.KeyboardEvent) => {
             if (e.key === 'Enter') {
               setOpened(false);
@@ -717,28 +724,34 @@ function Collection() {
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
                       <Group gap={4} wrap="nowrap" style={{ overflow: 'hidden' }}>
-                        {values.map((value) => (
-                          <Chip
-                            key={value}
-                            checked={false}
-                            variant="filled"
-                            size="xs"
-                            color={column.option_colors?.[value] || PILL_COLORS.default}
-                            styles={{
-                              root: {
-                                height: '22px',
-                                cursor: 'pointer',
-                                pointerEvents: 'none'
-                              },
-                              label: {
-                                padding: '2px 6px',
-                                whiteSpace: 'nowrap'
-                              }
-                            }}
-                          >
-                            {value}
-                          </Chip>
-                        ))}
+                        {values.map((value) => {
+                          console.log('Rendering pill:', {
+                            value,
+                            color: column.option_colors?.[value] || PILL_COLORS.default
+                          });
+                          return (
+                            <Chip
+                              key={value}
+                              checked={false}
+                              variant="filled"
+                              size="xs"
+                              color={column.option_colors?.[value] || PILL_COLORS.default}
+                              styles={{
+                                root: {
+                                  height: '22px',
+                                  cursor: 'pointer',
+                                  pointerEvents: 'none'
+                                },
+                                label: {
+                                  padding: '2px 6px',
+                                  whiteSpace: 'nowrap'
+                                }
+                              }}
+                            >
+                              {value}
+                            </Chip>
+                          );
+                        })}
                       </Group>
                     )}
                   </Text>
