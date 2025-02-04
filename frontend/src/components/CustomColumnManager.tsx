@@ -60,10 +60,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         name,
         type,
         options: (type === 'single-select' || type === 'multi-select') ? options : undefined,
-        option_colors: (type === 'single-select' || type === 'multi-select') ? optionColors : undefined,
+        option_colors: optionColors,
         defaultValue: defaultValue || undefined,
         applyToAll
       };
+
+      console.log('Submitting column data:', columnData);
 
       if (editingColumn?.id) {
         // Update existing column
@@ -177,7 +179,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           type: editingColumn.type,
           options: editingColumn.options,
           option_colors: updatedColors,
-          defaultValue: editingColumn.defaultValue
+          defaultValue: editingColumn.defaultValue || undefined,
+          applyToAll: editingColumn.applyToAll || false
         };
 
         console.log('Sending update with data:', updateData);
