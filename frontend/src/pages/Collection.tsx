@@ -855,7 +855,13 @@ function Collection() {
                             }
                           }}
                           onClick={() => {
-                            handleChange(opt);
+                            if (localValue === opt) {
+                              // Deselect if clicking the currently selected option
+                              handleChange('');
+                            } else {
+                              // Select the new option
+                              handleChange(opt);
+                            }
                             setOpened(false);
                           }}
                         >
