@@ -193,11 +193,16 @@ export const lookup = {
 export const customColumns = {
   getAll: async (): Promise<ApiResponse<CustomColumn[]>> => {
     try {
+      console.log('API: Fetching all custom columns');
       const response = await fetch('/api/custom-columns', {
         method: 'GET',
         credentials: 'include'
       });
-      return handleApiResponse(response);
+      const responseText = await response.text();
+      console.log('API: Custom columns response:', responseText);
+      const data = JSON.parse(responseText);
+      console.log('API: Parsed custom columns:', data);
+      return data;
     } catch (err) {
       console.error('Failed to get custom columns:', err);
       return { success: false, error: 'Failed to get custom columns' };

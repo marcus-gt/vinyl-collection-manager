@@ -139,8 +139,11 @@ function Collection() {
 
   const loadCustomColumns = async () => {
     try {
+      console.log('Loading custom columns...');
       const response = await customColumnsApi.getAll();
+      console.log('Custom columns response:', response);
       if (response.success && response.data) {
+        console.log('Setting custom columns:', response.data);
         setCustomColumns(response.data);
       }
     } catch (err) {
