@@ -764,16 +764,12 @@ function Collection() {
                         <IconX size={16} />
                       </ActionIcon>
                     </Group>
-                    <MultiSelect
-                      size="sm"
-                      value={values}
-                      onChange={(newValues) => {
-                        handleChange(newValues.join(','));
-                      }}
-                      data={column.options.map(opt => ({
-                        value: opt,
-                        label: (
+                    <Stack gap="xs">
+                      {(column.options || []).map((opt) => {
+                        const isSelected = values.includes(opt);
+                        return (
                           <Badge
+                            key={opt}
                             variant="filled"
                             size="sm"
                             radius="sm"
@@ -783,43 +779,22 @@ function Collection() {
                                 textTransform: 'none',
                                 cursor: 'pointer',
                                 padding: '3px 8px',
-                                width: '100%'
+                                width: '100%',
+                                opacity: isSelected ? 1 : 0.7
                               }
+                            }}
+                            onClick={() => {
+                              const newValues = isSelected
+                                ? values.filter(v => v !== opt)
+                                : [...values, opt];
+                              handleChange(newValues.join(','));
                             }}
                           >
                             {opt}
                           </Badge>
-                        )
-                      }))}
-                      clearable
-                      searchable
-                      placeholder="Select options..."
-                      styles={{
-                        input: {
-                          minHeight: '36px'
-                        },
-                        dropdown: {
-                          maxWidth: '90vw'
-                        }
-                      }}
-                      valueComponent={({ value }: { value: string }) => (
-                        <Badge
-                          variant="filled"
-                          size="sm"
-                          radius="sm"
-                          color={column.option_colors?.[value] || PILL_COLORS.default}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
-                          }}
-                        >
-                          {value}
-                        </Badge>
-                      )}
-                    />
+                        );
+                      })}
+                    </Stack>
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
