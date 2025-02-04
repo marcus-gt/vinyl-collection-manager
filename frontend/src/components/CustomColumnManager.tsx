@@ -168,63 +168,57 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     // Update local state first
     setOptionColors(updatedColors);
 
-    // If we're editing an existing column, update it
-    if (editingColumn?.id) {
-      try {
-        // Get the current column data to ensure we have the latest
-        const currentColumn = columns.find(col => col.id === editingColumn.id);
-        if (!currentColumn) {
-          throw new Error('Column not found');
-        }
+    // Find the column that has this option
+    const targetColumn = columns.find(col => col.options?.includes(option));
+    if (!targetColumn) {
+      console.error('Column not found for option:', option);
+      return;
+    }
 
-        console.log('Current column data:', currentColumn);
+    try {
+      // Prepare the complete update data
+      const updateData = {
+        name: targetColumn.name,
+        type: targetColumn.type,
+        options: targetColumn.options,
+        option_colors: updatedColors,
+        defaultValue: targetColumn.defaultValue
+      };
 
-        // Prepare the complete update data
-        const updateData = {
-          name: currentColumn.name,
-          type: currentColumn.type,
-          options: currentColumn.options,
-          option_colors: updatedColors,
-          defaultValue: currentColumn.defaultValue
-        };
+      console.log('Sending update with data:', updateData);
+      
+      // Make the API call
+      const response = await customColumns.update(targetColumn.id, updateData);
+      console.log('API response:', response);
 
-        console.log('Sending update with data:', updateData);
-        
-        // Make the API call
-        const response = await customColumns.update(editingColumn.id, updateData);
-        console.log('API response:', response);
-
-        if (response.success) {
-          notifications.show({
-            title: 'Success',
-            message: 'Color updated successfully',
-            color: 'green'
-          });
-          console.log('Reloading columns...');
-          await loadColumns();
-          console.log('Columns reloaded');
-        } else {
-          console.error('Update failed:', response.error);
-          // If the update failed, revert the local state
-          setOptionColors(optionColors);
-          notifications.show({
-            title: 'Error',
-            message: 'Failed to update color: ' + (response.error || 'Unknown error'),
-            color: 'red'
-          });
-        }
-      } catch (err) {
-        console.error('Error during color update:', err);
-        // If there was an error, revert the local state
+      if (response.success) {
+        notifications.show({
+          title: 'Success',
+          message: 'Color updated successfully',
+          color: 'green'
+        });
+        console.log('Reloading columns...');
+        await loadColumns();
+        console.log('Columns reloaded');
+      } else {
+        console.error('Update failed:', response.error);
+        // If the update failed, revert the local state
         setOptionColors(optionColors);
         notifications.show({
           title: 'Error',
-          message: 'Failed to update color: ' + (err instanceof Error ? err.message : 'Unknown error'),
+          message: 'Failed to update color: ' + (response.error || 'Unknown error'),
           color: 'red'
         });
       }
-    } else {
-      console.log('No column being edited, only updating local state');
+    } catch (err) {
+      console.error('Error during color update:', err);
+      // If there was an error, revert the local state
+      setOptionColors(optionColors);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to update color: ' + (err instanceof Error ? err.message : 'Unknown error'),
+        color: 'red'
+      });
     }
   };
 
