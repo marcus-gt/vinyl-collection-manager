@@ -809,7 +809,25 @@ function Collection() {
               <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
                   <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
-                    {localValue || '-'}
+                    {localValue ? (
+                      <Badge
+                        variant="filled"
+                        size="sm"
+                        radius="sm"
+                        color={column.option_colors?.[localValue] || PILL_COLORS.default}
+                        styles={{
+                          root: {
+                            textTransform: 'none',
+                            cursor: 'default',
+                            padding: '3px 8px'
+                          }
+                        }}
+                      >
+                        {localValue}
+                      </Badge>
+                    ) : (
+                      <Text size="sm" c="dimmed">-</Text>
+                    )}
                   </Text>
                 </Popover.Target>
                 <Popover.Dropdown>
@@ -820,19 +838,31 @@ function Collection() {
                         <IconX size={16} />
                       </ActionIcon>
                     </Group>
-                    <Select
-                      size="sm"
-                      value={localValue}
-                      onChange={(newValue) => {
-                        handleChange(newValue || '');
-                        setOpened(false);
-                      }}
-                      data={column.options.map(opt => ({
-                        value: opt,
-                        label: opt
-                      }))}
-                      clearable
-                    />
+                    <Group gap="xs" wrap="wrap">
+                      {column.options.map((opt) => (
+                        <Badge
+                          key={opt}
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={column.option_colors?.[opt] || PILL_COLORS.default}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'pointer',
+                              padding: '3px 8px',
+                              opacity: localValue === opt ? 1 : 0.5
+                            }
+                          }}
+                          onClick={() => {
+                            handleChange(opt);
+                            setOpened(false);
+                          }}
+                        >
+                          {opt}
+                        </Badge>
+                      ))}
+                    </Group>
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
