@@ -157,12 +157,15 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   };
 
   const handleSetOptionColor = async (option: string, color: PillColor) => {
-    console.log('Starting color update:', { option, color, before: optionColors });
+    // Ensure we're using a Mantine-supported color
+    const mantineColor = PILL_COLORS.options.find(c => c.value === color)?.value || PILL_COLORS.default;
+    
+    console.log('Starting color update:', { option, color, mantineColor, before: optionColors });
     
     // Create the updated colors object
     const updatedColors = {
       ...optionColors,
-      [option]: color
+      [option]: mantineColor
     };
     
     console.log('Updated colors object:', updatedColors);
