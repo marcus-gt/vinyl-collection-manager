@@ -788,7 +788,23 @@ function Collection() {
                       }}
                       data={column.options.map(opt => ({
                         value: opt,
-                        label: opt
+                        label: (
+                          <Badge
+                            variant="filled"
+                            size="sm"
+                            radius="sm"
+                            color={column.option_colors?.[opt] || PILL_COLORS.default}
+                            styles={{
+                              root: {
+                                textTransform: 'none',
+                                cursor: 'pointer',
+                                padding: '3px 8px'
+                              }
+                            }}
+                          >
+                            {opt}
+                          </Badge>
+                        )
                       }))}
                       clearable
                       searchable
@@ -801,12 +817,12 @@ function Collection() {
                           maxWidth: '90vw'
                         }
                       }}
-                      renderOption={({ option }) => (
+                      valueComponent={({ value }: { value: string }) => (
                         <Badge
                           variant="filled"
                           size="sm"
                           radius="sm"
-                          color={column.option_colors?.[option.value] || PILL_COLORS.default}
+                          color={column.option_colors?.[value] || PILL_COLORS.default}
                           styles={{
                             root: {
                               textTransform: 'none',
@@ -815,7 +831,7 @@ function Collection() {
                             }
                           }}
                         >
-                          {option.label}
+                          {value}
                         </Badge>
                       )}
                       onKeyDown={handleKeyDown}
