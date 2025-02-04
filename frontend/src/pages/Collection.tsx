@@ -764,7 +764,7 @@ function Collection() {
                         <IconX size={16} />
                       </ActionIcon>
                     </Group>
-                    <Stack gap="xs">
+                    <Group gap="xs" wrap="wrap">
                       {(column.options || []).map((opt) => {
                         const isSelected = values.includes(opt);
                         return (
@@ -779,8 +779,7 @@ function Collection() {
                                 textTransform: 'none',
                                 cursor: 'pointer',
                                 padding: '3px 8px',
-                                width: '100%',
-                                opacity: isSelected ? 1 : 0.7
+                                opacity: isSelected ? 1 : 0.5
                               }
                             }}
                             onClick={() => {
@@ -794,7 +793,7 @@ function Collection() {
                           </Badge>
                         );
                       })}
-                    </Stack>
+                    </Group>
                   </Stack>
                 </Popover.Dropdown>
               </Popover>
