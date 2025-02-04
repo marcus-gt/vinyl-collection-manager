@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip, Switch } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip, Switch, Badge } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -750,34 +750,22 @@ function Collection() {
                             optionColors: column.option_colors
                           });
                           return (
-                            <Chip
+                            <Badge
                               key={value}
-                              checked={false}
                               variant="filled"
-                              size="xs"
+                              size="sm"
                               radius="sm"
                               color={column.option_colors?.[value] || PILL_COLORS.default}
-                              styles={(theme) => ({
+                              styles={{
                                 root: {
-                                  height: '22px',
-                                  cursor: 'pointer',
-                                  pointerEvents: 'none',
-                                  backgroundColor: `var(--mantine-color-${column.option_colors?.[value] || PILL_COLORS.default}-filled)`,
-                                  border: 'none'
-                                },
-                                label: {
-                                  padding: '2px 6px',
-                                  whiteSpace: 'nowrap',
-                                  color: theme.white,
-                                  fontWeight: 500
-                                },
-                                checkIcon: {
-                                  display: 'none'
+                                  textTransform: 'none',
+                                  cursor: 'default',
+                                  padding: '3px 8px'
                                 }
-                              })}
+                              }}
                             >
                               {value}
-                            </Chip>
+                            </Badge>
                           );
                         })}
                       </Group>
