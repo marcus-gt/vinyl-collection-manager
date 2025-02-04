@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge, MantineTheme } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -793,34 +793,18 @@ function Collection() {
                       clearable
                       searchable
                       placeholder="Select options..."
-                      styles={{
+                      styles={(theme: MantineTheme) => ({
                         input: {
                           minHeight: '36px'
                         },
                         dropdown: {
                           maxWidth: '90vw'
                         },
-                        value: {
-                          backgroundColor: 'transparent'
+                        pill: {
+                          backgroundColor: theme.colors[column.option_colors?.[values[0]] || PILL_COLORS.default][6],
+                          color: theme.white
                         }
-                      }}
-                      valueComponent={({ value }) => (
-                        <Badge
-                          variant="filled"
-                          size="sm"
-                          radius="sm"
-                          color={column.option_colors?.[value] || PILL_COLORS.default}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
-                          }}
-                        >
-                          {value}
-                        </Badge>
-                      )}
+                      })}
                       onKeyDown={handleKeyDown}
                     />
                   </Stack>
