@@ -85,6 +85,7 @@ function Collection() {
 
     const handleTableRefresh = () => {
       loadRecords();
+      loadCustomColumns();  // Also reload columns when table refreshes
     };
 
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
