@@ -786,7 +786,11 @@ function Collection() {
                       onChange={(newValues) => {
                         handleChange(newValues.join(','));
                       }}
-                      data={column.options}
+                      data={column.options.map(opt => ({
+                        value: opt,
+                        label: opt,
+                        color: column.option_colors?.[opt] || PILL_COLORS.default
+                      }))}
                       clearable
                       searchable
                       placeholder="Select options..."
@@ -796,32 +800,8 @@ function Collection() {
                         },
                         dropdown: {
                           maxWidth: '90vw'
-                        },
-                        pill: {
-                          backgroundColor: 'transparent',
-                          padding: 0,
-                          '&[data-checked]': {
-                            backgroundColor: 'transparent'
-                          }
                         }
                       }}
-                      pillComponent={({ value }) => (
-                        <Badge
-                          variant="filled"
-                          size="sm"
-                          radius="sm"
-                          color={column.option_colors?.[value] || PILL_COLORS.default}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
-                          }}
-                        >
-                          {value}
-                        </Badge>
-                      )}
                       onKeyDown={handleKeyDown}
                     />
                   </Stack>
