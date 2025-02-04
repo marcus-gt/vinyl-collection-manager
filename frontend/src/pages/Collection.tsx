@@ -779,7 +779,7 @@ function Collection() {
                                 textTransform: 'none',
                                 cursor: 'pointer',
                                 padding: '3px 8px',
-                                opacity: isSelected ? 1 : 0.5
+                                opacity: isSelected ? 1 : 0.3
                               }
                             }}
                             onClick={() => {
