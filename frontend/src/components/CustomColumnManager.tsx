@@ -160,7 +160,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     // Ensure we're using a Mantine-supported color
     const mantineColor = PILL_COLORS.options.find(c => c.value === color)?.value || PILL_COLORS.default;
     
-    console.log('Starting color update:', { option, color, mantineColor, before: optionColors });
+    console.log('Starting color update:', { option, color, mantineColor, before: optionColors, editingColumn });
     
     // Create the updated colors object
     const updatedColors = {
@@ -223,6 +223,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           color: 'red'
         });
       }
+    } else {
+      console.log('No column being edited, skipping backend update');
     }
   };
 
@@ -457,7 +459,13 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                               {PILL_COLORS.options.map(({ value, label }) => (
                                 <Menu.Item
                                   key={value}
-                                  onClick={() => handleSetOptionColor(opt, value)}
+                                  onClick={() => {
+                                    // First ensure we're in edit mode
+                                    if (!editingColumn) {
+                                      handleSubmit();  // Save current state
+                                    }
+                                    handleSetOptionColor(opt, value);
+                                  }}
                                   leftSection={
                                     <ColorSwatch color={value} size={14} />
                                   }
