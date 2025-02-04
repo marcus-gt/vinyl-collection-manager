@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Chip, Switch, Badge } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
