@@ -412,7 +412,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                     <Group gap={2}>
                       {options.map((opt) => (
                         <Group key={opt} gap={0} wrap="nowrap">
-                          <Menu shadow="md" width={200} position="bottom-start" closeOnItemClick>
+                          <Menu shadow="md" width={150} position="bottom-start" closeOnItemClick>
                             <Menu.Target>
                               <Badge
                                 variant="filled"
@@ -432,23 +432,33 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                               </Badge>
                             </Menu.Target>
                             <Menu.Dropdown>
-                              {PILL_COLORS.options.map(({ value, label }: { value: string; label: string }) => (
-                                <Menu.Item
-                                  key={value}
-                                  onClick={() => {
-                                    // First ensure we're in edit mode
-                                    if (!editingColumn) {
-                                      handleSubmit();  // Save current state
-                                    }
-                                    handleColorChange(opt, value);
-                                  }}
-                                  leftSection={
-                                    <ColorSwatch color={value} size={14} />
-                                  }
-                                >
-                                  {label}
-                                </Menu.Item>
-                              ))}
+                              <Group gap={4} p="xs" wrap="wrap">
+                                {PILL_COLORS.options.map(({ value, label }) => (
+                                  <Badge
+                                    key={value}
+                                    variant="filled"
+                                    size="sm"
+                                    radius="sm"
+                                    color={value}
+                                    styles={{
+                                      root: {
+                                        textTransform: 'none',
+                                        cursor: 'pointer',
+                                        padding: '3px 8px',
+                                        opacity: optionColors[opt] === value ? 1 : 0.5
+                                      }
+                                    }}
+                                    onClick={() => {
+                                      if (!editingColumn) {
+                                        handleSubmit();  // Save current state
+                                      }
+                                      handleColorChange(opt, value);
+                                    }}
+                                  >
+                                    {label}
+                                  </Badge>
+                                ))}
+                              </Group>
                             </Menu.Dropdown>
                           </Menu>
                           <ActionIcon 
