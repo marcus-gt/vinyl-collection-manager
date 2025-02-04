@@ -197,6 +197,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           });
           console.log('Reloading columns...');
           await loadColumns();
+          // Trigger table refresh to update the pills
+          window.dispatchEvent(new CustomEvent('refresh-table-data'));
           console.log('Columns reloaded');
         } else {
           console.error('Update failed:', response.error);
