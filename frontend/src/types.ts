@@ -73,19 +73,15 @@ export interface CustomColumnValue {
 
 // Available theme colors for pills
 export type PillColor = 
-  | 'dark' 
-  | 'gray' 
-  | 'red' 
-  | 'pink' 
-  | 'grape' 
-  | 'violet' 
-  | 'indigo' 
-  | 'blue' 
-  | 'cyan' 
-  | 'teal' 
-  | 'green' 
-  | 'lime' 
-  | 'yellow' 
+  | 'dark'
+  | 'gray'
+  | 'red'
+  | 'grape'
+  | 'violet'
+  | 'indigo'
+  | 'blue'
+  | 'cyan'
+  | 'green'
   | 'orange';
 
 export const PILL_COLORS = {
@@ -94,16 +90,12 @@ export const PILL_COLORS = {
     { value: 'dark', label: 'Dark' },
     { value: 'gray', label: 'Gray' },
     { value: 'red', label: 'Red' },
-    { value: 'pink', label: 'Pink' },
-    { value: 'grape', label: 'Grape' },
+    { value: 'grape', label: 'Purple' },
     { value: 'violet', label: 'Violet' },
     { value: 'indigo', label: 'Indigo' },
     { value: 'blue', label: 'Blue' },
     { value: 'cyan', label: 'Cyan' },
-    { value: 'teal', label: 'Teal' },
     { value: 'green', label: 'Green' },
-    { value: 'lime', label: 'Lime' },
-    { value: 'yellow', label: 'Yellow' },
     { value: 'orange', label: 'Orange' }
   ]
 } as const; 
