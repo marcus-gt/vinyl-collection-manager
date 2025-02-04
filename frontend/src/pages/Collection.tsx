@@ -770,7 +770,27 @@ function Collection() {
                       onChange={(newValues) => {
                         handleChange(newValues.join(','));
                       }}
-                      data={column.options}
+                      data={column.options.map(opt => ({
+                        value: opt,
+                        label: (
+                          <Badge
+                            variant="filled"
+                            size="sm"
+                            radius="sm"
+                            color={column.option_colors?.[opt] || PILL_COLORS.default}
+                            styles={{
+                              root: {
+                                textTransform: 'none',
+                                cursor: 'pointer',
+                                padding: '3px 8px',
+                                width: '100%'
+                              }
+                            }}
+                          >
+                            {opt}
+                          </Badge>
+                        )
+                      }))}
                       clearable
                       searchable
                       placeholder="Select options..."
@@ -780,12 +800,25 @@ function Collection() {
                         },
                         dropdown: {
                           maxWidth: '90vw'
-                        },
-                        pill: {
-                          backgroundColor: `var(--mantine-color-${column.option_colors?.[values[0]] || PILL_COLORS.default}-filled)`,
-                          color: 'var(--mantine-color-white)'
                         }
                       }}
+                      valueComponent={({ value }: { value: string }) => (
+                        <Badge
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={column.option_colors?.[value] || PILL_COLORS.default}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'default',
+                              padding: '3px 8px'
+                            }
+                          }}
+                        >
+                          {value}
+                        </Badge>
+                      )}
                     />
                   </Stack>
                 </Popover.Dropdown>
