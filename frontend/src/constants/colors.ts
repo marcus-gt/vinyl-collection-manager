@@ -4,8 +4,9 @@ interface PillColorOption {
 }
 
 export const PILL_COLORS = {
-  default: 'blue',
+  default: 'grey',
   options: [
+    { value: 'grey', label: 'Grey' },
     { value: 'blue', label: 'Blue' },
     { value: 'green', label: 'Green' },
     { value: 'red', label: 'Red' },
