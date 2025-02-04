@@ -799,12 +799,25 @@ function Collection() {
                         },
                         dropdown: {
                           maxWidth: '90vw'
-                        },
-                        pill: {
-                          backgroundColor: theme.colors[column.option_colors?.[values[0]] || PILL_COLORS.default][6],
-                          color: theme.white
                         }
                       })}
+                      valueComponent={({ value }: { value: string }) => (
+                        <Badge
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={column.option_colors?.[value] || PILL_COLORS.default}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'default',
+                              padding: '3px 8px'
+                            }
+                          }}
+                        >
+                          {value}
+                        </Badge>
+                      )}
                       onKeyDown={handleKeyDown}
                     />
                   </Stack>
