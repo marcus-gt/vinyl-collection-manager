@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge, Combobox, InputBase } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge } from '@mantine/core';
 import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -8,7 +8,7 @@ import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
-import { useCombobox } from '@mantine/hooks';
+import type { MantineTheme } from '@mantine/core';
 
 const PAGE_SIZE = 15;
 
@@ -792,14 +792,10 @@ function Collection() {
                           maxWidth: '90vw'
                         },
                         pill: {
-                          backgroundColor: (theme) => {
-                            const value = theme.colors[column.option_colors?.[values[0]] || PILL_COLORS.default][6];
-                            return value;
-                          },
-                          color: 'white'
+                          backgroundColor: `var(--mantine-color-${column.option_colors?.[values[0]] || PILL_COLORS.default}-filled)`,
+                          color: 'var(--mantine-color-white)'
                         }
                       }}
-                      onKeyDown={handleKeyDown}
                     />
                   </Stack>
                 </Popover.Dropdown>
