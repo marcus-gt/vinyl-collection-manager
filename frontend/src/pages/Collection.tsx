@@ -389,6 +389,9 @@ function Collection() {
               title: 'Artist', 
               sortable: true,
               width: 200,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => (
                 <Popover width={400} position="bottom-start" withArrow shadow="md">
                   <Popover.Target>
@@ -409,6 +412,9 @@ function Collection() {
               title: 'Album', 
               sortable: true,
               width: 250,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => (
                 <Popover width={400} position="bottom-start" withArrow shadow="md">
                   <Popover.Target>
@@ -430,6 +436,9 @@ function Collection() {
               title: 'Label', 
               sortable: true,
               width: 150,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => (
                 <Popover width={400} position="bottom-start" withArrow shadow="md">
                   <Popover.Target>
@@ -450,6 +459,9 @@ function Collection() {
               title: 'Genres', 
               sortable: true,
               width: 150,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => {
                 const genres = record.genres?.join(', ') || '-';
                 return (
@@ -473,6 +485,9 @@ function Collection() {
               title: 'Styles', 
               sortable: true,
               width: 180,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => {
                 const styles = record.styles?.join(', ') || '-';
                 return (
@@ -496,6 +511,9 @@ function Collection() {
               title: 'Musicians', 
               sortable: true,
               width: 200,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => {
                 const musicians = record.musicians?.join(', ') || '-';
                 return musicians === '-' ? (
@@ -520,6 +538,10 @@ function Collection() {
               accessor: 'notes', 
               title: 'Notes', 
               sortable: true,
+              width: 200,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => {
                 const notes = record.notes || '-';
                 return (
@@ -543,6 +565,9 @@ function Collection() {
               title: 'Added', 
               sortable: true,
               width: 150,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => record.created_at ? 
                 new Date(record.created_at).toLocaleString() : '-'
             },
@@ -551,12 +576,18 @@ function Collection() {
               title: 'Scanned Release Year', 
               sortable: true, 
               width: 100,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => record.current_release_year || '-'
             },
             {
               accessor: 'links',
               title: 'Links',
               width: 130,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => (
                 <Group gap="xs">
                   {record.master_url && (
@@ -593,6 +624,9 @@ function Collection() {
               accessor: 'actions',
               title: 'Actions',
               width: 100,
+              resizable: true,
+              minWidth: 100,
+              maxWidth: 500,
         render: (record: VinylRecord) => (
                 <Group gap="xs">
                   <Tooltip label="Edit Notes">
@@ -623,92 +657,59 @@ function Collection() {
     ];
 
     // Add custom columns
-    const customColumnDefs = customColumns.map(column => {
-      // For multi-select columns, calculate the maximum width needed based on all records
-      let columnWidth = column.type === 'multi-select' ? 
-        Math.max(300, ...userRecords.map(record => {
-          const values = record.customValues?.[column.id]?.split(',').filter(Boolean) || [];
-          if (values.length === 0) return 150;
+    const customColumnDefs = customColumns.map(column => ({
+      accessor: `custom_${column.id}` as keyof VinylRecord,
+      title: column.name,
+      sortable: true,
+      width: column.type === 'multi-select' ? 300 : 
+             ['text'].includes(column.type) ? 300 : 150,
+      resizable: true,
+      minWidth: 100,
+      maxWidth: 1000,
+      style: column.type === 'multi-select' ? { overflow: 'visible' } : undefined,
+      render: (record: VinylRecord) => {
+        const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
+        
+        // Effect to sync local value with record value
+        useEffect(() => {
+          setLocalValue(record.customValues?.[column.id] || '');
+        }, [record.customValues, column.id]);
+        
+        const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+          if (!record.id) return;
           
-          // Calculate total width needed for all badges
-          const totalBadgeWidth = values.reduce((acc, value) => {
-            // Each character is roughly 8px wide
-            const textWidth = value.length * 8;
-            // Add padding (16px), border (2px), and gap (4px)
-            return acc + textWidth + 22;
-          }, 0);
-          
-          // Add extra padding for the container (16px on each side)
-          const containerPadding = 32;
-          
-          // Add gap between badges (4px) * number of gaps (values.length - 1)
-          const gapsWidth = 4 * (values.length - 1);
-          const totalWidth = totalBadgeWidth + gapsWidth + containerPadding;
-          
-          // Divide by 2 for two rows and add some buffer (20px)
-          return Math.ceil(totalWidth / 2) + 20;
-        })) : 
-        ['text'].includes(column.type) ? 300 : 150;
-
-      return {
-        accessor: `custom_${column.id}` as keyof VinylRecord,
-        title: column.name,
-        sortable: true,
-        width: columnWidth,
-        style: column.type === 'multi-select' ? { overflow: 'visible' } : undefined,
-        render: (record: VinylRecord) => {
-          const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
-          
-          // Effect to sync local value with record value
-          useEffect(() => {
-            setLocalValue(record.customValues?.[column.id] || '');
-          }, [record.customValues, column.id]);
-          
-          const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
-            if (!record.id) return;
+          try {
+            console.log('Updating custom value:', {
+              columnId: column.id,
+              newValue,
+              recordId: record.id
+            });
             
-            try {
-              console.log('Updating custom value:', {
-                columnId: column.id,
-                newValue,
-                recordId: record.id
-              });
-              
-              // For the API, we need to send an object with column_id as key and value as value
-              const valueToSend = {
-                [column.id]: newValue
-              };
+            // For the API, we need to send an object with column_id as key and value as value
+            const valueToSend = {
+              [column.id]: newValue
+            };
 
-              const response = await customValuesService.update(record.id, valueToSend);
-              
-              if (response.success) {
-                // Update the record in the local state
-                setUserRecords(prevRecords =>
-                  prevRecords.map(r =>
-                    r.id === record.id
-                      ? {
-                          ...r,
-                          customValues: {
-                            ...r.customValues,
-                            [column.id]: newValue
-                          }
+            const response = await customValuesService.update(record.id, valueToSend);
+            
+            if (response.success) {
+              // Update the record in the local state
+              setUserRecords(prevRecords =>
+                prevRecords.map(r =>
+                  r.id === record.id
+                    ? {
+                        ...r,
+                        customValues: {
+                          ...r.customValues,
+                          [column.id]: newValue
                         }
-                      : r
-                  )
-                );
-                console.log('Successfully updated custom value');
-              } else {
-                console.error('Failed to update custom value');
-                notifications.show({
-                  title: 'Error',
-                  message: 'Failed to update value',
-                  color: 'red'
-                });
-                // Revert local value on error
-                setLocalValue(record.customValues?.[column.id] || '');
-              }
-            } catch (err) {
-              console.error('Error updating custom value:', err);
+                      }
+                    : r
+                )
+              );
+              console.log('Successfully updated custom value');
+            } else {
+              console.error('Failed to update custom value');
               notifications.show({
                 title: 'Error',
                 message: 'Failed to update value',
@@ -717,174 +718,112 @@ function Collection() {
               // Revert local value on error
               setLocalValue(record.customValues?.[column.id] || '');
             }
-          }, 1000);  // 1 second debounce
-
-          const handleChange = (value: string) => {
-            setLocalValue(value);  // Update UI immediately
-            debouncedUpdate(value);  // Debounce the API call
-          };
-
-          if (column.type === 'boolean') {
-            return (
-              <Box style={{ position: 'relative', width: '100%', height: '100%' }}>
-                <Switch
-                  checked={localValue === 'true'}
-                  onChange={(e) => handleChange(e.currentTarget.checked.toString())}
-                  size="sm"
-                  style={{ 
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                />
-              </Box>
-            );
+          } catch (err) {
+            console.error('Error updating custom value:', err);
+            notifications.show({
+              title: 'Error',
+              message: 'Failed to update value',
+              color: 'red'
+            });
+            // Revert local value on error
+            setLocalValue(record.customValues?.[column.id] || '');
           }
+        }, 1000);  // 1 second debounce
 
-          if (column.type === 'multi-select' && column.options) {
-            const values = localValue ? localValue.split(',') : [];
-            const [opened, setOpened] = useState(false);
-            
-            return (
-              <Box style={{ position: 'relative' }}>
-                <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                  <Popover.Target>
-                    <Text size="sm" style={{ cursor: 'pointer' }} onClick={() => setOpened(true)}>
-                      {values.length === 0 ? (
-                        <Text size="sm" c="dimmed">-</Text>
-                      ) : (
-                        <Box style={{ 
-                          position: 'relative',
-                          height: '40px',
-                          overflow: 'hidden'
+        const handleChange = (value: string) => {
+          setLocalValue(value);  // Update UI immediately
+          debouncedUpdate(value);  // Debounce the API call
+        };
+
+        if (column.type === 'boolean') {
+          return (
+            <Box style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <Switch
+                checked={localValue === 'true'}
+                onChange={(e) => handleChange(e.currentTarget.checked.toString())}
+                size="sm"
+                style={{ 
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)'
+                }}
+              />
+            </Box>
+          );
+        }
+
+        if (column.type === 'multi-select' && column.options) {
+          const values = localValue ? localValue.split(',') : [];
+          const [opened, setOpened] = useState(false);
+          
+          return (
+            <Box style={{ position: 'relative' }}>
+              <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                <Popover.Target>
+                  <Text size="sm" style={{ cursor: 'pointer' }} onClick={() => setOpened(true)}>
+                    {values.length === 0 ? (
+                      <Text size="sm" c="dimmed">-</Text>
+                    ) : (
+                      <Box style={{ 
+                        position: 'relative',
+                        height: '40px',
+                        overflow: 'hidden'
+                      }}>
+                        <Group gap={4} wrap="nowrap" style={{ 
+                          height: '100%',
+                          alignItems: 'center',
+                          paddingRight: '20px'  // Space for gradient
                         }}>
-                          <Group gap={4} wrap="nowrap" style={{ 
-                            height: '100%',
-                            alignItems: 'center',
-                            paddingRight: '20px'  // Space for gradient
-                          }}>
-                            {values.map((value) => (
-                              <Badge
-                                key={value}
-                                variant="filled"
-                                size="sm"
-                                radius="sm"
-                                color={column.option_colors?.[value] || PILL_COLORS.default}
-                                styles={{
-                                  root: {
-                                    textTransform: 'none',
-                                    cursor: 'default',
-                                    padding: '3px 8px',
-                                    whiteSpace: 'nowrap',
-                                    display: 'inline-flex',
-                                    flexShrink: 0
-                                  }
-                                }}
-                              >
-                                {value}
-                              </Badge>
-                            ))}
-                          </Group>
-                          <Box 
-                            style={{ 
-                              position: 'absolute',
-                              right: 0,
-                              top: 0,
-                              bottom: 0,
-                              width: '20px',
-                              background: 'linear-gradient(to right, transparent, var(--mantine-color-dark-7) 50%)',
-                              pointerEvents: 'none'
-                            }}
-                          />
-                        </Box>
-                      )}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Stack gap="xs">
-                      <Group justify="space-between" align="center">
-                        <Text size="sm" fw={500}>Edit {column.name}</Text>
-                        <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
-                          <IconX size={16} />
-                        </ActionIcon>
-                      </Group>
-                      <Group gap="xs" wrap="wrap">
-                        {(column.options || []).map((opt) => {
-                          const isSelected = values.includes(opt);
-                          return (
+                          {values.map((value) => (
                             <Badge
-                              key={opt}
+                              key={value}
                               variant="filled"
                               size="sm"
                               radius="sm"
-                              color={column.option_colors?.[opt] || PILL_COLORS.default}
+                              color={column.option_colors?.[value] || PILL_COLORS.default}
                               styles={{
                                 root: {
                                   textTransform: 'none',
-                                  cursor: 'pointer',
+                                  cursor: 'default',
                                   padding: '3px 8px',
-                                  opacity: isSelected ? 1 : 0.3
+                                  whiteSpace: 'nowrap',
+                                  display: 'inline-flex',
+                                  flexShrink: 0
                                 }
                               }}
-                              onClick={() => {
-                                const newValues = isSelected
-                                  ? values.filter(v => v !== opt)
-                                  : [...values, opt];
-                                handleChange(newValues.join(','));
-                              }}
                             >
-                              {opt}
+                              {value}
                             </Badge>
-                          );
-                        })}
-                      </Group>
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              </Box>
-            );
-          }
-          
-          if (column.type === 'single-select' && column.options) {
-            const [opened, setOpened] = useState(false);
-
-            return (
-              <Box style={{ position: 'relative' }}>
-                <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
-                      {localValue ? (
-                        <Badge
-                          variant="filled"
-                          size="sm"
-                          radius="sm"
-                          color={column.option_colors?.[localValue] || PILL_COLORS.default}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
+                          ))}
+                        </Group>
+                        <Box 
+                          style={{ 
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: '20px',
+                            background: 'linear-gradient(to right, transparent, var(--mantine-color-dark-7) 50%)',
+                            pointerEvents: 'none'
                           }}
-                        >
-                          {localValue}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">-</Text>
-                      )}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Stack gap="xs">
-                      <Group justify="space-between" align="center">
-                        <Text size="sm" fw={500}>Edit {column.name}</Text>
-                        <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
-                          <IconX size={16} />
-                        </ActionIcon>
-                      </Group>
-                      <Group gap="xs" wrap="wrap">
-                        {column.options.map((opt) => (
+                        />
+                      </Box>
+                    )}
+                  </Text>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Group justify="space-between" align="center">
+                      <Text size="sm" fw={500}>Edit {column.name}</Text>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Group>
+                    <Group gap="xs" wrap="wrap">
+                      {(column.options || []).map((opt) => {
+                        const isSelected = values.includes(opt);
+                        return (
                           <Badge
                             key={opt}
                             variant="filled"
@@ -896,83 +835,104 @@ function Collection() {
                                 textTransform: 'none',
                                 cursor: 'pointer',
                                 padding: '3px 8px',
-                                opacity: localValue === opt ? 1 : 0.5
+                                opacity: isSelected ? 1 : 0.3
                               }
                             }}
                             onClick={() => {
-                              if (localValue === opt) {
-                                // Deselect if clicking the currently selected option
-                                handleChange('');
-                              } else {
-                                // Select the new option
-                                handleChange(opt);
-                              }
-                              setOpened(false);
+                              const newValues = isSelected
+                                ? values.filter(v => v !== opt)
+                                : [...values, opt];
+                              handleChange(newValues.join(','));
                             }}
                           >
                             {opt}
                           </Badge>
-                        ))}
-                      </Group>
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              </Box>
-            );
-          }
-          
-          if (column.type === 'number') {
-            const [opened, setOpened] = useState(false);
-            
-            const handleKeyDown = (e: React.KeyboardEvent) => {
-              if (e.key === 'Enter') {
-                setOpened(false);
-              }
-              if (e.key === 'Escape') {
-                setOpened(false);
-              }
-            };
+                        );
+                      })}
+                    </Group>
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            </Box>
+          );
+        }
+        
+        if (column.type === 'single-select' && column.options) {
+          const [opened, setOpened] = useState(false);
 
-            return (
-              <Box style={{ position: 'relative' }}>
-                <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
-                      {localValue || '-'}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Stack gap="xs">
-                      <Group justify="space-between" align="center">
-                        <Text size="sm" fw={500}>Edit {column.name}</Text>
-                        <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
-                          <IconX size={16} />
-                        </ActionIcon>
-                      </Group>
-                      <TextInput
+          return (
+            <Box style={{ position: 'relative' }}>
+              <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                <Popover.Target>
+                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
+                    {localValue ? (
+                      <Badge
+                        variant="filled"
                         size="sm"
-                        type="number"
-                        value={localValue}
-                        onChange={(e) => handleChange(e.target.value)}
-                        placeholder={`Enter ${column.name.toLowerCase()}`}
+                        radius="sm"
+                        color={column.option_colors?.[localValue] || PILL_COLORS.default}
                         styles={{
-                          input: {
-                            minHeight: '36px'
-                          },
                           root: {
-                            maxWidth: '90vw'
+                            textTransform: 'none',
+                            cursor: 'default',
+                            padding: '3px 8px'
                           }
                         }}
-                        onKeyDown={handleKeyDown}
-                      />
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              </Box>
-            );
-          }
-          
-          // Default text input
+                      >
+                        {localValue}
+                      </Badge>
+                    ) : (
+                      <Text size="sm" c="dimmed">-</Text>
+                    )}
+                  </Text>
+                </Popover.Target>
+                <Popover.Dropdown>
+                  <Stack gap="xs">
+                    <Group justify="space-between" align="center">
+                      <Text size="sm" fw={500}>Edit {column.name}</Text>
+                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                        <IconX size={16} />
+                      </ActionIcon>
+                    </Group>
+                    <Group gap="xs" wrap="wrap">
+                      {column.options.map((opt) => (
+                        <Badge
+                          key={opt}
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={column.option_colors?.[opt] || PILL_COLORS.default}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'pointer',
+                              padding: '3px 8px',
+                              opacity: localValue === opt ? 1 : 0.5
+                            }
+                          }}
+                          onClick={() => {
+                            if (localValue === opt) {
+                              // Deselect if clicking the currently selected option
+                              handleChange('');
+                            } else {
+                              // Select the new option
+                              handleChange(opt);
+                            }
+                            setOpened(false);
+                          }}
+                        >
+                          {opt}
+                        </Badge>
+                      ))}
+                    </Group>
+                  </Stack>
+                </Popover.Dropdown>
+              </Popover>
+            </Box>
+          );
+        }
+        
+        if (column.type === 'number') {
           const [opened, setOpened] = useState(false);
           
           const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1002,6 +962,7 @@ function Collection() {
                     </Group>
                     <TextInput
                       size="sm"
+                      type="number"
                       value={localValue}
                       onChange={(e) => handleChange(e.target.value)}
                       placeholder={`Enter ${column.name.toLowerCase()}`}
@@ -1021,8 +982,57 @@ function Collection() {
             </Box>
           );
         }
-      };
-    });
+        
+        // Default text input
+        const [opened, setOpened] = useState(false);
+        
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            setOpened(false);
+          }
+          if (e.key === 'Escape') {
+            setOpened(false);
+          }
+        };
+
+        return (
+          <Box style={{ position: 'relative' }}>
+            <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+              <Popover.Target>
+                <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
+                  {localValue || '-'}
+                </Text>
+              </Popover.Target>
+              <Popover.Dropdown>
+                <Stack gap="xs">
+                  <Group justify="space-between" align="center">
+                    <Text size="sm" fw={500}>Edit {column.name}</Text>
+                    <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                      <IconX size={16} />
+                    </ActionIcon>
+                  </Group>
+                  <TextInput
+                    size="sm"
+                    value={localValue}
+                    onChange={(e) => handleChange(e.target.value)}
+                    placeholder={`Enter ${column.name.toLowerCase()}`}
+                    styles={{
+                      input: {
+                        minHeight: '36px'
+                      },
+                      root: {
+                        maxWidth: '90vw'
+                      }
+                    }}
+                    onKeyDown={handleKeyDown}
+                  />
+                </Stack>
+              </Popover.Dropdown>
+            </Popover>
+          </Box>
+        );
+      }
+    }));
 
     return [...standardColumns, ...customColumnDefs];
   }, [customColumns]);
@@ -1071,12 +1081,9 @@ function Collection() {
           records={paginatedRecords}
           sortStatus={sortStatus}
           onSortStatusChange={handleSortStatusChange}
-          columns={tableColumns.map(col => ({
-            ...col,
-            resizable: true,
-            minWidth: 50,
-            maxWidth: 1000
-          }))}
+          columns={tableColumns}
+          allowColumnResizing
+          storeColumnsWidth
           styles={{
             table: {
               tableLayout: 'fixed',
@@ -1091,6 +1098,14 @@ function Collection() {
                 borderRight: '1px solid var(--mantine-color-dark-4)',
                 '&:last-child': {
                   borderRight: 'none'
+                }
+              },
+              '& .mantine-datatable-column-resizer': {
+                width: '4px',
+                right: '-2px',
+                backgroundColor: 'var(--mantine-color-dark-4)',
+                '&:hover': {
+                  backgroundColor: 'var(--mantine-color-blue-5)'
                 }
               }
             }
