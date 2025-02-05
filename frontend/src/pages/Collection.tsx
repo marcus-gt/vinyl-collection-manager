@@ -771,13 +771,13 @@ function Collection() {
                     ) : (
                       <Box style={{ 
                         position: 'relative',
-                        height: '40px',
+                        height: '48px',  // Increased height for two lines
                         overflow: 'hidden'
                       }}>
-                        <Group gap={4} wrap="nowrap" style={{ 
+                        <Group gap={4} wrap="wrap" style={{ 
                           height: '100%',
                           alignItems: 'center',
-                          paddingRight: '20px'  // Space for gradient
+                          padding: '4px'  // Add some padding around the tags
                         }}>
                           {values.map((value: string) => (
                             <Badge
@@ -793,7 +793,9 @@ function Collection() {
                                   padding: '3px 8px',
                                   whiteSpace: 'nowrap',
                                   display: 'inline-flex',
-                                  flexShrink: 0
+                                  flexShrink: 0,
+                                  height: '20px',  // Fixed height for badges
+                                  lineHeight: '14px'  // Proper line height for text
                                 }
                               }}
                             >
@@ -801,17 +803,6 @@ function Collection() {
                             </Badge>
                           ))}
                         </Group>
-                        <Box 
-                          style={{ 
-                            position: 'absolute',
-                            right: 0,
-                            top: 0,
-                            bottom: 0,
-                            width: '20px',
-                            background: 'linear-gradient(to right, transparent, var(--mantine-color-dark-7) 50%)',
-                            pointerEvents: 'none'
-                          }}
-                        />
                       </Box>
                     )}
                   </Text>
