@@ -720,13 +720,29 @@ function Collection() {
           const values = localValue ? localValue.split(',') : [];
           const [opened, setOpened] = useState(false);
           
-          // Calculate minimum width needed for the column
-          const minWidth = Math.max(
-            ...values.map(value => value.length * 8 + 40) // Rough estimate of text width plus padding
-          );
+          // Calculate column width based on content
+          const calculateColumnWidth = () => {
+            if (values.length === 0) return 150;
+            // Calculate width needed for each row (assuming 2 rows)
+            const totalWidth = values.reduce((acc, value) => acc + (value.length * 8 + 40), 0);
+            return Math.max(150, Math.ceil(totalWidth / 2) + 20); // Add padding
+          };
+
+          // Update column width when values change
+          useEffect(() => {
+            const newWidth = calculateColumnWidth();
+            const columnElement = document.querySelector(`[data-column-id="${column.id}"]`) as HTMLElement;
+            if (columnElement) {
+              columnElement.style.width = `${newWidth}px`;
+              columnElement.style.minWidth = `${newWidth}px`;
+            }
+          }, [values, column.id]);
           
           return (
-            <Box style={{ position: 'relative' }}>
+            <Box 
+              style={{ position: 'relative' }}
+              data-column-id={column.id}
+            >
               <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
                   <Text size="sm" style={{ cursor: 'pointer' }} onClick={() => setOpened(true)}>
@@ -735,10 +751,9 @@ function Collection() {
                     ) : (
                       <Group gap={4} wrap="wrap" style={{ 
                         minHeight: '24px',
-                        maxHeight: '48px',  // Allow for two rows
+                        maxHeight: '48px',
                         overflow: 'hidden',
-                        position: 'relative',
-                        minWidth: Math.max(150, minWidth)  // Ensure minimum reasonable width
+                        position: 'relative'
                       }}>
                         {values.map((value) => (
                           <Badge
