@@ -231,9 +231,12 @@ export function ResizableTable<T>({
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                     display: 'flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    pointerEvents: 'none'
                   }}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <div style={{ pointerEvents: 'auto' }}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </div>
                   </div>
                 </Table.Td>
               ))}
