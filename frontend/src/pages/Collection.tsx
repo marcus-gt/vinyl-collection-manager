@@ -980,12 +980,17 @@ function Collection() {
       id: 'actions',
       accessorKey: 'actions',
       header: '', // Empty header
-      size: 100,
+      size: 50, // Reduced from 100 to 50
       enableResizing: true,
-      minSize: 100,
-      maxSize: 500,
+      minSize: 50, // Reduced from 100 to 50
+      maxSize: 100,
       cell: ({ row }: { row: Row<VinylRecord> }) => (
-        <Group gap="xs">
+        <Box style={{ 
+          width: '100%', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center'
+        }}>
           <Tooltip label="Delete">
             <ActionIcon 
               color="red" 
@@ -1000,7 +1005,7 @@ function Collection() {
               <IconTrash size={16} />
             </ActionIcon>
           </Tooltip>
-        </Group>
+        </Box>
       ),
     };
 
@@ -1047,8 +1052,16 @@ function Collection() {
         )}
 
         {loading ? (
-          <Box style={{ height: '400px', position: 'relative' }}>
+          <Box style={{ 
+            height: '400px', 
+            position: 'relative',
+            backgroundColor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
             <LoadingOverlay visible={true} />
+            <Text size="lg" c="dimmed">Loading record collection...</Text>
           </Box>
         ) : (
           <ResizableTable<VinylRecord>
