@@ -60,26 +60,36 @@ export function ResizableTable<T>({
   });
 
   return (
-    <Box style={{ overflow: 'auto' }}>
+    <Box style={{ 
+      overflow: 'auto',
+      width: '100%',
+      minWidth: '100%'
+    }}>
       <Table
         striped
         highlightOnHover
         style={{
-          width: table.getCenterTotalSize(),
+          width: '100%',
+          minWidth: Math.max(table.getCenterTotalSize(), 1200),
           borderCollapse: 'separate',
           borderSpacing: 0,
           lineHeight: '32px'
         }}
         styles={{
           table: {
-            tableLayout: 'fixed'
+            tableLayout: 'fixed',
+            width: '100%',
+            minWidth: '100%'
           },
           thead: {
-            height: '32px'
+            height: '32px',
+            width: '100%'
           },
           tbody: {
+            width: '100%',
             '& tr': {
-              height: '32px'
+              height: '32px',
+              width: '100%'
             }
           },
           tr: {
