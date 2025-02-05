@@ -195,7 +195,6 @@ function Collection() {
 
   const handleDelete = async (record: VinylRecord) => {
     console.log('Delete initiated for record:', record);
-    console.log('Current userRecords state:', userRecords);
     
     if (!record.id) {
       console.error('No record ID found:', record);
@@ -210,32 +209,39 @@ function Collection() {
     console.log('Starting delete process for record ID:', record.id);
     setLoading(true);
     try {
+      // First load fresh data to ensure we have the latest state
+      const currentData = await records.getAll();
+      console.log('Current data from server:', currentData);
+      
+      if (currentData.success && currentData.data) {
+        setUserRecords(currentData.data);
+      }
+
       console.log('Calling delete API...');
       const response = await records.delete(record.id);
       console.log('Delete API response:', response);
       
       if (response.success) {
-        console.log('Delete successful, updating local state...');
-        // Create a new array without the deleted record
-        const updatedRecords = userRecords.filter(r => {
-          const keep = r.id !== record.id;
-          console.log(`Record ${r.id}: ${keep ? 'keeping' : 'removing'}`);
-          return keep;
-        });
-        console.log('Records before:', userRecords.length, 'Records after:', updatedRecords.length);
-        console.log('Updated records:', updatedRecords);
+        console.log('Delete successful, reloading data...');
+        // Reload the full data after successful deletion
+        const refreshedData = await records.getAll();
+        console.log('Refreshed data:', refreshedData);
         
-        // Update state and trigger a re-render
-        setUserRecords(updatedRecords);
-        
-        // Reload records from server to ensure sync
-        await loadRecords();
-        
-        notifications.show({
-          title: 'Success',
-          message: 'Record deleted successfully',
-          color: 'green'
-        });
+        if (refreshedData.success && refreshedData.data) {
+          setUserRecords(refreshedData.data);
+          notifications.show({
+            title: 'Success',
+            message: 'Record deleted successfully',
+            color: 'green'
+          });
+        } else {
+          console.error('Failed to reload data after deletion');
+          notifications.show({
+            title: 'Warning',
+            message: 'Record may have been deleted but failed to refresh data',
+            color: 'yellow'
+          });
+        }
       } else {
         console.error('Delete failed:', response.error);
         setError(response.error || 'Failed to delete record');
