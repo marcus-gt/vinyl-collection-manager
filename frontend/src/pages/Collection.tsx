@@ -1071,8 +1071,6 @@ function Collection() {
           records={paginatedRecords}
           sortStatus={sortStatus}
           onSortStatusChange={handleSortStatusChange}
-          resizableColumns={{ initialWidth: 200, minWidth: 100, maxWidth: 500 }}
-          persistentColumnWidth
           styles={{
             table: {
               tableLayout: 'fixed',
