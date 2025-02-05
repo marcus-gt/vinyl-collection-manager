@@ -70,6 +70,13 @@ export function ResizableTable<T>({
           borderSpacing: 0
         }}
         styles={{
+          table: {
+            tableLayout: 'fixed'
+          },
+          tr: {
+            height: '32px',
+            maxHeight: '32px'
+          },
           td: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
@@ -77,7 +84,11 @@ export function ResizableTable<T>({
             },
             padding: '4px 8px',
             height: '32px',
-            lineHeight: '24px'
+            maxHeight: '32px',
+            lineHeight: '24px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           },
           th: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
@@ -85,7 +96,9 @@ export function ResizableTable<T>({
               borderRight: 'none'
             },
             padding: '4px 8px',
-            height: '32px'
+            height: '32px',
+            maxHeight: '32px',
+            whiteSpace: 'nowrap'
           }
         }}
       >
