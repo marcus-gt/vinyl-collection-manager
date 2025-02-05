@@ -151,13 +151,17 @@ export const records = {
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
+      console.log('API: Initiating delete request for record:', id);
       const response = await fetch(`/api/records/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
-      return handleApiResponse(response);
+      console.log('API: Delete response status:', response.status);
+      const data = await response.json();
+      console.log('API: Delete response data:', data);
+      return data;
     } catch (err) {
-      console.error('Failed to delete record:', err);
+      console.error('API: Failed to delete record:', err);
       return { success: false, error: 'Failed to delete record' };
     }
   },

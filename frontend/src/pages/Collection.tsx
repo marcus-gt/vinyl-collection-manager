@@ -194,20 +194,55 @@ function Collection() {
   };
 
   const handleDelete = async (record: VinylRecord) => {
-    if (!record.id || !window.confirm('Are you sure you want to delete this record?')) return;
+    console.log('Delete initiated for record:', record);
+    if (!record.id) {
+      console.error('No record ID found:', record);
+      return;
+    }
 
+    if (!window.confirm('Are you sure you want to delete this record?')) {
+      console.log('Delete cancelled by user');
+      return;
+    }
+
+    console.log('Starting delete process for record ID:', record.id);
     setLoading(true);
     try {
+      console.log('Calling delete API...');
       const response = await records.delete(record.id);
+      console.log('Delete API response:', response);
+      
       if (response.success) {
-        setUserRecords(userRecords.filter(r => r.id !== record.id));
+        console.log('Delete successful, updating local state...');
+        const updatedRecords = userRecords.filter(r => r.id !== record.id);
+        console.log('Records before:', userRecords.length, 'Records after:', updatedRecords.length);
+        setUserRecords(updatedRecords);
+        notifications.show({
+          title: 'Success',
+          message: 'Record deleted successfully',
+          color: 'green'
+        });
       } else {
+        console.error('Delete failed:', response.error);
         setError(response.error || 'Failed to delete record');
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to delete record',
+          color: 'red'
+        });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete record');
+      console.error('Error during delete:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
+      setError(errorMessage);
+      notifications.show({
+        title: 'Error',
+        message: errorMessage,
+        color: 'red'
+      });
     } finally {
       setLoading(false);
+      console.log('Delete process completed');
     }
   };
 
@@ -636,7 +671,9 @@ function Collection() {
                     <ActionIcon 
                       variant="light" 
                       size="sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Edit clicked for record:', row.original);
                         setEditingRecord(row.original);
                         setEditingNotes(row.original.notes ?? '');
                       }}
@@ -649,7 +686,11 @@ function Collection() {
                       color="red" 
                       variant="light"
                       size="sm"
-                      onClick={() => handleDelete(row.original)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Delete clicked for record:', row.original);
+                        handleDelete(row.original);
+                      }}
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
