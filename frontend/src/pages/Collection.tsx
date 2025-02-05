@@ -8,7 +8,7 @@ import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
-import { SortingState } from '@tanstack/react-table';
+import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 
 const PAGE_SIZE = 15;
 
@@ -369,87 +369,97 @@ function Collection() {
   };
 
   const tableColumns = useMemo(() => {
-    const standardColumns = [
+    const standardColumns: ColumnDef<VinylRecord>[] = [
             { 
-              accessor: 'artist', 
-              title: 'Artist', 
-              sortable: true,
-              width: 200,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => (
+              id: 'artist',
+              accessorKey: 'artist', 
+              header: 'Artist',
+              enableSorting: true,
+              size: 200,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <Popover width={400} position="bottom-start" withArrow shadow="md">
                   <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.artist}>
-                      {record.artist}
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={row.original.artist}>
+                      {row.original.artist}
                     </Text>
                   </Popover.Target>
                   <Popover.Dropdown>
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {record.artist}
+                      {row.original.artist}
                     </Text>
                   </Popover.Dropdown>
                 </Popover>
               )
             },
             { 
-              accessor: 'album', 
-              title: 'Album', 
-              sortable: true,
-              width: 250,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => (
+              id: 'album',
+              accessorKey: 'album', 
+              header: 'Album', 
+              enableSorting: true,
+              size: 250,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <Popover width={400} position="bottom-start" withArrow shadow="md">
                   <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.album}>
-                      {record.album}
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={row.original.album}>
+                      {row.original.album}
                     </Text>
                   </Popover.Target>
                   <Popover.Dropdown>
                     <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {record.album}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
-            },
-            { accessor: 'year', title: 'Original Year', sortable: true, width: 80 },
-            { 
-              accessor: 'label', 
-              title: 'Label', 
-              sortable: true,
-              width: 150,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={record.label || '-'}>
-                      {record.label || '-'}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {record.label || '-'}
+                      {row.original.album}
                     </Text>
                   </Popover.Dropdown>
                 </Popover>
               )
             },
             { 
-              accessor: 'genres', 
-              title: 'Genres', 
-              sortable: true,
-              width: 150,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => {
-                const genres = record.genres?.join(', ') || '-';
+              id: 'year',
+              accessorKey: 'year', 
+              header: 'Original Year',
+              enableSorting: true,
+              size: 80,
+            },
+            { 
+              id: 'label', 
+              accessorKey: 'label', 
+              header: 'Label', 
+              enableSorting: true,
+              size: 150,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <Popover width={400} position="bottom-start" withArrow shadow="md">
+                  <Popover.Target>
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={row.original.label || '-'}>
+                      {row.original.label || '-'}
+                    </Text>
+                  </Popover.Target>
+                  <Popover.Dropdown>
+                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                      {row.original.label || '-'}
+                    </Text>
+                  </Popover.Dropdown>
+                </Popover>
+              )
+            },
+            { 
+              id: 'genres', 
+              accessorKey: 'genres', 
+              header: 'Genres', 
+              enableSorting: true,
+              size: 150,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const genres = row.original.genres?.join(', ') || '-';
                 return (
                   <Popover width={400} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
@@ -467,15 +477,16 @@ function Collection() {
               }
             },
             { 
-              accessor: 'styles', 
-              title: 'Styles', 
-              sortable: true,
-              width: 180,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => {
-                const styles = record.styles?.join(', ') || '-';
+              id: 'styles', 
+              accessorKey: 'styles', 
+              header: 'Styles', 
+              enableSorting: true,
+              size: 180,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const styles = row.original.styles?.join(', ') || '-';
                 return (
                   <Popover width={400} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
@@ -493,15 +504,16 @@ function Collection() {
               }
             },
             { 
-              accessor: 'musicians', 
-              title: 'Musicians', 
-              sortable: true,
-              width: 200,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => {
-                const musicians = record.musicians?.join(', ') || '-';
+              id: 'musicians', 
+              accessorKey: 'musicians', 
+              header: 'Musicians', 
+              enableSorting: true,
+              size: 200,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const musicians = row.original.musicians?.join(', ') || '-';
                 return musicians === '-' ? (
                   <Text size="sm">-</Text>
                 ) : (
@@ -521,15 +533,16 @@ function Collection() {
               }
             },
             { 
-              accessor: 'notes', 
-              title: 'Notes', 
-              sortable: true,
-              width: 200,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => {
-                const notes = record.notes || '-';
+              id: 'notes', 
+              accessorKey: 'notes', 
+              header: 'Notes', 
+              enableSorting: true,
+              size: 200,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const notes = row.original.notes || '-';
                 return (
                   <Popover width={400} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
@@ -547,40 +560,43 @@ function Collection() {
               }
             },
             { 
-              accessor: 'created_at', 
-              title: 'Added', 
-              sortable: true,
-              width: 150,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => record.created_at ? 
-                new Date(record.created_at).toLocaleString() : '-'
+              id: 'created_at', 
+              accessorKey: 'created_at', 
+              header: 'Added', 
+              enableSorting: true,
+              size: 150,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.created_at ? 
+                new Date(row.original.created_at).toLocaleString() : '-'
             },
             { 
-              accessor: 'current_release_year', 
-              title: 'Scanned Release Year', 
-              sortable: true, 
-              width: 100,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => record.current_release_year || '-'
+              id: 'current_release_year', 
+              accessorKey: 'current_release_year', 
+              header: 'Scanned Release Year', 
+              enableSorting: true, 
+              size: 100,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_year || '-'
             },
             {
-              accessor: 'links',
-              title: 'Links',
-              width: 130,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => (
+              id: 'links',
+              accessorKey: 'links',
+              header: 'Links',
+              size: 130,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <Group gap="xs">
-                  {record.master_url && (
+                  {row.original.master_url && (
                     <Tooltip label="View Master Release">
                       <ActionIcon 
                         component="a" 
-                        href={record.master_url} 
+                        href={row.original.master_url} 
                         target="_blank" 
                         variant="light" 
                         size="sm"
@@ -589,11 +605,11 @@ function Collection() {
                       </ActionIcon>
                     </Tooltip>
                   )}
-                  {record.current_release_url && (
+                  {row.original.current_release_url && (
                     <Tooltip label="View Scanned Release">
                       <ActionIcon 
                         component="a" 
-                        href={record.current_release_url} 
+                        href={row.original.current_release_url} 
                         target="_blank" 
                         variant="light" 
                         size="sm"
@@ -607,21 +623,22 @@ function Collection() {
               ),
             },
             {
-              accessor: 'actions',
-              title: 'Actions',
-              width: 100,
-              resizable: true,
-              minWidth: 100,
-              maxWidth: 500,
-        render: (record: VinylRecord) => (
+              id: 'actions',
+              accessorKey: 'actions',
+              header: 'Actions',
+              size: 100,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <Group gap="xs">
                   <Tooltip label="Edit Notes">
                     <ActionIcon 
                       variant="light" 
                       size="sm"
                       onClick={() => {
-                        setEditingRecord(record);
-                        setEditingNotes(record.notes ?? '');
+                        setEditingRecord(row.original);
+                        setEditingNotes(row.original.notes ?? '');
                       }}
                     >
                       <IconNotes size={16} />
@@ -632,7 +649,7 @@ function Collection() {
                       color="red" 
                       variant="light"
                       size="sm"
-                      onClick={() => handleDelete(record)}
+                      onClick={() => handleDelete(row.original)}
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
@@ -643,32 +660,33 @@ function Collection() {
     ];
 
     // Add custom columns
-    const customColumnDefs = customColumns.map(column => ({
-      accessor: `custom_${column.id}` as keyof VinylRecord,
-      title: column.name,
-      sortable: true,
-      width: column.type === 'multi-select' ? 300 : 
+    const customColumnDefs: ColumnDef<VinylRecord>[] = customColumns.map(column => ({
+      id: `custom_${column.id}`,
+      accessorKey: `customValues.${column.id}`,
+      header: column.name,
+      enableSorting: true,
+      size: column.type === 'multi-select' ? 300 : 
              ['text'].includes(column.type) ? 300 : 150,
-      resizable: true,
-      minWidth: 100,
-      maxWidth: 1000,
-      style: column.type === 'multi-select' ? { overflow: 'visible' } : undefined,
-      render: (record: VinylRecord) => {
-        const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
+      enableResizing: true,
+      minSize: 100,
+      maxSize: 1000,
+      meta: { type: column.type },
+      cell: ({ row }: { row: Row<VinylRecord> }) => {
+        const [localValue, setLocalValue] = useState(row.original.customValues?.[column.id] || '');
         
         // Effect to sync local value with record value
         useEffect(() => {
-          setLocalValue(record.customValues?.[column.id] || '');
-        }, [record.customValues, column.id]);
+          setLocalValue(row.original.customValues?.[column.id] || '');
+        }, [row.original.customValues, column.id]);
         
         const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
-          if (!record.id) return;
+          if (!row.original.id) return;
           
           try {
             console.log('Updating custom value:', {
               columnId: column.id,
               newValue,
-              recordId: record.id
+              recordId: row.original.id
             });
             
             // For the API, we need to send an object with column_id as key and value as value
@@ -676,13 +694,13 @@ function Collection() {
               [column.id]: newValue
             };
 
-            const response = await customValuesService.update(record.id, valueToSend);
+            const response = await customValuesService.update(row.original.id, valueToSend);
             
             if (response.success) {
               // Update the record in the local state
               setUserRecords(prevRecords =>
                 prevRecords.map(r =>
-                  r.id === record.id
+                  r.id === row.original.id
                     ? {
                         ...r,
                         customValues: {
@@ -702,7 +720,7 @@ function Collection() {
                 color: 'red'
               });
               // Revert local value on error
-              setLocalValue(record.customValues?.[column.id] || '');
+              setLocalValue(row.original.customValues?.[column.id] || '');
             }
           } catch (err) {
             console.error('Error updating custom value:', err);
@@ -712,7 +730,7 @@ function Collection() {
               color: 'red'
             });
             // Revert local value on error
-            setLocalValue(record.customValues?.[column.id] || '');
+            setLocalValue(row.original.customValues?.[column.id] || '');
           }
         }, 1000);  // 1 second debounce
 
@@ -761,7 +779,7 @@ function Collection() {
                           alignItems: 'center',
                           paddingRight: '20px'  // Space for gradient
                         }}>
-                          {values.map((value) => (
+                          {values.map((value: string) => (
                             <Badge
                               key={value}
                               variant="filled"
@@ -826,7 +844,7 @@ function Collection() {
                             }}
                             onClick={() => {
                               const newValues = isSelected
-                                ? values.filter(v => v !== opt)
+                                ? values.filter((v: string) => v !== opt)
                                 : [...values, opt];
                               handleChange(newValues.join(','));
                             }}
