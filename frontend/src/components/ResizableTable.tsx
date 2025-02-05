@@ -69,6 +69,20 @@ export function ResizableTable<T>({
           borderCollapse: 'separate',
           borderSpacing: 0
         }}
+        styles={{
+          td: {
+            borderRight: '1px solid var(--mantine-color-dark-4)',
+            '&:last-child': {
+              borderRight: 'none'
+            }
+          },
+          th: {
+            borderRight: '1px solid var(--mantine-color-dark-4)',
+            '&:last-child': {
+              borderRight: 'none'
+            }
+          }
+        }}
       >
         <Table.Thead>
           {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
