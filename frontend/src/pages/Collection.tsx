@@ -627,8 +627,9 @@ function Collection() {
       accessor: `custom_${column.id}` as keyof VinylRecord,
       title: column.name,
       sortable: true,
-      width: column.type === 'multi-select' ? undefined : // Remove fixed width for multi-select
+      width: column.type === 'multi-select' ? 300 : // Default width for multi-select
              ['text'].includes(column.type) ? 300 : 150,
+      style: column.type === 'multi-select' ? { overflow: 'visible' } : undefined,
       render: (record: VinylRecord) => {
         const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
         
@@ -719,6 +720,11 @@ function Collection() {
           const values = localValue ? localValue.split(',') : [];
           const [opened, setOpened] = useState(false);
           
+          // Calculate minimum width needed for the column
+          const minWidth = Math.max(
+            ...values.map(value => value.length * 8 + 40) // Rough estimate of text width plus padding
+          );
+          
           return (
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
@@ -727,10 +733,12 @@ function Collection() {
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
-                      <Group gap={4} wrap="nowrap" style={{ 
-                        height: '40px',
-                        alignItems: 'center',
-                        overflow: 'visible'
+                      <Group gap={4} wrap="wrap" style={{ 
+                        minHeight: '24px',
+                        maxHeight: '48px',  // Allow for two rows
+                        overflow: 'hidden',
+                        position: 'relative',
+                        minWidth: Math.max(150, minWidth)  // Ensure minimum reasonable width
                       }}>
                         {values.map((value) => (
                           <Badge
