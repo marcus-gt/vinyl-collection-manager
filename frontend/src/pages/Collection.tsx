@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Select, MultiSelect, Box, Switch, Badge } from '@mantine/core';
-import { DataTable, DataTableSortStatus } from 'mantine-datatable';
 import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
@@ -8,6 +7,8 @@ import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
+import { ResizableTable } from '../components/ResizableTable';
+import { SortingState } from '@tanstack/react-table';
 
 const PAGE_SIZE = 15;
 
@@ -69,7 +70,7 @@ function Collection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
-  const [sortStatus, setSortStatus] = useState<DataTableSortStatus<VinylRecord>>({ columnAccessor: 'artist', direction: 'asc' });
+  const [sortState, setSortState] = useState<SortingState>([{ id: 'artist', desc: false }]);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
@@ -210,21 +211,6 @@ function Collection() {
     }
   };
 
-  const handleSortStatusChange = (newSortStatus: DataTableSortStatus<VinylRecord>) => {
-    if (sortStatus.columnAccessor === newSortStatus.columnAccessor) {
-      // Clicking the same column, cycle through: asc -> desc -> unsorted
-      if (sortStatus.direction === 'asc') {
-        setSortStatus({ ...newSortStatus, direction: 'desc' });
-      } else {
-        // Reset to default sorting
-      setSortStatus({ columnAccessor: 'artist', direction: 'asc' });
-      }
-    } else {
-      // Clicking a new column, start with ascending
-      setSortStatus({ ...newSortStatus, direction: 'asc' });
-    }
-  };
-
   // Filter and sort records based on search query and sort status
   const filteredRecords = useMemo(() => {
     let records = [...userRecords];
@@ -243,11 +229,11 @@ function Collection() {
     }
 
     // Apply sorting
-    if (sortStatus?.columnAccessor) {
-      const { columnAccessor, direction } = sortStatus;
+    if (sortState?.length > 0) {
+      const { id, desc } = sortState[0];
       records.sort((a, b) => {
-        let aValue = a[columnAccessor as keyof VinylRecord];
-        let bValue = b[columnAccessor as keyof VinylRecord];
+        let aValue = a[id as keyof VinylRecord];
+        let bValue = b[id as keyof VinylRecord];
 
         // Handle array fields
         if (Array.isArray(aValue)) aValue = aValue.join(', ');
@@ -262,20 +248,20 @@ function Collection() {
         const bString = String(bValue).toLowerCase();
 
         // Special handling for numeric fields
-        if (columnAccessor === 'year' || columnAccessor === 'current_release_year') {
+        if (id === 'year' || id === 'current_release_year') {
           const aNum = Number(aValue) || 0;
           const bNum = Number(bValue) || 0;
-          return direction === 'asc' ? aNum - bNum : bNum - aNum;
+          return desc ? bNum - aNum : aNum - bNum;
         }
 
-        return direction === 'asc' 
+        return desc 
           ? aString.localeCompare(bString)
           : bString.localeCompare(aString);
       });
     }
 
     return records;
-  }, [userRecords, searchQuery, sortStatus]);
+  }, [userRecords, searchQuery, sortState]);
 
   // Get paginated records
   const paginatedRecords = useMemo(() => {
@@ -1076,70 +1062,12 @@ function Collection() {
           <Text c="red">{error}</Text>
         )}
 
-        <DataTable<VinylRecord>
-          minHeight={150}
-          records={paginatedRecords}
-          sortStatus={sortStatus}
-          onSortStatusChange={handleSortStatusChange}
+        <ResizableTable<VinylRecord>
+          data={paginatedRecords}
           columns={tableColumns}
-          allowColumnResizing
-          storeColumnsWidth
-          styles={{
-            table: {
-              tableLayout: 'fixed',
-              '& tbody tr td': {
-                height: '40px',
-                maxHeight: '40px',
-                padding: '8px',
-                position: 'relative'
-              },
-              '& th': {
-                position: 'relative',
-                borderRight: '1px solid var(--mantine-color-dark-4)',
-                '&:last-child': {
-                  borderRight: 'none'
-                }
-              },
-              '& .mantine-datatable-column-resizer': {
-                width: '4px',
-                right: '-2px',
-                backgroundColor: 'var(--mantine-color-dark-4)',
-                '&:hover': {
-                  backgroundColor: 'var(--mantine-color-blue-5)'
-                }
-              }
-            }
-          }}
-          totalRecords={filteredRecords.length}
-          recordsPerPage={PAGE_SIZE}
-          page={page}
-          onPageChange={setPage}
-          fetching={loading}
-          noRecordsText={
-            loading ? 
-            "Loading records..." : 
-            filteredRecords.length === 0 ? 
-              searchQuery ? 
-                "No records found matching your search." :
-                "No records in your collection yet. Try scanning some vinyl records!" :
-              ""
-          }
-          loadingText="Loading records..."
-          horizontalSpacing="xs"
-          verticalSpacing="xs"
-          idAccessor="id"
-          emptyState={
-            <Text c="dimmed" size="sm">
-              {loading ? 
-                "Loading records..." : 
-                filteredRecords.length === 0 ? 
-                  searchQuery ? 
-                    "No records found matching your search." :
-                    "No records in your collection yet. Try scanning some vinyl records!" :
-                  ""
-              }
-            </Text>
-          }
+          sortState={sortState}
+          onSortChange={setSortState}
+          tableId="vinyl-collection"
         />
 
         <Modal

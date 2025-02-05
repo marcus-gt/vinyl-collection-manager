@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,7 +10,8 @@ import {
   Header,
   HeaderGroup,
   Row,
-  Cell
+  Cell,
+  OnChangeFn
 } from '@tanstack/react-table';
 import { Table, Box, Text } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
@@ -19,7 +20,7 @@ interface ResizableTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
   sortState?: SortingState;
-  onSortChange?: (sorting: SortingState) => void;
+  onSortChange?: OnChangeFn<SortingState>;
   tableId: string;  // Unique ID for storing column widths
 }
 
