@@ -611,11 +611,12 @@ function Collection() {
       accessorKey: `customValues.${column.id}`,
       header: column.name,
       enableSorting: true,
-      size: column.type === 'multi-select' ? 300 : 
-             ['text'].includes(column.type) ? 300 : 150,
+      size: column.type === 'boolean' ? 50 : // Smaller width for boolean columns
+            column.type === 'multi-select' ? 300 : 
+            ['text'].includes(column.type) ? 300 : 150,
       enableResizing: true,
-      minSize: 100,
-      maxSize: 1000,
+      minSize: column.type === 'boolean' ? 50 : 100, // Smaller min width for boolean
+      maxSize: column.type === 'boolean' ? 100 : 1000, // Smaller max width for boolean
       meta: { type: column.type },
       cell: ({ row }: { row: Row<VinylRecord> }) => {
         const [localValue, setLocalValue] = useState(row.original.customValues?.[column.id] || '');
@@ -687,17 +688,17 @@ function Collection() {
 
         if (column.type === 'boolean') {
           return (
-            <Box style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <Box style={{ 
+              width: '100%', 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              height: '32px' // Match the row height
+            }}>
               <Switch
                 checked={localValue === 'true'}
                 onChange={(e) => handleChange(e.currentTarget.checked.toString())}
                 size="sm"
-                style={{ 
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)'
-                }}
               />
             </Box>
           );
@@ -1056,12 +1057,18 @@ function Collection() {
             height: '400px', 
             position: 'relative',
             backgroundColor: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
           }}>
             <LoadingOverlay visible={true} />
-            <Text size="lg" c="dimmed">Loading record collection...</Text>
+            <Box style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, calc(50% + 20px))', // Move 20px below center
+              textAlign: 'center',
+              zIndex: 2
+            }}>
+              <Text size="lg" c="dimmed">Loading record collection...</Text>
+            </Box>
           </Box>
         ) : (
           <ResizableTable<VinylRecord>
