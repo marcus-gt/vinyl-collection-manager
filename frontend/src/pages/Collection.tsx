@@ -774,7 +774,7 @@ function Collection() {
                         height: '48px',  // Increased height for two lines
                         overflow: 'hidden'
                       }}>
-                        <Group gap={4} wrap="wrap" style={{ 
+                        <Group gap={4} wrap="nowrap" style={{ 
                           height: '100%',
                           alignItems: 'center',
                           padding: '4px'  // Add some padding around the tags
