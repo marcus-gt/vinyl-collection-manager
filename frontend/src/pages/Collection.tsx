@@ -1071,6 +1071,10 @@ function Collection() {
           records={paginatedRecords}
           sortStatus={sortStatus}
           onSortStatusChange={handleSortStatusChange}
+          defaultColumnProps={{
+            resizable: true,
+            width: 100
+          }}
           styles={{
             table: {
               tableLayout: 'fixed',
@@ -1085,6 +1089,13 @@ function Collection() {
                 borderRight: '1px solid var(--mantine-color-dark-4)',
                 '&:last-child': {
                   borderRight: 'none'
+                }
+              },
+              '& .mantine-datatable-column-resizer': {
+                width: '4px',
+                backgroundColor: 'var(--mantine-color-dark-4)',
+                '&:hover': {
+                  backgroundColor: 'var(--mantine-color-blue-5)'
                 }
               }
             }
