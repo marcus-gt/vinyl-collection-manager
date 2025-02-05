@@ -381,7 +381,7 @@ function Collection() {
             { 
               id: 'artist',
               accessorKey: 'artist', 
-              title: 'Artist', 
+              header: 'Artist', 
               sortable: true,
               size: 200,
               enableResizing: true,
@@ -405,7 +405,7 @@ function Collection() {
             { 
               id: 'album',
               accessorKey: 'album', 
-              title: 'Album', 
+              header: 'Album', 
               sortable: true,
               size: 250,
               enableResizing: true,
@@ -429,14 +429,14 @@ function Collection() {
             { 
               id: 'year',
               accessorKey: 'year', 
-              title: 'Original Year',
+              header: 'Original Year',
               sortable: true,
               size: 80,
             },
             { 
               id: 'label', 
               accessorKey: 'label', 
-              title: 'Label', 
+              header: 'Label', 
               sortable: true,
               size: 150,
               enableResizing: true,
@@ -460,7 +460,7 @@ function Collection() {
             { 
               id: 'genres', 
               accessorKey: 'genres', 
-              title: 'Genres', 
+              header: 'Genres', 
               sortable: true,
               size: 150,
               enableResizing: true,
@@ -487,7 +487,7 @@ function Collection() {
             { 
               id: 'styles', 
               accessorKey: 'styles', 
-              title: 'Styles', 
+              header: 'Styles', 
               sortable: true,
               size: 180,
               enableResizing: true,
@@ -514,7 +514,7 @@ function Collection() {
             { 
               id: 'musicians', 
               accessorKey: 'musicians', 
-              title: 'Musicians', 
+              header: 'Musicians', 
               sortable: true,
               size: 200,
               enableResizing: true,
@@ -543,7 +543,7 @@ function Collection() {
             { 
               id: 'created_at', 
               accessorKey: 'created_at', 
-              title: 'Added', 
+              header: 'Added', 
               sortable: true,
               size: 150,
               enableResizing: true,
@@ -555,7 +555,7 @@ function Collection() {
             { 
               id: 'current_release_year', 
               accessorKey: 'current_release_year', 
-              title: 'Scanned Release Year', 
+              header: 'Scanned Release Year', 
               sortable: true, 
               size: 100,
               enableResizing: true,
@@ -566,7 +566,7 @@ function Collection() {
             {
               id: 'links',
               accessorKey: 'links',
-              title: 'Links',
+              header: 'Links',
               size: 130,
               enableResizing: true,
               minSize: 100,
@@ -609,7 +609,7 @@ function Collection() {
     const customColumnDefs: ColumnDef<VinylRecord>[] = customColumns.map(column => ({
       id: `custom_${column.id}`,
       accessorKey: `customValues.${column.id}`,
-      title: column.name,
+      header: column.name,
       sortable: true,
       size: column.type === 'multi-select' ? 300 : 
              ['text'].includes(column.type) ? 300 : 150,
