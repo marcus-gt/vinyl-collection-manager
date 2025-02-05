@@ -71,48 +71,29 @@ export function ResizableTable<T>({
         }}
         styles={{
           table: {
-            tableLayout: 'fixed'
-          },
-          tr: {
-            height: '32px',
-            maxHeight: '32px',
-            '& > *': {
-              height: '32px',
-              maxHeight: '32px'
+            tableLayout: 'fixed',
+            '& tr': {
+              height: '32px !important'
+            },
+            '& td, & th': {
+              height: '32px !important',
+              padding: '0 8px !important',
+              lineHeight: '32px !important',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }
           },
           td: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
-            },
-            padding: '4px 8px',
-            height: '32px !important',
-            maxHeight: '32px !important',
-            lineHeight: '24px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            '& > *': {
-              height: '32px',
-              maxHeight: '32px',
-              lineHeight: '24px',
-              display: 'flex',
-              alignItems: 'center'
             }
           },
           th: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
-            },
-            padding: '4px 8px',
-            height: '32px !important',
-            maxHeight: '32px !important',
-            whiteSpace: 'nowrap',
-            '& > *': {
-              height: '32px',
-              maxHeight: '32px'
             }
           }
         }}
