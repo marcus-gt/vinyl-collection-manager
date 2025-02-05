@@ -627,7 +627,8 @@ function Collection() {
       accessor: `custom_${column.id}` as keyof VinylRecord,
       title: column.name,
       sortable: true,
-      width: ['multi-select', 'text'].includes(column.type) ? 300 : 150,  // Use wider width for both multi-select and text
+      width: column.type === 'multi-select' ? undefined : // Remove fixed width for multi-select
+             ['text'].includes(column.type) ? 300 : 150,
       render: (record: VinylRecord) => {
         const [localValue, setLocalValue] = useState(record.customValues?.[column.id] || '');
         
@@ -718,24 +719,18 @@ function Collection() {
           const values = localValue ? localValue.split(',') : [];
           const [opened, setOpened] = useState(false);
           
-          console.log('Rendering multi-select column:', {
-            columnName: column.name,
-            values,
-            optionColors: column.option_colors,
-            localValue
-          });
-
           return (
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Text size="sm" style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
+                  <Text size="sm" style={{ cursor: 'pointer' }} onClick={() => setOpened(true)}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
-                      <Group gap={4} wrap="wrap" style={{ 
-                        padding: '4px 0',
-                        minHeight: '24px'
+                      <Group gap={4} wrap="nowrap" style={{ 
+                        height: '40px',
+                        alignItems: 'center',
+                        overflow: 'visible'
                       }}>
                         {values.map((value) => (
                           <Badge
@@ -750,7 +745,8 @@ function Collection() {
                                 cursor: 'default',
                                 padding: '3px 8px',
                                 whiteSpace: 'nowrap',
-                                display: 'inline-flex'
+                                display: 'inline-flex',
+                                flexShrink: 0
                               }
                             }}
                           >
