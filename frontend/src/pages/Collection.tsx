@@ -569,7 +569,7 @@ function Collection() {
               minSize: 100,
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => row.original.created_at ? 
-                new Date(row.original.created_at).toLocaleString() : '-'
+                new Date(row.original.created_at).toLocaleDateString() : '-'
             },
             { 
               id: 'current_release_year', 

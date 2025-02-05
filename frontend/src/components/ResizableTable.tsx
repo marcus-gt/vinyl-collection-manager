@@ -74,13 +74,18 @@ export function ResizableTable<T>({
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
-            }
+            },
+            padding: '4px 8px',
+            height: '32px',
+            lineHeight: '24px'
           },
           th: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
-            }
+            },
+            padding: '4px 8px',
+            height: '32px'
           }
         }}
       >
