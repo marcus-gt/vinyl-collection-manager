@@ -166,12 +166,30 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
 def remove_record_from_collection(user_id: str, record_id: str) -> Dict[str, Any]:
     """Remove a record from user's collection."""
     try:
-        response = supabase.table('vinyl_records').delete().match({
+        print("\n=== Removing Record from Collection ===")
+        print(f"User ID: {user_id}")
+        print(f"Record ID: {record_id}")
+        
+        # Get authenticated client
+        client = get_supabase_client()
+        
+        print("Executing delete query...")
+        response = client.table('vinyl_records').delete().match({
             'id': record_id,
             'user_id': user_id
         }).execute()
+        
+        print(f"Delete response: {response.data}")
+        
+        if not response.data:
+            print("No data returned from delete operation")
+            return {"success": False, "error": "Record not found or already deleted"}
+            
         return {"success": True}
     except Exception as e:
+        print(f"Error removing record: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {"success": False, "error": str(e)}
 
 def update_record_notes(user_id: str, record_id: str, notes: str) -> Dict[str, Any]:
