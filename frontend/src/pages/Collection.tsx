@@ -68,12 +68,9 @@ function Collection() {
   const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
-  const [editingNotes, setEditingNotes] = useState('');
   const [sortState, setSortState] = useState<SortingState>([{ id: 'artist', desc: false }]);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
-  const [customValues, setCustomValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadRecords();
@@ -149,47 +146,6 @@ function Collection() {
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
-    }
-  };
-
-  const handleUpdateRecord = async () => {
-    if (!editingRecord?.id) return;
-    
-    setLoading(true);
-    try {
-      // Update notes
-      const notesResponse = await records.updateNotes(editingRecord.id, editingNotes);
-      
-      // Update custom values
-      const valuesResponse = await customValuesService.update(editingRecord.id, customValues);
-      
-      if (notesResponse.success && valuesResponse.success) {
-        // Update the record in the list
-        setUserRecords(prevRecords => 
-          prevRecords.map(record => 
-            record.id === editingRecord.id 
-              ? { 
-                  ...notesResponse.data!, 
-                  customValues: customValues 
-                } 
-              : record
-          )
-        );
-        setEditingRecord(null);
-        notifications.show({
-          title: 'Success',
-          message: 'Record updated successfully',
-          color: 'green'
-        });
-      }
-    } catch (err) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to update record',
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -278,8 +234,7 @@ function Collection() {
         record.album?.toLowerCase().includes(query) ||
         record.label?.toLowerCase().includes(query) ||
         record.genres?.some(genre => genre.toLowerCase().includes(query)) ||
-        record.styles?.some(style => style.toLowerCase().includes(query)) ||
-        record.notes?.toLowerCase().includes(query)
+        record.styles?.some(style => style.toLowerCase().includes(query))
       );
     }
 
@@ -335,7 +290,6 @@ function Collection() {
       'Genres',
       'Styles',
       'Musicians',
-      'Notes',
       'Added',
       'Scanned Release Year',
       'Master URL',
@@ -350,18 +304,17 @@ function Collection() {
     const rows = userRecords.map(record => {
       // Standard fields
       const standardFields = [
-      record.artist,
-      record.album,
-      record.year || '',
-      record.label || '',
-      record.genres?.join('; ') || '',
-      record.styles?.join('; ') || '',
-      record.musicians?.join('; ') || '',
-      record.notes || '',
-      record.created_at ? new Date(record.created_at).toLocaleString() : '',
-      record.current_release_year || '',
-      record.master_url || '',
-      record.current_release_url || ''
+        record.artist,
+        record.album,
+        record.year || '',
+        record.label || '',
+        record.genres?.join('; ') || '',
+        record.styles?.join('; ') || '',
+        record.musicians?.join('; ') || '',
+        record.created_at ? new Date(record.created_at).toLocaleString() : '',
+        record.current_release_year || '',
+        record.master_url || '',
+        record.current_release_url || ''
       ];
 
       // Custom fields
@@ -588,33 +541,6 @@ function Collection() {
               }
             },
             { 
-              id: 'notes', 
-              accessorKey: 'notes', 
-              header: 'Notes', 
-              enableSorting: true,
-              size: 200,
-              enableResizing: true,
-              minSize: 100,
-              maxSize: 500,
-              cell: ({ row }: { row: Row<VinylRecord> }) => {
-                const notes = row.original.notes || '-';
-                return (
-                  <Popover width={400} position="bottom-start" withArrow shadow="md">
-                    <Popover.Target>
-                      <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={notes}>
-                        {notes}
-                      </Text>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                        {notes}
-                      </Text>
-                    </Popover.Dropdown>
-                  </Popover>
-                );
-              }
-            },
-            { 
               id: 'created_at', 
               accessorKey: 'created_at', 
               header: 'Added', 
@@ -687,20 +613,6 @@ function Collection() {
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <Group gap="xs">
-                  <Tooltip label="Edit Notes">
-                    <ActionIcon 
-                      variant="light" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('Edit clicked for record:', row.original);
-                        setEditingRecord(row.original);
-                        setEditingNotes(row.original.notes ?? '');
-                      }}
-                    >
-                      <IconNotes size={16} />
-                    </ActionIcon>
-                  </Tooltip>
                   <Tooltip label="Delete">
                     <ActionIcon 
                       color="red" 
@@ -1139,106 +1051,6 @@ function Collection() {
           onSortChange={setSortState}
           tableId="vinyl-collection"
         />
-
-        <Modal
-          opened={!!editingRecord}
-          onClose={() => {
-            setEditingRecord(null);
-            setCustomValues({});
-          }}
-          title="Edit Record"
-        >
-          <Stack>
-            {editingRecord && (
-              <Text size="sm" fw={500}>
-                {editingRecord.artist} - {editingRecord.album}
-              </Text>
-            )}
-            <TextInput
-              label="Notes"
-              value={editingNotes}
-              onChange={(e) => setEditingNotes(e.target.value)}
-              placeholder="Add notes about this record..."
-            />
-            {customColumns.map(column => (
-              <div key={column.id}>
-                {column.type === 'text' && (
-                  <TextInput
-                    label={column.name}
-                    value={customValues[column.id] || ''}
-                    onChange={(e) => setCustomValues(prev => ({
-                      ...prev,
-                      [column.id]: e.target.value
-                    }))}
-                  />
-                )}
-                {column.type === 'number' && (
-                  <TextInput
-                    label={column.name}
-                    type="number"
-                    value={customValues[column.id] || ''}
-                    onChange={(e) => setCustomValues(prev => ({
-                      ...prev,
-                      [column.id]: e.target.value
-                    }))}
-                  />
-                )}
-                {column.type === 'boolean' && (
-                  <Switch
-                    label={column.name}
-                    checked={customValues[column.id] === 'true'}
-                    onChange={(e) => setCustomValues(prev => ({
-                      ...prev,
-                      [column.id]: e.currentTarget.checked.toString()
-                    }))}
-                    size="md"
-                  />
-                )}
-                {column.type === 'single-select' && column.options && (
-                  <Select
-                    label={column.name}
-                    value={customValues[column.id] || ''}
-                    onChange={(value: string | null) => setCustomValues(prev => ({
-                      ...prev,
-                      [column.id]: value || ''
-                    }))}
-                    data={column.options.map(opt => ({
-                      value: opt,
-                      label: opt
-                    }))}
-                    clearable
-                  />
-                )}
-                {column.type === 'multi-select' && column.options && (
-                  <MultiSelect
-                    label={column.name}
-                    value={customValues[column.id]?.split(',').filter(Boolean) || []}
-                    onChange={(values: string[]) => setCustomValues(prev => ({
-                      ...prev,
-                      [column.id]: values.join(',')
-                    }))}
-                    data={column.options.map(opt => ({
-                      value: opt,
-                      label: opt
-                    }))}
-                    clearable
-                  />
-                )}
-              </div>
-            ))}
-            <Group justify="flex-end">
-              <Button variant="light" onClick={() => {
-                setEditingRecord(null);
-                setCustomValues({});
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateRecord} loading={loading}>
-                Save
-              </Button>
-            </Group>
-          </Stack>
-        </Modal>
 
         <CustomColumnManager
           opened={customColumnManagerOpened}
