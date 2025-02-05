@@ -379,11 +379,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                       minHeight: '36px',
                       paddingRight: '80px' // Make room for the button
                     },
-                    rightSection: {
+                    section: {  // Changed from rightSection to section
                       width: '70px', // Give more width to the button section
                       right: '5px'  // Add some spacing from the right edge
                     }
                   }}
+                  rightSectionWidth={70}
                   rightSection={
                     <Button 
                       size="xs" 
