@@ -1071,10 +1071,12 @@ function Collection() {
           records={paginatedRecords}
           sortStatus={sortStatus}
           onSortStatusChange={handleSortStatusChange}
-          defaultColumnProps={{
+          columns={tableColumns.map(col => ({
+            ...col,
             resizable: true,
-            width: 100
-          }}
+            minWidth: 50,
+            maxWidth: 1000
+          }))}
           styles={{
             table: {
               tableLayout: 'fixed',
@@ -1090,17 +1092,9 @@ function Collection() {
                 '&:last-child': {
                   borderRight: 'none'
                 }
-              },
-              '& .mantine-datatable-column-resizer': {
-                width: '4px',
-                backgroundColor: 'var(--mantine-color-dark-4)',
-                '&:hover': {
-                  backgroundColor: 'var(--mantine-color-blue-5)'
-                }
               }
             }
           }}
-          columns={tableColumns}
           totalRecords={filteredRecords.length}
           recordsPerPage={PAGE_SIZE}
           page={page}
