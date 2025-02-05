@@ -25,7 +25,6 @@ from .db import (
     add_record_to_collection,
     get_user_collection,
     remove_record_from_collection,
-    update_record_notes,
     get_supabase_client
 )
 
@@ -497,23 +496,6 @@ def delete_record(record_id):
     result = remove_record_from_collection(user_id, record_id)
     if result['success']:
         return jsonify({'success': True}), 200
-    return jsonify({'success': False, 'error': result['error']}), 400
-
-@app.route('/api/records/<record_id>/notes', methods=['PUT'])
-def update_notes(record_id):
-    """Update notes for a record."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
-    notes = data.get('notes')
-    if notes is None:
-        return jsonify({'success': False, 'error': 'Notes required'}), 400
-    
-    result = update_record_notes(user_id, record_id, notes)
-    if result['success']:
-        return jsonify({'success': True, 'record': result['record']}), 200
     return jsonify({'success': False, 'error': result['error']}), 400
 
 @app.route('/api/lookup/barcode/<barcode>', methods=['GET'])
