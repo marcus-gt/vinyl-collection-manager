@@ -157,8 +157,10 @@ export const records = {
         credentials: 'include'
       });
       console.log('API: Delete response status:', response.status);
-      const data = await response.json();
-      console.log('API: Delete response data:', data);
+      const responseText = await response.text();
+      console.log('API: Raw response text:', responseText);
+      const data = responseText ? JSON.parse(responseText) : { success: true };
+      console.log('API: Parsed delete response data:', data);
       return data;
     } catch (err) {
       console.error('API: Failed to delete record:', err);

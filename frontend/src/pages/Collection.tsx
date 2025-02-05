@@ -195,6 +195,8 @@ function Collection() {
 
   const handleDelete = async (record: VinylRecord) => {
     console.log('Delete initiated for record:', record);
+    console.log('Current userRecords state:', userRecords);
+    
     if (!record.id) {
       console.error('No record ID found:', record);
       return;
@@ -214,9 +216,21 @@ function Collection() {
       
       if (response.success) {
         console.log('Delete successful, updating local state...');
-        const updatedRecords = userRecords.filter(r => r.id !== record.id);
+        // Create a new array without the deleted record
+        const updatedRecords = userRecords.filter(r => {
+          const keep = r.id !== record.id;
+          console.log(`Record ${r.id}: ${keep ? 'keeping' : 'removing'}`);
+          return keep;
+        });
         console.log('Records before:', userRecords.length, 'Records after:', updatedRecords.length);
+        console.log('Updated records:', updatedRecords);
+        
+        // Update state and trigger a re-render
         setUserRecords(updatedRecords);
+        
+        // Reload records from server to ensure sync
+        await loadRecords();
+        
         notifications.show({
           title: 'Success',
           message: 'Record deleted successfully',
