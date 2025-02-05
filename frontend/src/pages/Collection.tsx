@@ -734,10 +734,8 @@ function Collection() {
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
                       <Group gap={4} wrap="wrap" style={{ 
-                        minHeight: '24px',
-                        maxHeight: '48px',  // Allow for two rows
-                        overflow: 'hidden',
-                        position: 'relative'
+                        padding: '4px 0',
+                        minHeight: '24px'
                       }}>
                         {values.map((value) => (
                           <Badge
@@ -759,23 +757,6 @@ function Collection() {
                             {value}
                           </Badge>
                         ))}
-                        {values.length > 4 && (
-                          <Badge
-                            variant="filled"
-                            size="sm"
-                            radius="sm"
-                            color="gray"
-                            styles={{
-                              root: {
-                                textTransform: 'none',
-                                cursor: 'default',
-                                padding: '3px 8px'
-                              }
-                            }}
-                          >
-                            +{values.length - 4}
-                          </Badge>
-                        )}
                       </Group>
                     )}
                   </Text>
@@ -1053,8 +1034,8 @@ function Collection() {
             table: {
               tableLayout: 'fixed',
               '& tbody tr td': {
-                height: '40px',
-                maxHeight: '40px',
+                height: 'auto',
+                minHeight: '40px',
                 padding: '8px',
                 position: 'relative'
               }
