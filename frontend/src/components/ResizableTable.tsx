@@ -13,7 +13,7 @@ import {
   Cell,
   OnChangeFn
 } from '@tanstack/react-table';
-import { Table, Box, Text } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
 
 interface ResizableTableProps<T> {
@@ -22,6 +22,7 @@ interface ResizableTableProps<T> {
   sortState?: SortingState;
   onSortChange?: OnChangeFn<SortingState>;
   tableId: string;  // Unique ID for storing column widths
+  loading?: boolean;  // Add loading prop
 }
 
 export function ResizableTable<T>({ 
@@ -29,7 +30,8 @@ export function ResizableTable<T>({
   columns, 
   sortState, 
   onSortChange,
-  tableId 
+  tableId,
+  loading = false  // Add loading prop with default value
 }: ResizableTableProps<T>) {
   // Store column widths in localStorage
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -63,8 +65,10 @@ export function ResizableTable<T>({
     <Box style={{ 
       overflow: 'auto',
       width: '100%',
-      minWidth: '100%'
+      minWidth: '100%',
+      position: 'relative'
     }}>
+      <LoadingOverlay visible={loading} />
       <Table
         striped
         highlightOnHover

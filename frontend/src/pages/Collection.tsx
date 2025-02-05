@@ -1050,6 +1050,7 @@ function Collection() {
           sortState={sortState}
           onSortChange={setSortState}
           tableId="vinyl-collection"
+          loading={loading}
         />
 
         <CustomColumnManager
