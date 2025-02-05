@@ -67,33 +67,57 @@ export function ResizableTable<T>({
         style={{
           width: table.getCenterTotalSize(),
           borderCollapse: 'separate',
-          borderSpacing: 0
+          borderSpacing: 0,
+          lineHeight: '32px'
         }}
         styles={{
           table: {
-            tableLayout: 'fixed',
+            tableLayout: 'fixed'
+          },
+          thead: {
+            height: '32px'
+          },
+          tbody: {
             '& tr': {
-              height: '32px !important'
-            },
-            '& td, & th': {
-              height: '32px !important',
-              padding: '0 8px !important',
-              lineHeight: '32px !important',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              height: '32px'
+            }
+          },
+          tr: {
+            height: '32px',
+            '&:hover': {
+              height: '32px'
             }
           },
           td: {
+            height: '32px',
+            maxHeight: '32px',
+            padding: '0 8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
+            },
+            '& > div': {
+              height: '32px',
+              maxHeight: '32px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center'
             }
           },
           th: {
+            height: '32px',
+            maxHeight: '32px',
+            padding: '0 8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
+            },
+            '& > div': {
+              height: '32px',
+              maxHeight: '32px',
+              overflow: 'hidden'
             }
           }
         }}
@@ -108,7 +132,9 @@ export function ResizableTable<T>({
                   style={{
                     width: header.getSize(),
                     position: 'relative',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    height: '32px',
+                    maxHeight: '32px'
                   }}
                 >
                   {header.isPlaceholder ? null : (
@@ -117,7 +143,10 @@ export function ResizableTable<T>({
                         style: {
                           display: 'flex',
                           alignItems: 'center',
-                          cursor: header.column.getCanSort() ? 'pointer' : 'default'
+                          cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                          height: '32px',
+                          maxHeight: '32px',
+                          overflow: 'hidden'
                         },
                         onClick: header.column.getToggleSortingHandler()
                       }}
@@ -127,7 +156,7 @@ export function ResizableTable<T>({
                         header.getContext()
                       )}
                       {header.column.getCanSort() && (
-                        <Text ml="xs" c="dimmed">
+                        <Text ml="xs" c="dimmed" style={{ lineHeight: '32px' }}>
                           {{
                             asc: '↑',
                             desc: '↓'
@@ -173,16 +202,29 @@ export function ResizableTable<T>({
         </Table.Thead>
         <Table.Tbody>
           {table.getRowModel().rows.map((row: Row<T>) => (
-            <Table.Tr key={row.id}>
+            <Table.Tr key={row.id} style={{ height: '32px', maxHeight: '32px' }}>
               {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
                 <Table.Td
                   key={cell.id}
                   style={{
                     width: cell.column.getSize(),
-                    maxWidth: cell.column.getSize()
+                    maxWidth: cell.column.getSize(),
+                    height: '32px',
+                    maxHeight: '32px',
+                    overflow: 'hidden'
                   }}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  <div style={{ 
+                    height: '32px', 
+                    maxHeight: '32px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
                 </Table.Td>
               ))}
             </Table.Tr>
