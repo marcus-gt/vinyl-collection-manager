@@ -108,8 +108,7 @@ export function Scanner() {
         musicians: record.musicians || [],
         master_url: record.master_url,
         current_release_url: record.current_release_url,
-        label: record.label,
-        notes: ''
+        label: record.label
       };
 
       console.log('Prepared record data:', recordData);

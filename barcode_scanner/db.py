@@ -140,8 +140,7 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'master_url': record_data.get('master_url'),
             'current_release_url': record_data.get('current_release_url'),
             'current_release_year': record_data.get('current_release_year'),
-            'barcode': record_data.get('barcode'),
-            'notes': record_data.get('notes', '')
+            'barcode': record_data.get('barcode')
         }
         
         print("\nPrepared record data:")
