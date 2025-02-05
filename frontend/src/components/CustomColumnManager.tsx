@@ -376,15 +376,23 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                   size="sm"
                   styles={{
                     input: {
-                      minHeight: '36px'
+                      minHeight: '36px',
+                      paddingRight: '80px' // Make room for the button
+                    },
+                    rightSection: {
+                      width: '70px', // Give more width to the button section
+                      right: '5px'  // Add some spacing from the right edge
                     }
                   }}
                   rightSection={
                     <Button 
                       size="xs" 
-                      variant="light"
+                      variant="filled"
                       onClick={handleAddOption}
                       disabled={!currentOption || options.includes(currentOption)}
+                      style={{
+                        minWidth: '60px' // Ensure button has minimum width
+                      }}
                     >
                       Add
                     </Button>
