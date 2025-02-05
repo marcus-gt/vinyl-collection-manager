@@ -729,11 +729,16 @@ function Collection() {
             <Box style={{ position: 'relative' }}>
               <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
+                  <Text size="sm" style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
                     {values.length === 0 ? (
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
-                      <Group gap={4} wrap="wrap" style={{ overflow: 'hidden', maxHeight: '44px' }}>
+                      <Group gap={4} wrap="wrap" style={{ 
+                        minHeight: '24px',
+                        maxHeight: '48px',  // Allow for two rows
+                        overflow: 'hidden',
+                        position: 'relative'
+                      }}>
                         {values.map((value) => (
                           <Badge
                             key={value}
@@ -745,13 +750,32 @@ function Collection() {
                               root: {
                                 textTransform: 'none',
                                 cursor: 'default',
-                                padding: '3px 8px'
+                                padding: '3px 8px',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-flex'
                               }
                             }}
                           >
                             {value}
                           </Badge>
                         ))}
+                        {values.length > 4 && (
+                          <Badge
+                            variant="filled"
+                            size="sm"
+                            radius="sm"
+                            color="gray"
+                            styles={{
+                              root: {
+                                textTransform: 'none',
+                                cursor: 'default',
+                                padding: '3px 8px'
+                              }
+                            }}
+                          >
+                            +{values.length - 4}
+                          </Badge>
+                        )}
                       </Group>
                     )}
                   </Text>
