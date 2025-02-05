@@ -723,9 +723,28 @@ function Collection() {
           // Calculate column width based on content
           const calculateColumnWidth = () => {
             if (values.length === 0) return 150;
-            // Calculate width needed for each row (assuming 2 rows)
-            const totalWidth = values.reduce((acc, value) => acc + (value.length * 8 + 40), 0);
-            return Math.max(150, Math.ceil(totalWidth / 2) + 20); // Add padding
+            
+            // Calculate total width needed for all badges
+            const totalBadgeWidth = values.reduce((acc, value) => {
+              // Each character is roughly 8px wide
+              const textWidth = value.length * 8;
+              // Add padding (16px), border (2px), and gap (4px)
+              return acc + textWidth + 22;
+            }, 0);
+            
+            // Add extra padding for the container (16px on each side)
+            const containerPadding = 32;
+            
+            // Calculate width needed for two rows with some buffer
+            // Add gap between badges (4px) * number of gaps (values.length - 1)
+            const gapsWidth = 4 * (values.length - 1);
+            const totalWidth = totalBadgeWidth + gapsWidth + containerPadding;
+            
+            // Divide by 2 for two rows and add some buffer (20px)
+            const columnWidth = Math.ceil(totalWidth / 2) + 20;
+            
+            // Ensure minimum width of 150px
+            return Math.max(150, columnWidth);
           };
 
           // Update column width when values change
@@ -750,10 +769,9 @@ function Collection() {
                       <Text size="sm" c="dimmed">-</Text>
                     ) : (
                       <Group gap={4} wrap="wrap" style={{ 
-                        minHeight: '24px',
-                        maxHeight: '48px',
+                        height: '48px',  // Fixed height for two rows
                         overflow: 'hidden',
-                        position: 'relative'
+                        padding: '4px 8px'
                       }}>
                         {values.map((value) => (
                           <Badge
@@ -769,7 +787,9 @@ function Collection() {
                                 padding: '3px 8px',
                                 whiteSpace: 'nowrap',
                                 display: 'inline-flex',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                height: '20px',
+                                lineHeight: '14px'
                               }
                             }}
                           >
