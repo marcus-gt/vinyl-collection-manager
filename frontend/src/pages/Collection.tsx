@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Switch, Badge } from '@mantine/core';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Switch, Badge, LoadingOverlay } from '@mantine/core';
 import { IconTrash, IconExternalLink, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
@@ -381,8 +381,8 @@ function Collection() {
             { 
               id: 'artist',
               accessorKey: 'artist', 
-              header: 'Artist',
-              enableSorting: true,
+              title: 'Artist', 
+              sortable: true,
               size: 200,
               enableResizing: true,
               minSize: 100,
@@ -405,8 +405,8 @@ function Collection() {
             { 
               id: 'album',
               accessorKey: 'album', 
-              header: 'Album', 
-              enableSorting: true,
+              title: 'Album', 
+              sortable: true,
               size: 250,
               enableResizing: true,
               minSize: 100,
@@ -429,15 +429,15 @@ function Collection() {
             { 
               id: 'year',
               accessorKey: 'year', 
-              header: 'Original Year',
-              enableSorting: true,
+              title: 'Original Year',
+              sortable: true,
               size: 80,
             },
             { 
               id: 'label', 
               accessorKey: 'label', 
-              header: 'Label', 
-              enableSorting: true,
+              title: 'Label', 
+              sortable: true,
               size: 150,
               enableResizing: true,
               minSize: 100,
@@ -460,8 +460,8 @@ function Collection() {
             { 
               id: 'genres', 
               accessorKey: 'genres', 
-              header: 'Genres', 
-              enableSorting: true,
+              title: 'Genres', 
+              sortable: true,
               size: 150,
               enableResizing: true,
               minSize: 100,
@@ -487,8 +487,8 @@ function Collection() {
             { 
               id: 'styles', 
               accessorKey: 'styles', 
-              header: 'Styles', 
-              enableSorting: true,
+              title: 'Styles', 
+              sortable: true,
               size: 180,
               enableResizing: true,
               minSize: 100,
@@ -514,8 +514,8 @@ function Collection() {
             { 
               id: 'musicians', 
               accessorKey: 'musicians', 
-              header: 'Musicians', 
-              enableSorting: true,
+              title: 'Musicians', 
+              sortable: true,
               size: 200,
               enableResizing: true,
               minSize: 100,
@@ -543,8 +543,8 @@ function Collection() {
             { 
               id: 'created_at', 
               accessorKey: 'created_at', 
-              header: 'Added', 
-              enableSorting: true,
+              title: 'Added', 
+              sortable: true,
               size: 150,
               enableResizing: true,
               minSize: 100,
@@ -555,8 +555,8 @@ function Collection() {
             { 
               id: 'current_release_year', 
               accessorKey: 'current_release_year', 
-              header: 'Scanned Release Year', 
-              enableSorting: true, 
+              title: 'Scanned Release Year', 
+              sortable: true, 
               size: 100,
               enableResizing: true,
               minSize: 100,
@@ -566,7 +566,7 @@ function Collection() {
             {
               id: 'links',
               accessorKey: 'links',
-              header: 'Links',
+              title: 'Links',
               size: 130,
               enableResizing: true,
               minSize: 100,
@@ -603,41 +603,14 @@ function Collection() {
                 </Group>
               ),
             },
-            {
-              id: 'actions',
-              accessorKey: 'actions',
-              header: 'Actions',
-              size: 100,
-              enableResizing: true,
-              minSize: 100,
-              maxSize: 500,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Group gap="xs">
-                  <Tooltip label="Delete">
-                    <ActionIcon 
-                      color="red" 
-                      variant="light"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('Delete clicked for record:', row.original);
-                        handleDelete(row.original);
-                      }}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-              ),
-            },
     ];
 
     // Add custom columns
     const customColumnDefs: ColumnDef<VinylRecord>[] = customColumns.map(column => ({
       id: `custom_${column.id}`,
       accessorKey: `customValues.${column.id}`,
-      header: column.name,
-      enableSorting: true,
+      title: column.name,
+      sortable: true,
       size: column.type === 'multi-select' ? 300 : 
              ['text'].includes(column.type) ? 300 : 150,
       enableResizing: true,
@@ -1002,7 +975,36 @@ function Collection() {
       }
     }));
 
-    return [...standardColumns, ...customColumnDefs];
+    // Add actions column last
+    const actionsColumn: ColumnDef<VinylRecord> = {
+      id: 'actions',
+      accessorKey: 'actions',
+      header: '', // Empty header
+      size: 100,
+      enableResizing: true,
+      minSize: 100,
+      maxSize: 500,
+      cell: ({ row }: { row: Row<VinylRecord> }) => (
+        <Group gap="xs">
+          <Tooltip label="Delete">
+            <ActionIcon 
+              color="red" 
+              variant="light"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Delete clicked for record:', row.original);
+                handleDelete(row.original);
+              }}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      ),
+    };
+
+    return [...standardColumns, ...customColumnDefs, actionsColumn];
   }, [customColumns]);
 
   return (
@@ -1044,14 +1046,20 @@ function Collection() {
           <Text c="red">{error}</Text>
         )}
 
-        <ResizableTable<VinylRecord>
-          data={paginatedRecords}
-          columns={tableColumns}
-          sortState={sortState}
-          onSortChange={setSortState}
-          tableId="vinyl-collection"
-          loading={loading}
-        />
+        {loading ? (
+          <Box style={{ height: '400px', position: 'relative' }}>
+            <LoadingOverlay visible={true} />
+          </Box>
+        ) : (
+          <ResizableTable<VinylRecord>
+            data={paginatedRecords}
+            columns={tableColumns}
+            sortState={sortState}
+            onSortChange={setSortState}
+            tableId="vinyl-collection"
+            loading={loading}
+          />
+        )}
 
         <CustomColumnManager
           opened={customColumnManagerOpened}
