@@ -167,23 +167,6 @@ export const records = {
       return { success: false, error: 'Failed to delete record' };
     }
   },
-
-  updateNotes: async (id: string, notes: string): Promise<ApiResponse<VinylRecord>> => {
-    try {
-      const response = await fetch(`/api/records/${id}/notes`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ notes })
-      });
-      return handleApiResponse(response);
-    } catch (err) {
-      console.error('Failed to update notes:', err);
-      return { success: false, error: 'Failed to update notes' };
-    }
-  },
 };
 
 export const lookup = {

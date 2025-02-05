@@ -190,18 +190,4 @@ def remove_record_from_collection(user_id: str, record_id: str) -> Dict[str, Any
         print(f"Error removing record: {str(e)}")
         import traceback
         traceback.print_exc()
-        return {"success": False, "error": str(e)}
-
-def update_record_notes(user_id: str, record_id: str, notes: str) -> Dict[str, Any]:
-    """Update notes for a record in user's collection."""
-    try:
-        response = supabase.table('vinyl_records').update({
-            'notes': notes,
-            'updated_at': datetime.utcnow().isoformat()
-        }).match({
-            'id': record_id,
-            'user_id': user_id
-        }).execute()
-        return {"success": True, "record": response.data[0]}
-    except Exception as e:
         return {"success": False, "error": str(e)} 
