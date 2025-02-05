@@ -75,7 +75,11 @@ export function ResizableTable<T>({
           },
           tr: {
             height: '32px',
-            maxHeight: '32px'
+            maxHeight: '32px',
+            '& > *': {
+              height: '32px',
+              maxHeight: '32px'
+            }
           },
           td: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
@@ -83,12 +87,19 @@ export function ResizableTable<T>({
               borderRight: 'none'
             },
             padding: '4px 8px',
-            height: '32px',
-            maxHeight: '32px',
+            height: '32px !important',
+            maxHeight: '32px !important',
             lineHeight: '24px',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            textOverflow: 'ellipsis',
+            '& > *': {
+              height: '32px',
+              maxHeight: '32px',
+              lineHeight: '24px',
+              display: 'flex',
+              alignItems: 'center'
+            }
           },
           th: {
             borderRight: '1px solid var(--mantine-color-dark-4)',
@@ -96,9 +107,13 @@ export function ResizableTable<T>({
               borderRight: 'none'
             },
             padding: '4px 8px',
-            height: '32px',
-            maxHeight: '32px',
-            whiteSpace: 'nowrap'
+            height: '32px !important',
+            maxHeight: '32px !important',
+            whiteSpace: 'nowrap',
+            '& > *': {
+              height: '32px',
+              maxHeight: '32px'
+            }
           }
         }}
       >
