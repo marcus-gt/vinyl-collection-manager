@@ -754,35 +754,50 @@ function Collection() {
                       {values.length === 0 ? (
                         <Text size="sm" c="dimmed">-</Text>
                       ) : (
-                        <Group gap={4} wrap="wrap" style={{ 
-                          height: '48px',  // Fixed height for two rows
-                          overflow: 'hidden',
-                          padding: '4px 8px'
+                        <Box style={{ 
+                          position: 'relative',
+                          height: '40px',
+                          overflow: 'hidden'
                         }}>
-                          {values.map((value) => (
-                            <Badge
-                              key={value}
-                              variant="filled"
-                              size="sm"
-                              radius="sm"
-                              color={column.option_colors?.[value] || PILL_COLORS.default}
-                              styles={{
-                                root: {
-                                  textTransform: 'none',
-                                  cursor: 'default',
-                                  padding: '3px 8px',
-                                  whiteSpace: 'nowrap',
-                                  display: 'inline-flex',
-                                  flexShrink: 0,
-                                  height: '20px',
-                                  lineHeight: '14px'
-                                }
-                              }}
-                            >
-                              {value}
-                            </Badge>
-                          ))}
-                        </Group>
+                          <Group gap={4} wrap="nowrap" style={{ 
+                            height: '100%',
+                            alignItems: 'center',
+                            paddingRight: '20px'  // Space for gradient
+                          }}>
+                            {values.map((value) => (
+                              <Badge
+                                key={value}
+                                variant="filled"
+                                size="sm"
+                                radius="sm"
+                                color={column.option_colors?.[value] || PILL_COLORS.default}
+                                styles={{
+                                  root: {
+                                    textTransform: 'none',
+                                    cursor: 'default',
+                                    padding: '3px 8px',
+                                    whiteSpace: 'nowrap',
+                                    display: 'inline-flex',
+                                    flexShrink: 0
+                                  }
+                                }}
+                              >
+                                {value}
+                              </Badge>
+                            ))}
+                          </Group>
+                          <Box 
+                            style={{ 
+                              position: 'absolute',
+                              right: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: '20px',
+                              background: 'linear-gradient(to right, transparent, var(--mantine-color-dark-7) 50%)',
+                              pointerEvents: 'none'
+                            }}
+                          />
+                        </Box>
                       )}
                     </Text>
                   </Popover.Target>
@@ -1056,14 +1071,23 @@ function Collection() {
           records={paginatedRecords}
           sortStatus={sortStatus}
           onSortStatusChange={handleSortStatusChange}
+          resizableColumns={{ initialWidth: 200, minWidth: 100, maxWidth: 500 }}
+          persistentColumnWidth
           styles={{
             table: {
               tableLayout: 'fixed',
               '& tbody tr td': {
-                height: 'auto',
-                minHeight: '40px',
+                height: '40px',
+                maxHeight: '40px',
                 padding: '8px',
                 position: 'relative'
+              },
+              '& th': {
+                position: 'relative',
+                borderRight: '1px solid var(--mantine-color-dark-4)',
+                '&:last-child': {
+                  borderRight: 'none'
+                }
               }
             }
           }}
