@@ -30,7 +30,7 @@ pydantic==2.10.6
 pydantic_core==2.27.2
 PyJWT==2.10.1
 python-dateutil==2.9.0.post0
-python-discogs-client==2.7
+python-discogs-client>=2.7,<3.0
 python-dotenv==1.0.0
 python-jose==3.3.0
 realtime==1.0.6
