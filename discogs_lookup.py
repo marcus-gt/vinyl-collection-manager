@@ -2,17 +2,16 @@ import os
 from dotenv import load_dotenv
 import re
 from typing import Optional, Dict, Any
-import discogs_client
+from discogs_client import Client
 import time
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Discogs client with rate limiting
-d = discogs_client.Client(
+# Initialize Discogs client
+d = Client(
     'VinylCollectionManager/1.0',
-    user_token=os.getenv('DISCOGS_TOKEN'),
-    requests_timeout=30
+    user_token=os.getenv('DISCOGS_TOKEN')
 )
 
 def get_musicians(credits) -> list[str]:
