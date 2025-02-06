@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea } from '@mantine/core';
+import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
 import { IconExternalLink } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
 import type { VinylRecord } from '../types';
@@ -7,6 +7,7 @@ import { BarcodeScanner } from '../components/BarcodeScanner';
 
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
+  const [discogsUrl, setDiscogsUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -78,6 +79,40 @@ export function Scanner() {
       }
     } catch (err) {
       setError('Failed to lookup barcode');
+      setRecord(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDiscogsLookup = async () => {
+    if (!discogsUrl.trim()) {
+      setError('Please enter a Discogs URL');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      // Extract the release ID from the URL
+      const releaseId = discogsUrl.match(/\/release\/(\d+)/)?.[1];
+      if (!releaseId) {
+        setError('Invalid Discogs URL. Please use a release URL (e.g., https://www.discogs.com/release/123456)');
+        return;
+      }
+
+      const response = await lookup.byDiscogsId(releaseId);
+      if (response.success && response.data) {
+        setRecord(response.data);
+        setError(null);
+      } else {
+        setError(response.error || 'Failed to find record');
+        setRecord(null);
+      }
+    } catch (err) {
+      setError('Failed to lookup Discogs release');
       setRecord(null);
     } finally {
       setLoading(false);
@@ -180,78 +215,107 @@ export function Scanner() {
       px={{ base: 'xs', sm: 'md' }}
     >
       <Box maw={600} mx="auto">
-        <Title ta="center" mb="xl">Scan Vinyl Record</Title>
+        <Title ta="center" mb="xl">Add Record to Collection</Title>
 
         <Paper withBorder shadow="md" p="md" radius="md" mb="xl">
           <Stack>
-            {isScanning ? (
-              <>
-                <BarcodeScanner 
-                  key={scannerKey}
-                  onScan={handleScan} 
-                  isScanning={isScanning} 
-                  isLoading={loading}
-                />
-                {barcode && (
+            <Tabs defaultValue="barcode">
+              <Tabs.List>
+                <Tabs.Tab value="barcode">Scan Barcode</Tabs.Tab>
+                <Tabs.Tab value="discogs">Discogs Link</Tabs.Tab>
+              </Tabs.List>
+
+              <Tabs.Panel value="barcode" pt="xs">
+                {isScanning ? (
                   <>
-                    <Text ta="center" size="sm" fw={500} mt="xs">
-                      Captured barcode: {barcode}
-                    </Text>
-                    {loading && (
-                      <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                        <Loader size="sm" />
-                        <Text size="sm" c="dimmed">
-                          Looking up record in Discogs...
+                    <BarcodeScanner 
+                      key={scannerKey}
+                      onScan={handleScan} 
+                      isScanning={isScanning} 
+                      isLoading={loading}
+                    />
+                    {barcode && (
+                      <>
+                        <Text ta="center" size="sm" fw={500} mt="xs">
+                          Captured barcode: {barcode}
                         </Text>
-                      </Box>
+                        {loading && (
+                          <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                            <Loader size="sm" />
+                            <Text size="sm" c="dimmed">
+                              Looking up record in Discogs...
+                            </Text>
+                          </Box>
+                        )}
+                      </>
                     )}
+                    <Button 
+                      color="red" 
+                      onClick={() => {
+                        setIsScanning(false);
+                        setError(null);
+                        setSuccess(null);
+                      }}
+                    >
+                      Stop Scanning
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Group grow>
+                      <TextInput
+                        label="Barcode"
+                        placeholder="Enter or scan barcode"
+                        value={barcode}
+                        onChange={(e) => setBarcode(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
+                        disabled={loading}
+                      />
+                    </Group>
+                    <Group grow>
+                      <Button 
+                        onClick={handleManualLookup} 
+                        loading={loading}
+                        disabled={!barcode.trim()}
+                      >
+                        Look up Record
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          setIsScanning(true);
+                          setError(null);
+                          setSuccess(null);
+                        }} 
+                        variant="light"
+                        disabled={loading}
+                      >
+                        Start Camera
+                      </Button>
+                    </Group>
                   </>
                 )}
-                <Button 
-                  color="red" 
-                  onClick={() => {
-                    setIsScanning(false);
-                    setError(null);
-                    setSuccess(null);
-                  }}
-                >
-                  Stop Scanning
-                </Button>
-              </>
-            ) : (
-              <>
-                <Group grow>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="discogs" pt="xs">
+                <Stack>
                   <TextInput
-                    label="Barcode"
-                    placeholder="Enter or scan barcode"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
+                    label="Discogs Release URL"
+                    placeholder="https://www.discogs.com/release/123456"
+                    value={discogsUrl}
+                    onChange={(e) => setDiscogsUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleDiscogsLookup()}
                     disabled={loading}
                   />
-                </Group>
-                <Group grow>
                   <Button 
-                    onClick={handleManualLookup} 
+                    onClick={handleDiscogsLookup}
                     loading={loading}
-                    disabled={!barcode.trim()}
+                    disabled={!discogsUrl.trim()}
                   >
-                    Look up Record
+                    Look up Release
                   </Button>
-                  <Button 
-                    onClick={() => {
-                      setIsScanning(true);
-                      setError(null);
-                      setSuccess(null);
-                    }} 
-                    variant="light"
-                    disabled={loading}
-                  >
-                    Start Camera
-                  </Button>
-                </Group>
-              </>
-            )}
+                </Stack>
+              </Tabs.Panel>
+            </Tabs>
 
             {error && (
               <Alert color="red" title="Error" variant="light">

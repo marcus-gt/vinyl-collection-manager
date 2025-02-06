@@ -177,6 +177,14 @@ export const lookup = {
       data: response.data.data
     };
   },
+
+  byDiscogsId: async (releaseId: string): Promise<ApiResponse<VinylRecord>> => {
+    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/discogs/${releaseId}`);
+    return {
+      success: response.data.success,
+      data: response.data.data
+    };
+  },
 };
 
 export const customColumns = {
