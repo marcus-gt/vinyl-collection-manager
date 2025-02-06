@@ -179,22 +179,22 @@ export const lookup = {
   },
 
   byDiscogsId: async (id: string): Promise<ApiResponse<VinylRecord>> => {
-    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/discogs/${id}`);
+    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(`/api/lookup/discogs/${id}`);
     return {
       success: response.data.success,
       data: response.data.data,
-      error: response.data.message
+      error: response.data.error
     };
   },
 
   byDiscogsUrl: async (url: string): Promise<ApiResponse<VinylRecord>> => {
     // URL encode the Discogs URL
     const encodedUrl = encodeURIComponent(url);
-    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/discogs-url?url=${encodedUrl}`);
+    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(`/api/lookup/discogs-url?url=${encodedUrl}`);
     return {
       success: response.data.success,
       data: response.data.data,
-      error: response.data.message
+      error: response.data.error
     };
   }
 };
