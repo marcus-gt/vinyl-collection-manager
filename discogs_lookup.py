@@ -8,11 +8,22 @@ import time
 # Load environment variables
 load_dotenv()
 
+# Get token and validate it's not None
+token = os.getenv('DISCOGS_TOKEN')
+if not token:
+    raise ValueError("DISCOGS_TOKEN environment variable is not set")
+
+print(f"Initializing Discogs client with token: {token[:4]}...{token[-4:]}")  # Only show first/last 4 chars for security
+
 # Initialize Discogs client
-d = Client(
-    'VinylCollectionManager/1.0',
-    user_token=os.getenv('DISCOGS_TOKEN')
-)
+try:
+    d = Client('VinylCollectionManager/1.0', user_token=token)
+    # Test the client with a simple identity call
+    me = d.identity()
+    print(f"Successfully authenticated with Discogs as: {me.username}")
+except Exception as e:
+    print(f"Error initializing Discogs client: {str(e)}")
+    raise
 
 def get_musicians(credits) -> list[str]:
     """Filter and format musician credits, excluding non-musical roles"""
@@ -109,17 +120,44 @@ def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
     try:
         print(f"Looking up release ID: {release_id}")  # Debug logging
         
+        # Validate release_id is numeric
+        if not release_id.isdigit():
+            print(f"Invalid release ID format: {release_id}")
+            return None
+            
         # Get the release
-        release = d.release(release_id)
-        print(f"Found release: {release.title} by {[a.name for a in release.artists]}")  # Debug logging
+        print("Fetching release from Discogs API...")
+        release = d.release(int(release_id))  # Convert to int as the API expects numeric ID
+        print(f"Raw release data: {release.__dict__}")  # Debug the raw response
         
-        return format_release_data(release)
+        if not release:
+            print("No release found")
+            return None
+            
+        print(f"Found release: {release.title} by {[a.name for a in release.artists]}")
+        
+        formatted_data = format_release_data(release)
+        print(f"Formatted release data: {formatted_data}")
+        
+        if formatted_data:
+            return {
+                'success': True,
+                'data': formatted_data
+            }
+        else:
+            return {
+                'success': False,
+                'message': 'Failed to format release data'
+            }
 
     except Exception as e:
         print(f"Error searching by release ID: {str(e)}")
         import traceback
         traceback.print_exc()
-        return None
+        return {
+            'success': False,
+            'message': f'Error looking up release: {str(e)}'
+        }
 
 def extract_release_id(discogs_url: str) -> Optional[str]:
     """Extract release ID from a Discogs URL"""
