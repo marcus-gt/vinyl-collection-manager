@@ -31,15 +31,38 @@ def get_musicians(credits) -> list[str]:
     non_musical_roles = {
         'design', 'photography', 'artwork', 'mastered', 'mixed',
         'lacquer cut', 'liner notes', 'recorded by', 'producer',
-        'engineer', 'mastering', 'mixing', 'recording'
+        'engineer', 'mastering', 'mixing', 'recording', 'artwork',
+        'cover', 'layout', 'typography', 'illustration', 'supervised',
+        'coordinator', 'executive', 'a&r', 'management', 'marketing'
+    }
+
+    musical_roles = {
+        'alto', 'baritone', 'tenor', 'soprano', 'saxophone', 'sax',
+        'trumpet', 'piano', 'bass', 'drums', 'guitar', 'percussion',
+        'trombone', 'vocals', 'performer', 'composed', 'written',
+        'arranged', 'conductor', 'orchestra', 'ensemble', 'quartet',
+        'quintet', 'trio', 'band', 'leader', 'sideman', 'soloist',
+        'musician', 'instruments', 'horn', 'woodwind', 'brass',
+        'strings', 'rhythm', 'flute', 'clarinet', 'vibraphone'
     }
 
     for credit in credits:
         role = credit.role.lower()
-        # Skip if any non-musical role is found in the role description
+        print(f"Checking credit: {credit.name} ({role})")  # Debug logging
+        
+        # Skip if any non-musical role is found
         if any(non_role in role for non_role in non_musical_roles):
+            print(f"Skipping {credit.name} - non-musical role: {role}")
             continue
-        musicians.add(credit.name)
+            
+        # Include if any musical role is found
+        if any(musical_role in role for musical_role in musical_roles):
+            musicians.add(credit.name)
+            print(f"Added musician {credit.name} - musical role: {role}")
+        # Or if no specific role matches (might be a musician)
+        elif not any(non_role in role for non_role in non_musical_roles):
+            musicians.add(credit.name)
+            print(f"Added musician {credit.name} - unspecified role: {role}")
 
     return sorted(list(musicians))
 
@@ -53,32 +76,74 @@ def format_release_data(release) -> Dict[str, Any]:
         # Get musicians from both release credits and track credits
         musicians = set()
         
-        # Add musicians from release credits
-        if hasattr(release, 'extraartists'):
-            musicians.update(get_musicians(release.extraartists))
-        
-        # Add musicians from track credits
-        for track in release.tracklist:
-            if hasattr(track, 'extraartists'):
-                musicians.update(get_musicians(track.extraartists))
+        # Try to get the master release for year and additional info
+        master = None
+        original_year = None
+        main_release = None
+        try:
+            if hasattr(release, 'master') and release.master:
+                print("Found master release, fetching full master data...")
+                master = d.master(release.master.id)  # Fetch full master data
+                original_year = master.year
+                print(f"Found master release year: {original_year}")
+                
+                # Get the main release data
+                if hasattr(master, 'main_release'):
+                    print(f"Found main release ID: {master.main_release.id}")
+                    main_release = d.release(master.main_release.id)
+                    print("Fetched main release data")
+                    
+                    # Get musicians from main release credits
+                    if hasattr(main_release, 'credits'):
+                        print("Found main release credits:", [f"{c.name} ({c.role})" for c in main_release.credits])
+                        musicians.update(get_musicians(main_release.credits))
+                    else:
+                        print("No credits found on main release")
+                    
+                    # Get musicians from main release tracklist
+                    if hasattr(main_release, 'tracklist'):
+                        for track in main_release.tracklist:
+                            if hasattr(track, 'credits'):
+                                print(f"Found track credits for {track.title}:", 
+                                      [f"{c.name} ({c.role})" for c in track.credits])
+                                musicians.update(get_musicians(track.credits))
+                            else:
+                                print(f"No credits found on track: {track.title}")
+        except Exception as e:
+            print(f"Error getting master/main release info: {e}")
 
-        # Get master release info if available
-        master = release.master if hasattr(release, 'master') else None
+        # Fall back to current release credits if no musicians found
+        if not musicians:
+            print("\nNo musicians found in main release, checking current release...")
+            if hasattr(release, 'credits'):
+                print("Found current release credits:", [f"{c.name} ({c.role})" for c in release.credits])
+                musicians.update(get_musicians(release.credits))
+            else:
+                print("No credits found on current release")
+                
+            # Get musicians from current release tracklist
+            if hasattr(release, 'tracklist'):
+                for track in release.tracklist:
+                    if hasattr(track, 'credits'):
+                        print(f"Found track credits for {track.title}:", 
+                              [f"{c.name} ({c.role})" for c in track.credits])
+                        musicians.update(get_musicians(track.credits))
+                    else:
+                        print(f"No credits found on track: {track.title}")
         
         # Format the data
         data = {
             'artist': artist_name,
             'album': release.title,
-            'year': release.year,
+            'year': original_year or getattr(release, 'year', None),
             'label': release.labels[0].name if release.labels else None,
-            'genres': release.genres if hasattr(release, 'genres') else [],
-            'styles': release.styles if hasattr(release, 'styles') else [],
+            'genres': getattr(release, 'genres', []),
+            'styles': getattr(release, 'styles', []),
             'musicians': sorted(list(musicians)),
             'master_url': f'https://www.discogs.com/master/{master.id}' if master else None,
             'current_release_url': f'https://www.discogs.com/release/{release.id}',
-            'current_release_year': release.year,
-            'barcode': next((id_.value for id_ in release.identifiers 
-                           if id_.type in ['Barcode', 'UPC']), None)
+            'current_release_year': getattr(release, 'year', None),
+            'barcode': None
         }
 
         print(f"Formatted release data: {data}")  # Debug logging
@@ -128,7 +193,7 @@ def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
                 'message': 'Invalid release ID format'
             }
             
-        # Get the release
+        # Get the release directly by ID
         print("Fetching release from Discogs API...")
         release = d.release(int(release_id))  # Convert to int as the API expects numeric ID
         
@@ -222,22 +287,68 @@ def get_label_info(label_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 def main():
-    """Example usage of the Discogs lookup functions"""
-    print("\n=== Testing Barcode Lookup ===")
-    test_barcode = "8436028696758"  # Chet Baker - Chet
-    result = search_by_barcode(test_barcode)
-    if result:
-        print("\nFound by barcode:")
-        for key, value in result.items():
-            print(f"{key}: {value}")
+    """Test the Discogs API with Blue Train release"""
+    print("\n=== Testing Discogs API ===")
+    
+    # Test the client connection
+    print("\nTesting client connection...")
+    try:
+        me = d.identity()
+        print(f"✓ Successfully connected as: {me.username}")
+    except Exception as e:
+        print(f"✗ Connection failed: {str(e)}")
+        return
 
-    print("\n=== Testing Release ID Lookup ===")
-    test_release_id = "8067003"  # John Coltrane - Blue Train
-    result = search_by_discogs_id(test_release_id)
-    if result:
-        print("\nFound by release ID:")
-        for key, value in result.items():
-            print(f"{key}: {value}")
+    # Test release lookup
+    release_id = "8067003"  # John Coltrane - Blue Train
+    print(f"\nLooking up release ID: {release_id}")
+    
+    try:
+        # First try to get the raw release
+        print("\nFetching raw release data...")
+        release = d.release(int(release_id))
+        print("Raw release data:")
+        print(f"- Title: {release.title}")
+        print(f"- Artists: {[a.name for a in release.artists]}")
+        print(f"- Year: {release.year}")
+        print(f"- Labels: {[l.name for l in release.labels]}")
+        print(f"- Genres: {release.genres}")
+        print(f"- Styles: {release.styles}")
+        
+        # Try to get extra artists
+        if hasattr(release, 'extraartists'):
+            print("\nExtra artists:")
+            for artist in release.extraartists:
+                print(f"- {artist.name}: {artist.role}")
+        
+        # Try to get tracklist
+        if hasattr(release, 'tracklist'):
+            print("\nTracklist:")
+            for track in release.tracklist:
+                print(f"- {track.title}")
+                if hasattr(track, 'extraartists'):
+                    for artist in track.extraartists:
+                        print(f"  * {artist.name}: {artist.role}")
+        
+        # Now test our formatted data function
+        print("\nTesting format_release_data function...")
+        formatted = format_release_data(release)
+        if formatted:
+            print("\nFormatted release data:")
+            for key, value in formatted.items():
+                print(f"- {key}: {value}")
+        else:
+            print("✗ Failed to format release data")
+            
+        # Finally test the full search function
+        print("\nTesting full search_by_discogs_id function...")
+        result = search_by_discogs_id(release_id)
+        print(f"\nFinal search result: {result}")
+        
+    except Exception as e:
+        print(f"✗ Error during testing: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
