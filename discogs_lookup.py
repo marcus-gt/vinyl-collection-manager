@@ -1,177 +1,199 @@
 import os
 from dotenv import load_dotenv
 import re
-import urllib.parse
 from typing import Optional, Dict, Any
-from discogs_data import make_discogs_request, get_album_data_from_id
-import requests
+import discogs_client
+import time
 
 # Load environment variables
 load_dotenv()
 
-def clean_album_name(name: str) -> str:
-    """Remove common suffixes and text in parentheses."""
-    # Remove text in parentheses and brackets
-    name = re.sub(r'\s*[\(\[].+?[\)\]]\s*', ' ', name)
-    # Remove special editions, remasters, etc.
-    name = re.sub(r'\s*(Deluxe|Expanded|Remastered|Edition|Version).*$', '', name, flags=re.IGNORECASE)
-    return name.strip()
+# Initialize Discogs client with rate limiting
+d = discogs_client.Client(
+    'VinylCollectionManager/1.0',
+    user_token=os.getenv('DISCOGS_TOKEN'),
+    requests_timeout=30
+)
 
-def search_discogs(artist: str, album: str) -> Optional[Dict[str, str]]:
-    """Search Discogs for a master release using artist and album name."""
-    headers = {
-        'Authorization': f'Discogs token={os.getenv("DISCOGS_TOKEN")}',
-        'User-Agent': 'DiscogsLookupScript/1.0'
+def get_musicians(credits) -> list[str]:
+    """Filter and format musician credits, excluding non-musical roles"""
+    musicians = set()
+    non_musical_roles = {
+        'design', 'photography', 'artwork', 'mastered', 'mixed',
+        'lacquer cut', 'liner notes', 'recorded by', 'producer',
+        'engineer', 'mastering', 'mixing', 'recording'
     }
 
-    # URL encode the parameters
-    artist_encoded = urllib.parse.quote(artist)
-    album_encoded = urllib.parse.quote(album)
-    url = f'https://api.discogs.com/database/search?type=master&artist={artist_encoded}&release_title={album_encoded}'
+    for credit in credits:
+        role = credit.role.lower()
+        # Skip if any non-musical role is found in the role description
+        if any(non_role in role for non_role in non_musical_roles):
+            continue
+        musicians.add(credit.name)
 
+    return sorted(list(musicians))
+
+def format_release_data(release) -> Dict[str, Any]:
+    """Format a Discogs release object into a standardized format"""
     try:
-        results = make_discogs_request(url, headers)
-        if not results or 'results' not in results:
-            return None
+        # Get artist name(s)
+        artists = [artist.name for artist in release.artists]
+        artist_name = ' & '.join(artists) if artists else 'Unknown Artist'
 
-        # Process results to find the master URL
-        results_list = results.get('results', [])
-        if results_list:
-            # Sort by community stats (have + want) to get the most popular release
-            sorted_results = sorted(
-                results_list,
-                key=lambda x: x.get('community', {}).get('have', 0) + x.get('community', {}).get('want', 0),
-                reverse=True
-            )
+        # Get musicians from both release credits and track credits
+        musicians = set()
+        
+        # Add musicians from release credits
+        if hasattr(release, 'extraartists'):
+            musicians.update(get_musicians(release.extraartists))
+        
+        # Add musicians from track credits
+        for track in release.tracklist:
+            if hasattr(track, 'extraartists'):
+                musicians.update(get_musicians(track.extraartists))
 
-            # Get the first result (most popular)
-            master = sorted_results[0]
-            if master.get('master_url') and master.get('uri'):
-                return {
-                    'master_url': master['master_url'],
-                    'uri': f"https://www.discogs.com{master['uri']}"
-                }
-        return None
+        # Get master release info if available
+        master = release.master if hasattr(release, 'master') else None
+        
+        # Format the data
+        data = {
+            'artist': artist_name,
+            'album': release.title,
+            'year': release.year,
+            'label': release.labels[0].name if release.labels else None,
+            'genres': release.genres if hasattr(release, 'genres') else [],
+            'styles': release.styles if hasattr(release, 'styles') else [],
+            'musicians': sorted(list(musicians)),
+            'master_url': f'https://www.discogs.com/master/{master.id}' if master else None,
+            'current_release_url': f'https://www.discogs.com/release/{release.id}',
+            'current_release_year': release.year,
+            'barcode': next((id_.value for id_ in release.identifiers 
+                           if id_.type in ['Barcode', 'UPC']), None)
+        }
+
+        print(f"Formatted release data: {data}")  # Debug logging
+        return data
+
     except Exception as e:
-        print(f"Error searching Discogs: {e}")
+        print(f"Error formatting release data: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
-
-def get_discogs_master_url(artist: str, album: str) -> Optional[Dict[str, str]]:
-    """Get Discogs master URL using artist and album name. Tries exact match first, then cleaned version."""
-    # Try with exact album name first
-    result = search_discogs(artist, album)
-
-    # If no result found, try with cleaned album name
-    if not result:
-        print("No results found with exact title, trying with cleaned version...")
-        cleaned_album = clean_album_name(album)
-        if cleaned_album != album:  # Only search again if cleaning actually changed something
-            result = search_discogs(artist, cleaned_album)
-
-    return result
 
 def search_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
-    """Search Discogs for a release using its barcode, then get master release info if available."""
-    headers = {
-        'Authorization': f'Discogs token={os.getenv("DISCOGS_TOKEN")}',
-        'User-Agent': 'VinylBarcodeScanner/1.0'
-    }
-    
-    url = f'https://api.discogs.com/database/search?type=release&barcode={barcode}'
-    
+    """Search Discogs for a release using its barcode"""
     try:
-        # First get the release info
-        response = requests.get(url, headers=headers)
-        if not response.ok:
-            print(f"Error from Discogs API: {response.status_code}")
+        print(f"Searching for barcode: {barcode}")  # Debug logging
+        
+        # Search for releases with the barcode
+        results = d.search(barcode, type='release')
+        if not results:
+            print("No results found for barcode")
             return None
-            
-        data = response.json()
-        if not data or 'results' not in data or not data['results']:
-            return None
-            
+
         # Get the first result
-        result = data['results'][0]
-        print(f"Initial search result: {result}")  # Debug print
-        
-        # Store the release year from the search result
-        current_release_year = result.get('year')
-        print(f"Current release year from search: {current_release_year}")  # Debug print
-        
-        # Get the release ID from the URI
-        release_uri = result.get('uri', '')
-        if not release_uri:
-            return None
-            
-        # Extract the release ID
-        release_id_match = re.search(r'/release/(\d+)', release_uri)
-        if not release_id_match:
-            return None
-            
-        release_id = release_id_match.group(1)
-        
-        # Get the master ID if available
-        master_id = result.get('master_id')
-        print(f"Found master_id: {master_id}")  # Debug print
-        
-        # Use the more robust data fetching process
-        album_data = get_album_data_from_id('release', release_id)
-        if not album_data:
-            return None
-            
-        # Add additional fields needed for the barcode scanner UI
-        album_data['format'] = result.get('format', [])
-        album_data['is_master'] = bool(master_id)
-        
-        # Make sure we preserve the release year from the search result
-        album_data['release_year'] = current_release_year
-        print(f"Setting release year to: {current_release_year}")  # Debug print
-        
-        # Format URLs for web display
-        album_data['release_url'] = f'https://www.discogs.com/release/{release_id}'
-        if master_id:
-            album_data['master_url'] = f'https://www.discogs.com/master/{master_id}'
-        
-        print(f"Final album data: {album_data}")  # Debug print
-        return album_data
-        
+        release = results[0]
+        print(f"Found release: {release.title} by {[a.name for a in release.artists]}")  # Debug logging
+
+        # Get the full release data
+        full_release = d.release(release.id)
+        return format_release_data(full_release)
+
     except Exception as e:
-        print(f"Error searching Discogs: {str(e)}")
+        print(f"Error searching by barcode: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
+    """Search for a release by Discogs release ID"""
+    try:
+        print(f"Looking up release ID: {release_id}")  # Debug logging
+        
+        # Get the release
+        release = d.release(release_id)
+        print(f"Found release: {release.title} by {[a.name for a in release.artists]}")  # Debug logging
+        
+        return format_release_data(release)
+
+    except Exception as e:
+        print(f"Error searching by release ID: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def extract_release_id(discogs_url: str) -> Optional[str]:
+    """Extract release ID from a Discogs URL"""
+    try:
+        # Handle URLs like https://www.discogs.com/release/1234-Artist-Title
+        if '/release/' in discogs_url:
+            release_id = re.search(r'/release/(\d+)', discogs_url)
+            if release_id:
+                return release_id.group(1)
+        return None
+    except Exception as e:
+        print(f"Error extracting release ID: {str(e)}")
+        return None
+
+def get_price_suggestions(release_id: str) -> Optional[Dict[str, Any]]:
+    """Get price suggestions for a release"""
+    try:
+        release = d.release(release_id)
+        return release.price_suggestions
+    except Exception as e:
+        print(f"Error getting price suggestions: {str(e)}")
+        return None
+
+def get_artist_info(artist_id: str) -> Optional[Dict[str, Any]]:
+    """Get detailed artist information"""
+    try:
+        artist = d.artist(artist_id)
+        return {
+            'name': artist.name,
+            'real_name': artist.real_name,
+            'profile': artist.profile,
+            'members': [m.name for m in artist.members] if hasattr(artist, 'members') else [],
+            'groups': [g.name for g in artist.groups] if hasattr(artist, 'groups') else [],
+            'aliases': [a.name for a in artist.aliases] if hasattr(artist, 'aliases') else [],
+            'urls': artist.urls
+        }
+    except Exception as e:
+        print(f"Error getting artist info: {str(e)}")
+        return None
+
+def get_label_info(label_id: str) -> Optional[Dict[str, Any]]:
+    """Get detailed label information"""
+    try:
+        label = d.label(label_id)
+        return {
+            'name': label.name,
+            'contact_info': label.contact_info,
+            'profile': label.profile,
+            'parent_label': label.parent_label.name if label.parent_label else None,
+            'sublabels': [l.name for l in label.sublabels],
+            'urls': label.urls
+        }
+    except Exception as e:
+        print(f"Error getting label info: {str(e)}")
         return None
 
 def main():
-    """Example usage of the script with both barcode and artist/album lookups."""
-    print("\n=== Testing Barcode Lookups ===")
-    test_barcodes = [
-        "8436028696758",  # Chet Baker - Chet
-        "602508027727"    # Herbie Hancock - Inventions & Dimensions
-    ]
+    """Example usage of the Discogs lookup functions"""
+    print("\n=== Testing Barcode Lookup ===")
+    test_barcode = "8436028696758"  # Chet Baker - Chet
+    result = search_by_barcode(test_barcode)
+    if result:
+        print("\nFound by barcode:")
+        for key, value in result.items():
+            print(f"{key}: {value}")
 
-    for barcode in test_barcodes:
-        print(f"\nLooking up barcode: {barcode}")
-        result = search_by_barcode(barcode)
-        if result:
-            print("Found:")
-            for key, value in result.items():
-                print(f"{key}: {value}")
-        else:
-            print("No results found")
-
-    print("\n=== Testing Artist/Album Lookups ===")
-    test_inputs = [
-        ("Miles Davis", "Kind of Blue"),
-        ("John Coltrane", "A Love Supreme")
-    ]
-
-    for artist, album in test_inputs:
-        print(f"\nLooking up: {artist} - {album}")
-        result = get_discogs_master_url(artist, album)
-        if result:
-            print(f"Found:")
-            for key, value in result.items():
-                print(f"{key}: {value}")
-        else:
-            print("Not found")
+    print("\n=== Testing Release ID Lookup ===")
+    test_release_id = "8067003"  # John Coltrane - Blue Train
+    result = search_by_discogs_id(test_release_id)
+    if result:
+        print("\nFound by release ID:")
+        for key, value in result.items():
+            print(f"{key}: {value}")
 
 if __name__ == "__main__":
     main()

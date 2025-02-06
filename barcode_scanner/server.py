@@ -18,7 +18,7 @@ from flask_cors import CORS
 import sys
 
 sys.path.append(parent_dir)
-from discogs_lookup import search_by_barcode
+from discogs_lookup import search_by_barcode, search_by_discogs_id
 from .db import (
     create_user,
     login_user,
@@ -816,6 +816,43 @@ def update_custom_values(record_id):
         return jsonify({'success': True, 'data': results}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/lookup/discogs/<release_id>')
+def lookup_discogs(release_id):
+    """Look up a release by Discogs release ID."""
+    try:
+        result = search_by_discogs_id(release_id)
+        
+        if result:
+            response_data = {
+                'success': True,
+                'data': {
+                    'artist': result.get('artist'),
+                    'album': result.get('album'),
+                    'year': result.get('year'),
+                    'format': ', '.join(result.get('format', [])),
+                    'label': result.get('label'),
+                    'web_url': result.get('uri'),
+                    'master_url': result.get('master_url'),
+                    'genres': result.get('genres'),
+                    'styles': result.get('styles'),
+                    'is_master': result.get('is_master', False),
+                    'release_year': result.get('release_year'),
+                    'release_url': result.get('release_url'),
+                    'musicians': result.get('musicians')
+                }
+            }
+            return jsonify(response_data)
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'No results found'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
