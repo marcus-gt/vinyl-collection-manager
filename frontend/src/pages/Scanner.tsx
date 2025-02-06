@@ -90,6 +90,12 @@ export function Scanner() {
       setError('Please enter a Discogs URL');
       return;
     }
+
+    // Validate URL format
+    if (!discogsUrl.includes('discogs.com/release/') && !discogsUrl.includes('discogs.com/master/')) {
+      setError('Invalid Discogs URL. Please use a release or master URL (e.g., https://www.discogs.com/release/123456 or https://www.discogs.com/master/123456)');
+      return;
+    }
     
     setLoading(true);
     setError(null);
