@@ -235,17 +235,67 @@ def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
         }
 
 def extract_release_id(discogs_url: str) -> Optional[str]:
-    """Extract release ID from a Discogs URL"""
+    """Extract release ID or master ID from a Discogs URL"""
     try:
         # Handle URLs like https://www.discogs.com/release/1234-Artist-Title
         if '/release/' in discogs_url:
             release_id = re.search(r'/release/(\d+)', discogs_url)
             if release_id:
                 return release_id.group(1)
+        # Handle URLs like https://www.discogs.com/master/1234-Artist-Title
+        elif '/master/' in discogs_url:
+            master_id = re.search(r'/master/(\d+)', discogs_url)
+            if master_id:
+                return master_id.group(1)
         return None
     except Exception as e:
-        print(f"Error extracting release ID: {str(e)}")
+        print(f"Error extracting ID: {str(e)}")
         return None
+
+def search_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
+    """Search for a release using a Discogs URL (supports both release and master URLs)"""
+    try:
+        print(f"\n=== Looking up Discogs URL: {url} ===")
+        
+        # Extract the ID from the URL
+        discogs_id = extract_release_id(url)
+        if not discogs_id:
+            return {
+                'success': False,
+                'message': 'Could not extract ID from URL'
+            }
+            
+        # Check if it's a master URL
+        if '/master/' in url:
+            print(f"Found master URL, fetching master release {discogs_id}...")
+            master = d.master(int(discogs_id))
+            if not master:
+                return {
+                    'success': False,
+                    'message': 'Master release not found'
+                }
+                
+            # Get the main release from the master
+            if not hasattr(master, 'main_release'):
+                return {
+                    'success': False,
+                    'message': 'No main release found for this master'
+                }
+                
+            print(f"Found main release ID: {master.main_release.id}")
+            return search_by_discogs_id(str(master.main_release.id))
+        else:
+            # It's a release URL, use the existing function
+            return search_by_discogs_id(discogs_id)
+            
+    except Exception as e:
+        print(f"Error searching by URL: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'message': f'Error looking up release: {str(e)}'
+        }
 
 def get_price_suggestions(release_id: str) -> Optional[Dict[str, Any]]:
     """Get price suggestions for a release"""
@@ -343,10 +393,21 @@ def main():
         else:
             print("✗ Failed to format release data")
             
-        # Finally test the full search function
+        # Test the full search function with release ID
         print("\nTesting full search_by_discogs_id function...")
         result = search_by_discogs_id(release_id)
         print(f"\nFinal search result: {result}")
+        
+        # Test the URL search function with both release and master URLs
+        print("\nTesting URL search with release URL...")
+        release_url = f"https://www.discogs.com/release/{release_id}-John-Coltrane-Blue-Train"
+        result = search_by_discogs_url(release_url)
+        print(f"\nRelease URL search result: {result}")
+        
+        print("\nTesting URL search with master URL...")
+        master_url = "https://www.discogs.com/master/32208-John-Coltrane-Blue-Train"
+        result = search_by_discogs_url(master_url)
+        print(f"\nMaster URL search result: {result}")
         
     except Exception as e:
         print(f"✗ Error during testing: {str(e)}")
