@@ -1020,10 +1020,15 @@ function Collection() {
 
   return (
     <Container 
-      size="xl" 
-      px={{ base: 'xs', sm: 'md' }}
+      fluid
+      h="100%"
+      p={0}
+      style={{
+        maxWidth: '100%',
+        width: '100%'
+      }}
     >
-      <Stack>
+      <Stack p="xs">
         <Group justify="space-between" align="center" mb="md">
           <Title>Collection Overview</Title>
           <Group>
@@ -1076,14 +1081,16 @@ function Collection() {
             </Box>
           </Box>
         ) : (
-          <ResizableTable<VinylRecord>
-            data={paginatedRecords}
-            columns={tableColumns}
-            sortState={sortState}
-            onSortChange={setSortState}
-            tableId="vinyl-collection"
-            loading={loading}
-          />
+          <Box style={{ height: 'calc(100vh - 140px)' }}>
+            <ResizableTable<VinylRecord>
+              data={paginatedRecords}
+              columns={tableColumns}
+              sortState={sortState}
+              onSortChange={setSortState}
+              tableId="vinyl-collection"
+              loading={loading}
+            />
+          </Box>
         )}
 
         <CustomColumnManager
