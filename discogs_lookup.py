@@ -118,37 +118,44 @@ def search_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
 def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
     """Search for a release by Discogs release ID"""
     try:
-        print(f"Looking up release ID: {release_id}")  # Debug logging
+        print(f"\n=== Looking up release ID: {release_id} ===")
         
         # Validate release_id is numeric
         if not release_id.isdigit():
             print(f"Invalid release ID format: {release_id}")
-            return None
+            return {
+                'success': False,
+                'message': 'Invalid release ID format'
+            }
             
         # Get the release
         print("Fetching release from Discogs API...")
         release = d.release(int(release_id))  # Convert to int as the API expects numeric ID
-        print(f"Raw release data: {release.__dict__}")  # Debug the raw response
         
         if not release:
             print("No release found")
-            return None
+            return {
+                'success': False,
+                'message': 'No release found'
+            }
             
         print(f"Found release: {release.title} by {[a.name for a in release.artists]}")
         
+        # Get the formatted data
         formatted_data = format_release_data(release)
         print(f"Formatted release data: {formatted_data}")
         
-        if formatted_data:
-            return {
-                'success': True,
-                'data': formatted_data
-            }
-        else:
+        if not formatted_data:
             return {
                 'success': False,
                 'message': 'Failed to format release data'
             }
+            
+        # Return success response with data
+        return {
+            'success': True,
+            'data': formatted_data
+        }
 
     except Exception as e:
         print(f"Error searching by release ID: {str(e)}")

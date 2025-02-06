@@ -821,34 +821,22 @@ def update_custom_values(record_id):
 def lookup_discogs(release_id):
     """Look up a release by Discogs release ID."""
     try:
+        print(f"\n=== Looking up Discogs release ID: {release_id} ===")
         result = search_by_discogs_id(release_id)
+        print(f"Search result: {result}")
         
-        if result:
-            response_data = {
-                'success': True,
-                'data': {
-                    'artist': result.get('artist'),
-                    'album': result.get('album'),
-                    'year': result.get('year'),
-                    'format': ', '.join(result.get('format', [])),
-                    'label': result.get('label'),
-                    'web_url': result.get('uri'),
-                    'master_url': result.get('master_url'),
-                    'genres': result.get('genres'),
-                    'styles': result.get('styles'),
-                    'is_master': result.get('is_master', False),
-                    'release_year': result.get('release_year'),
-                    'release_url': result.get('release_url'),
-                    'musicians': result.get('musicians')
-                }
-            }
-            return jsonify(response_data)
-        else:
+        if not result:
             return jsonify({
                 'success': False,
                 'message': 'No results found'
             })
+            
+        return jsonify(result)  # result already contains success and data fields
+        
     except Exception as e:
+        print(f"Error looking up Discogs release: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': str(e)
