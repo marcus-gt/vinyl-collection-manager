@@ -304,17 +304,17 @@ function Collection() {
     const rows = userRecords.map(record => {
       // Standard fields
       const standardFields = [
-        record.artist,
-        record.album,
-        record.year || '',
-        record.label || '',
-        record.genres?.join('; ') || '',
-        record.styles?.join('; ') || '',
-        record.musicians?.join('; ') || '',
-        record.created_at ? new Date(record.created_at).toLocaleString() : '',
-        record.current_release_year || '',
-        record.master_url || '',
-        record.current_release_url || ''
+      record.artist,
+      record.album,
+      record.year || '',
+      record.label || '',
+      record.genres?.join('; ') || '',
+      record.styles?.join('; ') || '',
+      record.musicians?.join('; ') || '',
+      record.created_at ? new Date(record.created_at).toLocaleString() : '',
+      record.current_release_year || '',
+      record.master_url || '',
+      record.current_release_url || ''
       ];
 
       // Custom fields
@@ -997,20 +997,20 @@ function Collection() {
           justifyContent: 'center', 
           alignItems: 'center'
         }}>
-          <Tooltip label="Delete">
-            <ActionIcon 
-              color="red" 
-              variant="light"
-              size="sm"
+                  <Tooltip label="Delete">
+                    <ActionIcon 
+                      color="red" 
+                      variant="light"
+                      size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Delete clicked for record:', row.original);
                 handleDelete(row.original);
               }}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Tooltip>
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
         </Box>
       ),
     };
@@ -1048,14 +1048,14 @@ function Collection() {
               disabled={userRecords.length === 0}
             >
               Export CSV
-            </Button>
+              </Button>
             <Button
               variant="light"
               onClick={() => setCustomColumnManagerOpened(true)}
             >
               Manage Columns
-            </Button>
-          </Group>
+              </Button>
+            </Group>
         </Group>
 
         {error && (

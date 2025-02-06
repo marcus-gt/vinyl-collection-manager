@@ -57,10 +57,13 @@ def get_musicians(credits) -> list[str]:
             
         # Include if any musical role is found
         if any(musical_role in role for musical_role in musical_roles):
-            musicians.add(credit.name)
-            print(f"Added musician {credit.name} - musical role: {role}")
+            # Format name with role: "Name (Role)"
+            formatted_name = f"{credit.name} ({credit.role})"
+            musicians.add(formatted_name)
+            print(f"Added musician {formatted_name} - musical role: {role}")
         # Or if no specific role matches (might be a musician)
         elif not any(non_role in role for non_role in non_musical_roles):
+            # For unspecified roles, just add the name
             musicians.add(credit.name)
             print(f"Added musician {credit.name} - unspecified role: {role}")
 
@@ -165,7 +168,7 @@ def search_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
         if not results:
             print("No results found for barcode")
             return None
-
+            
         # Get the first result
         release = results[0]
         print(f"Found release: {release.title} by {[a.name for a in release.artists]}")  # Debug logging
