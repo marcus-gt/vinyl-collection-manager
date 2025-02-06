@@ -96,14 +96,7 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      // Extract the release ID from the URL
-      const releaseId = discogsUrl.match(/\/release\/(\d+)/)?.[1];
-      if (!releaseId) {
-        setError('Invalid Discogs URL. Please use a release URL (e.g., https://www.discogs.com/release/123456)');
-        return;
-      }
-
-      const response = await lookup.byDiscogsId(releaseId);
+      const response = await lookup.byDiscogsUrl(discogsUrl);
       if (response.success && response.data) {
         setRecord(response.data);
         setError(null);

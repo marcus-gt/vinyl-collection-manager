@@ -178,13 +178,25 @@ export const lookup = {
     };
   },
 
-  byDiscogsId: async (releaseId: string): Promise<ApiResponse<VinylRecord>> => {
-    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/discogs/${releaseId}`);
+  byDiscogsId: async (id: string): Promise<ApiResponse<VinylRecord>> => {
+    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/discogs/${id}`);
     return {
       success: response.data.success,
-      data: response.data.data
+      data: response.data.data,
+      error: response.data.message
     };
   },
+
+  byDiscogsUrl: async (url: string): Promise<ApiResponse<VinylRecord>> => {
+    // URL encode the Discogs URL
+    const encodedUrl = encodeURIComponent(url);
+    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/discogs-url?url=${encodedUrl}`);
+    return {
+      success: response.data.success,
+      data: response.data.data,
+      error: response.data.message
+    };
+  }
 };
 
 export const customColumns = {
