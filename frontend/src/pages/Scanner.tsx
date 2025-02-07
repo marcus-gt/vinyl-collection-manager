@@ -556,11 +556,20 @@ export function Scanner() {
             {showManualForm && (
               <Paper withBorder p="md" mt="md">
                 <Stack>
+                  <TextInput
+                    label="Artist"
+                    value={manualRecord.artist}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, artist: e.target.value }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Album"
+                    value={manualRecord.album}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, album: e.target.value }))}
+                    disabled={loading}
+                  />
                   <Title order={4}>Additional Information</Title>
                   <Text c="dimmed" size="sm" mb="md">Optional</Text>
-                  <Text size="lg" fw={500} mb="xs">
-                    {manualRecord.artist} - {manualRecord.album}
-                  </Text>
                   <TextInput
                     label="Year"
                     type="number"
