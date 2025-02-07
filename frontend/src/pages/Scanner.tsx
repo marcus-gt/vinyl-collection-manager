@@ -228,8 +228,8 @@ export function Scanner() {
     
     // Set the initial values in the manual record
     setManualRecord({
-      artist: artist.trim(),
-      album: album.trim(),
+      artist: artist.trim(),  // We'll still store these but won't show input fields
+      album: album.trim(),    // We'll use the values from the search form
       year: undefined,
       label: '',
       genres: [],
@@ -556,18 +556,6 @@ export function Scanner() {
             {showManualForm && (
               <Paper withBorder p="md" mt="md">
                 <Stack>
-                  <TextInput
-                    label="Artist"
-                    value={manualRecord.artist}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, artist: e.target.value }))}
-                    disabled={loading}
-                  />
-                  <TextInput
-                    label="Album"
-                    value={manualRecord.album}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, album: e.target.value }))}
-                    disabled={loading}
-                  />
                   <Title order={4}>Additional Information</Title>
                   <Text c="dimmed" size="sm" mb="md">Optional</Text>
                   <TextInput
