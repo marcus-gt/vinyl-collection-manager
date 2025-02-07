@@ -389,7 +389,7 @@ export function Scanner() {
       px={{ base: 'xs', sm: 'md' }}
     >
       <Box maw={600} mx="auto">
-        <Title ta="center" mb="xl">Add Record to Collection</Title>
+        <Title ta="center" mb="xl">Add Records</Title>
 
         <Paper withBorder shadow="md" p="md" radius="md" mb="xl">
           <Stack>
@@ -460,17 +460,15 @@ export function Scanner() {
                     </Button>
                   </>
                 ) : (
-                  <>
-                    <Group grow>
-                      <TextInput
-                        label="Barcode"
-                        placeholder="Enter or scan barcode"
-                        value={barcode}
-                        onChange={(e) => setBarcode(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
-                        disabled={loading}
-                      />
-                    </Group>
+                  <Stack>
+                    <TextInput
+                      label="Barcode"
+                      placeholder="Enter or scan barcode"
+                      value={barcode}
+                      onChange={(e) => setBarcode(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
+                      disabled={loading}
+                    />
                     <Group grow>
                       <Button 
                         onClick={handleManualLookup} 
@@ -491,7 +489,7 @@ export function Scanner() {
                         Start Camera
                       </Button>
                     </Group>
-                  </>
+                  </Stack>
                 )}
               </Tabs.Panel>
 

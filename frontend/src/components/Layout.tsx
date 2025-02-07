@@ -55,7 +55,7 @@ function Layout() {
               lineHeight: 1.2
             }}
           >
-            Vinyl Collection
+            Add Records
           </Title>
           {user && (
             <>
