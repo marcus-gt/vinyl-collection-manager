@@ -19,7 +19,7 @@ function Layout() {
         Collection
       </Button>
       <Button variant="subtle" component={Link} to="/scanner" onClick={close}>
-        Scanner
+        Add Records
       </Button>
       <Button variant="light" onClick={() => { handleLogout(); close(); }}>
         Logout
@@ -55,7 +55,7 @@ function Layout() {
               lineHeight: 1.2
             }}
           >
-            Add Records
+            Vinyl Collection
           </Title>
           {user && (
             <>
