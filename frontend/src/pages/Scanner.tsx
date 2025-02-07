@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
-import { IconExternalLink } from '@tabler/icons-react';
+import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
@@ -17,9 +17,16 @@ export function Scanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0); // Used to reset scanner state
   const [recentRecords, setRecentRecords] = useState<VinylRecord[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     loadRecentRecords();
+    return () => {
+      // Cleanup: abort any pending requests when component unmounts
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const loadRecentRecords = async () => {
@@ -37,14 +44,26 @@ export function Scanner() {
     }
   };
 
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setLoading(false);
+      setError('Search cancelled');
+    }
+  };
+
   const handleScan = async (scannedBarcode: string) => {
     setBarcode(scannedBarcode);
     setLoading(true);
     setError(null);
     setSuccess(null);
     
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    
     try {
-      const response = await lookup.byBarcode(scannedBarcode);
+      const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(response.data);
         setError(null);
@@ -53,9 +72,16 @@ export function Scanner() {
         setRecord(null);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Request was cancelled, already handled
+        return;
+      }
       setError('Failed to lookup barcode');
       setRecord(null);
     } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -70,8 +96,11 @@ export function Scanner() {
     setError(null);
     setSuccess(null);
     
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    
     try {
-      const response = await lookup.byBarcode(barcode);
+      const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(response.data);
         setError(null);
@@ -80,9 +109,16 @@ export function Scanner() {
         setRecord(null);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Request was cancelled, already handled
+        return;
+      }
       setError('Failed to lookup barcode');
       setRecord(null);
     } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -103,8 +139,11 @@ export function Scanner() {
     setError(null);
     setSuccess(null);
     
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    
     try {
-      const response = await lookup.byDiscogsUrl(discogsUrl);
+      const response = await lookup.byDiscogsUrl(discogsUrl, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(response.data);
         setError(null);
@@ -113,9 +152,16 @@ export function Scanner() {
         setRecord(null);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Request was cancelled, already handled
+        return;
+      }
       setError('Failed to lookup Discogs release');
       setRecord(null);
     } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -130,8 +176,11 @@ export function Scanner() {
     setError(null);
     setSuccess(null);
     
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    
     try {
-      const response = await lookup.byArtistAlbum(artist, album);
+      const response = await lookup.byArtistAlbum(artist, album, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(response.data);
         setError(null);
@@ -140,9 +189,16 @@ export function Scanner() {
         setRecord(null);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Request was cancelled, already handled
+        return;
+      }
       setError('Failed to lookup record');
       setRecord(null);
     } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -372,6 +428,19 @@ export function Scanner() {
                 </Stack>
               </Tabs.Panel>
             </Tabs>
+
+            {loading && (
+              <Group justify="center">
+                <Button 
+                  variant="light" 
+                  color="red" 
+                  onClick={handleCancel}
+                  leftSection={<IconX size={16} />}
+                >
+                  Cancel Search
+                </Button>
+              </Group>
+            )}
 
             {error && (
               <Alert color="red" title="Error" variant="light">

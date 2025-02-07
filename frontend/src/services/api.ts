@@ -170,16 +170,22 @@ export const records = {
 };
 
 export const lookup = {
-  byBarcode: async (barcode: string): Promise<ApiResponse<VinylRecord>> => {
-    const response = await api.get<{success: boolean, data: VinylRecord}>(`/api/lookup/barcode/${barcode}`);
+  byBarcode: async (barcode: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
+    const response = await api.get<{success: boolean, data: VinylRecord}>(
+      `/api/lookup/barcode/${barcode}`,
+      { signal }
+    );
     return {
       success: response.data.success,
       data: response.data.data
     };
   },
 
-  byDiscogsId: async (id: string): Promise<ApiResponse<VinylRecord>> => {
-    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(`/api/lookup/discogs/${id}`);
+  byDiscogsId: async (id: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
+    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
+      `/api/lookup/discogs/${id}`,
+      { signal }
+    );
     return {
       success: response.data.success,
       data: response.data.data,
@@ -187,10 +193,13 @@ export const lookup = {
     };
   },
 
-  byDiscogsUrl: async (url: string): Promise<ApiResponse<VinylRecord>> => {
+  byDiscogsUrl: async (url: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
     // URL encode the Discogs URL
     const encodedUrl = encodeURIComponent(url);
-    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(`/api/lookup/discogs-url?url=${encodedUrl}`);
+    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
+      `/api/lookup/discogs-url?url=${encodedUrl}`,
+      { signal }
+    );
     return {
       success: response.data.success,
       data: response.data.data,
@@ -198,12 +207,13 @@ export const lookup = {
     };
   },
 
-  byArtistAlbum: async (artist: string, album: string): Promise<ApiResponse<VinylRecord>> => {
+  byArtistAlbum: async (artist: string, album: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
     // URL encode the parameters
     const encodedArtist = encodeURIComponent(artist);
     const encodedAlbum = encodeURIComponent(album);
     const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
-      `/api/lookup/artist-album?artist=${encodedArtist}&album=${encodedAlbum}`
+      `/api/lookup/artist-album?artist=${encodedArtist}&album=${encodedAlbum}`,
+      { signal }
     );
     return {
       success: response.data.success,
