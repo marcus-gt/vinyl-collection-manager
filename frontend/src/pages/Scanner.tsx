@@ -17,6 +17,16 @@ export function Scanner() {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0); // Used to reset scanner state
   const [recentRecords, setRecentRecords] = useState<VinylRecord[]>([]);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualRecord, setManualRecord] = useState<Partial<VinylRecord>>({
+    artist: '',
+    album: '',
+    year: undefined,
+    label: '',
+    genres: [],
+    styles: [],
+    musicians: []
+  });
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -203,26 +213,34 @@ export function Scanner() {
     }
   };
 
-  const handleAddBasicInfo = async () => {
+  const handleAddBasicInfo = () => {
     if (!artist.trim() || !album.trim()) {
       setError('Please enter both artist and album name');
       return;
     }
     
+    // Set the initial values in the manual record
+    setManualRecord({
+      artist: artist.trim(),
+      album: album.trim(),
+      year: undefined,
+      label: '',
+      genres: [],
+      styles: [],
+      musicians: []
+    });
+    
+    // Show the manual form
+    setShowManualForm(true);
+  };
+
+  const handleManualSubmit = async () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
-      const basicRecord = {
-        artist: artist.trim(),
-        album: album.trim(),
-        genres: [],
-        styles: [],
-        musicians: []
-      };
-      
-      const response = await records.add(basicRecord);
+      const response = await records.add(manualRecord);
       if (response.success) {
         setSuccess('Added to collection!');
         // Refresh recent records
@@ -231,6 +249,16 @@ export function Scanner() {
         setArtist('');
         setAlbum('');
         setRecord(null);
+        setShowManualForm(false);
+        setManualRecord({
+          artist: '',
+          album: '',
+          year: undefined,
+          label: '',
+          genres: [],
+          styles: [],
+          musicians: []
+        });
       } else {
         setError(response.error || 'Failed to add to collection');
       }
@@ -469,7 +497,7 @@ export function Scanner() {
                       onClick={handleAddBasicInfo}
                       disabled={!artist.trim() || !album.trim() || loading}
                     >
-                      Add Basic Info Only
+                      Add Basic Info
                     </Button>
                   </Group>
                 </Stack>
@@ -499,6 +527,92 @@ export function Scanner() {
               <Alert color="green" title="Success" variant="light">
                 {success}
               </Alert>
+            )}
+
+            {showManualForm && (
+              <Paper withBorder p="md" mt="md">
+                <Stack>
+                  <Title order={4}>Additional Information</Title>
+                  <TextInput
+                    label="Artist"
+                    value={manualRecord.artist}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, artist: e.target.value }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Album"
+                    value={manualRecord.album}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, album: e.target.value }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Year"
+                    type="number"
+                    value={manualRecord.year || ''}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, year: parseInt(e.target.value) || undefined }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Label"
+                    value={manualRecord.label || ''}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, label: e.target.value }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Genres (comma-separated)"
+                    value={manualRecord.genres?.join(', ') || ''}
+                    onChange={(e) => setManualRecord(prev => ({ 
+                      ...prev, 
+                      genres: e.target.value.split(',').map(g => g.trim()).filter(Boolean)
+                    }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Styles (comma-separated)"
+                    value={manualRecord.styles?.join(', ') || ''}
+                    onChange={(e) => setManualRecord(prev => ({ 
+                      ...prev, 
+                      styles: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                    }))}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Musicians (comma-separated)"
+                    value={manualRecord.musicians?.join(', ') || ''}
+                    onChange={(e) => setManualRecord(prev => ({ 
+                      ...prev, 
+                      musicians: e.target.value.split(',').map(m => m.trim()).filter(Boolean)
+                    }))}
+                    disabled={loading}
+                  />
+                  <Group>
+                    <Button
+                      onClick={handleManualSubmit}
+                      loading={loading}
+                    >
+                      Add to Collection
+                    </Button>
+                    <Button
+                      variant="light"
+                      onClick={() => {
+                        setShowManualForm(false);
+                        setManualRecord({
+                          artist: '',
+                          album: '',
+                          year: undefined,
+                          label: '',
+                          genres: [],
+                          styles: [],
+                          musicians: []
+                        });
+                      }}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                  </Group>
+                </Stack>
+              </Paper>
             )}
 
             {record && (
