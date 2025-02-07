@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
-import { IconExternalLink, IconX } from '@tabler/icons-react';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs } from '@mantine/core';
+import { IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
