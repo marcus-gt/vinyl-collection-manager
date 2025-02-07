@@ -49,7 +49,7 @@ export function Scanner() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setLoading(false);
-      setError('Search cancelled');
+      setError('Search aborted');
     }
   };
 
@@ -185,7 +185,7 @@ export function Scanner() {
         setRecord(response.data);
         setError(null);
       } else {
-        setError(response.error || 'Failed to find record');
+        setError("Couldn't find record");
         setRecord(null);
       }
     } catch (err) {
@@ -193,12 +193,50 @@ export function Scanner() {
         // Request was cancelled, already handled
         return;
       }
-      setError('Failed to lookup record');
+      setError("Couldn't find record");
       setRecord(null);
     } finally {
       if (abortControllerRef.current) {
         abortControllerRef.current = null;
       }
+      setLoading(false);
+    }
+  };
+
+  const handleAddBasicInfo = async () => {
+    if (!artist.trim() || !album.trim()) {
+      setError('Please enter both artist and album name');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const basicRecord = {
+        artist: artist.trim(),
+        album: album.trim(),
+        genres: [],
+        styles: [],
+        musicians: []
+      };
+      
+      const response = await records.add(basicRecord);
+      if (response.success) {
+        setSuccess('Added to collection!');
+        // Refresh recent records
+        await loadRecentRecords();
+        // Reset fields
+        setArtist('');
+        setAlbum('');
+        setRecord(null);
+      } else {
+        setError(response.error || 'Failed to add to collection');
+      }
+    } catch (err) {
+      setError('Failed to add to collection');
+    } finally {
       setLoading(false);
     }
   };
@@ -418,13 +456,22 @@ export function Scanner() {
                     onKeyDown={(e) => e.key === 'Enter' && handleArtistAlbumLookup()}
                     disabled={loading}
                   />
-                  <Button 
-                    onClick={handleArtistAlbumLookup}
-                    loading={loading}
-                    disabled={!artist.trim() || !album.trim()}
-                  >
-                    Search
-                  </Button>
+                  <Group>
+                    <Button 
+                      onClick={handleArtistAlbumLookup}
+                      loading={loading}
+                      disabled={!artist.trim() || !album.trim()}
+                    >
+                      Find Record Info
+                    </Button>
+                    <Button
+                      variant="light"
+                      onClick={handleAddBasicInfo}
+                      disabled={!artist.trim() || !album.trim() || loading}
+                    >
+                      Add Basic Info Only
+                    </Button>
+                  </Group>
                 </Stack>
               </Tabs.Panel>
             </Tabs>
