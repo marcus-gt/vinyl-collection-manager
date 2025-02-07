@@ -559,30 +559,114 @@ export function Scanner() {
                     disabled={loading}
                   />
                   <TextInput
-                    label="Genres (comma-separated)"
+                    label="Genres"
+                    placeholder="Rock, Jazz, Classical..."
+                    description="Press Enter or add comma to create multiple genres"
                     value={manualRecord.genres?.join(', ') || ''}
-                    onChange={(e) => setManualRecord(prev => ({ 
-                      ...prev, 
-                      genres: e.target.value.split(',').map(g => g.trim()).filter(Boolean)
-                    }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // If the last character is a comma, trim the trailing comma
+                      const trimmedValue = value.endsWith(',') ? value.slice(0, -1) : value;
+                      // Split by commas, trim whitespace, and filter out empty strings
+                      const genres = trimmedValue
+                        .split(',')
+                        .map(g => g.trim())
+                        .filter(Boolean);
+                      setManualRecord(prev => ({ ...prev, genres }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = e.currentTarget.value;
+                        const genres = value
+                          .split(',')
+                          .map(g => g.trim())
+                          .filter(Boolean);
+                        setManualRecord(prev => ({ ...prev, genres }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const genres = value
+                        .split(',')
+                        .map(g => g.trim())
+                        .filter(Boolean);
+                      setManualRecord(prev => ({ ...prev, genres }));
+                    }}
                     disabled={loading}
                   />
                   <TextInput
-                    label="Styles (comma-separated)"
+                    label="Styles"
+                    placeholder="Hard Rock, Fusion, Baroque..."
+                    description="Press Enter or add comma to create multiple styles"
                     value={manualRecord.styles?.join(', ') || ''}
-                    onChange={(e) => setManualRecord(prev => ({ 
-                      ...prev, 
-                      styles: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                    }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // If the last character is a comma, trim the trailing comma
+                      const trimmedValue = value.endsWith(',') ? value.slice(0, -1) : value;
+                      // Split by commas, trim whitespace, and filter out empty strings
+                      const styles = trimmedValue
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                      setManualRecord(prev => ({ ...prev, styles }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = e.currentTarget.value;
+                        const styles = value
+                          .split(',')
+                          .map(s => s.trim())
+                          .filter(Boolean);
+                        setManualRecord(prev => ({ ...prev, styles }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const styles = value
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                      setManualRecord(prev => ({ ...prev, styles }));
+                    }}
                     disabled={loading}
                   />
                   <TextInput
-                    label="Musicians (comma-separated)"
+                    label="Musicians"
+                    placeholder="John Coltrane (Saxophone), Miles Davis (Trumpet)..."
+                    description="Press Enter or add comma to create multiple musicians"
                     value={manualRecord.musicians?.join(', ') || ''}
-                    onChange={(e) => setManualRecord(prev => ({ 
-                      ...prev, 
-                      musicians: e.target.value.split(',').map(m => m.trim()).filter(Boolean)
-                    }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // If the last character is a comma, trim the trailing comma
+                      const trimmedValue = value.endsWith(',') ? value.slice(0, -1) : value;
+                      // Split by commas, trim whitespace, and filter out empty strings
+                      const musicians = trimmedValue
+                        .split(',')
+                        .map(m => m.trim())
+                        .filter(Boolean);
+                      setManualRecord(prev => ({ ...prev, musicians }));
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = e.currentTarget.value;
+                        const musicians = value
+                          .split(',')
+                          .map(m => m.trim())
+                          .filter(Boolean);
+                        setManualRecord(prev => ({ ...prev, musicians }));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const musicians = value
+                        .split(',')
+                        .map(m => m.trim())
+                        .filter(Boolean);
+                      setManualRecord(prev => ({ ...prev, musicians }));
+                    }}
                     disabled={loading}
                   />
                   <Group>
