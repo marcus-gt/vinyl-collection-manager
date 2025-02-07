@@ -18,7 +18,7 @@ from flask_cors import CORS
 import sys
 
 sys.path.append(parent_dir)
-from discogs_lookup import search_by_barcode, search_by_discogs_id, search_by_discogs_url
+from discogs_lookup import search_by_barcode, search_by_discogs_id, search_by_discogs_url, search_by_artist_album
 from .db import (
     create_user,
     login_user,
@@ -869,6 +869,37 @@ def lookup_discogs_url():
         return jsonify({
             'success': False,
             'message': str(e)
+        }), 500
+
+@app.route('/api/lookup/artist-album')
+def lookup_artist_album():
+    """Look up a release by artist and album name"""
+    try:
+        artist = request.args.get('artist')
+        album = request.args.get('album')
+        
+        if not artist or not album:
+            return jsonify({
+                'success': False,
+                'error': 'Artist and album names are required'
+            })
+            
+        result = search_by_artist_album(artist, album)
+        if result:
+            return jsonify(result)
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No results found'
+            })
+            
+    except Exception as e:
+        print(f"Error looking up by artist/album: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 if __name__ == '__main__':

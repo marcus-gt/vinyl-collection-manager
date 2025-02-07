@@ -8,6 +8,8 @@ import { BarcodeScanner } from '../components/BarcodeScanner';
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
+  const [artist, setArtist] = useState('');
+  const [album, setAlbum] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -118,6 +120,33 @@ export function Scanner() {
     }
   };
 
+  const handleArtistAlbumLookup = async () => {
+    if (!artist.trim() || !album.trim()) {
+      setError('Please enter both artist and album name');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const response = await lookup.byArtistAlbum(artist, album);
+      if (response.success && response.data) {
+        setRecord(response.data);
+        setError(null);
+      } else {
+        setError(response.error || 'Failed to find record');
+        setRecord(null);
+      }
+    } catch (err) {
+      setError('Failed to lookup record');
+      setRecord(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddToCollection = async () => {
     if (!record) return;
     
@@ -222,6 +251,7 @@ export function Scanner() {
               <Tabs.List>
                 <Tabs.Tab value="barcode">Scan Barcode</Tabs.Tab>
                 <Tabs.Tab value="discogs">Discogs Link</Tabs.Tab>
+                <Tabs.Tab value="search">Search</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="barcode" pt="xs">
@@ -311,6 +341,33 @@ export function Scanner() {
                     disabled={!discogsUrl.trim()}
                   >
                     Look up Release
+                  </Button>
+                </Stack>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="search" pt="xs">
+                <Stack>
+                  <TextInput
+                    label="Artist"
+                    placeholder="Enter artist name"
+                    value={artist}
+                    onChange={(e) => setArtist(e.target.value)}
+                    disabled={loading}
+                  />
+                  <TextInput
+                    label="Album"
+                    placeholder="Enter album name"
+                    value={album}
+                    onChange={(e) => setAlbum(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleArtistAlbumLookup()}
+                    disabled={loading}
+                  />
+                  <Button 
+                    onClick={handleArtistAlbumLookup}
+                    loading={loading}
+                    disabled={!artist.trim() || !album.trim()}
+                  >
+                    Search
                   </Button>
                 </Stack>
               </Tabs.Panel>

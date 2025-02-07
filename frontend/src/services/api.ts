@@ -196,6 +196,20 @@ export const lookup = {
       data: response.data.data,
       error: response.data.error
     };
+  },
+
+  byArtistAlbum: async (artist: string, album: string): Promise<ApiResponse<VinylRecord>> => {
+    // URL encode the parameters
+    const encodedArtist = encodeURIComponent(artist);
+    const encodedAlbum = encodeURIComponent(album);
+    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
+      `/api/lookup/artist-album?artist=${encodedArtist}&album=${encodedAlbum}`
+    );
+    return {
+      success: response.data.success,
+      data: response.data.data,
+      error: response.data.error
+    };
   }
 };
 

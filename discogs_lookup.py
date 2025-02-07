@@ -339,6 +339,91 @@ def get_label_info(label_id: str) -> Optional[Dict[str, Any]]:
         print(f"Error getting label info: {str(e)}")
         return None
 
+def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
+    """Search for a release by artist and album name"""
+    try:
+        print(f"\n=== Looking up release by artist: {artist}, album: {album} ===")
+        
+        # Clean up search terms
+        artist = artist.strip()
+        album = album.strip()
+        
+        # Build search query
+        query = f"{artist} {album}"
+        print(f"Search query: {query}")
+        
+        # Search for releases
+        results = d.search(query, type='release')
+        if not results:
+            print("No results found")
+            return {
+                'success': False,
+                'error': 'No results found'
+            }
+            
+        # Find best match by comparing artist and album names
+        best_match = None
+        best_score = 0
+        
+        for result in results:
+            # Get artist name(s)
+            result_artists = [a.name.lower() for a in result.artists]
+            artist_match = any(artist.lower() in result_artist or result_artist in artist.lower() 
+                             for result_artist in result_artists)
+            
+            # Get album name
+            result_album = result.title.lower()
+            album_match = album.lower() in result_album or result_album in album.lower()
+            
+            # Calculate match score
+            score = 0
+            if artist_match:
+                score += 1
+            if album_match:
+                score += 1
+                
+            # Update best match if this is better
+            if score > best_score:
+                best_score = score
+                best_match = result
+                
+            # Break early if we found a perfect match
+            if score == 2:
+                break
+                
+        if not best_match:
+            print("No matching results found")
+            return {
+                'success': False,
+                'error': 'No matching results found'
+            }
+            
+        print(f"Best match found: {best_match.title} by {[a.name for a in best_match.artists]}")
+        
+        # Get the full release data
+        full_release = d.release(best_match.id)
+        formatted_data = format_release_data(full_release)
+        
+        if not formatted_data:
+            return {
+                'success': False,
+                'error': 'Failed to format release data'
+            }
+            
+        return {
+            'success': True,
+            'data': formatted_data
+        }
+            
+    except Exception as e:
+        print(f"Error searching by artist/album: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': f'Error looking up release: {str(e)}'
+        }
+
 def main():
     """Test the Discogs API with Blue Train release"""
     print("\n=== Testing Discogs API ===")
