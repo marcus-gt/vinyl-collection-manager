@@ -394,10 +394,34 @@ export function Scanner() {
         <Paper withBorder shadow="md" p="md" radius="md" mb="xl">
           <Stack>
             <Tabs defaultValue="barcode">
-              <Tabs.List>
-                <Tabs.Tab value="barcode">Scan Barcode</Tabs.Tab>
-                <Tabs.Tab value="discogs">Discogs Link</Tabs.Tab>
-                <Tabs.Tab value="search">Manual Input</Tabs.Tab>
+              <Tabs.List style={{ flexWrap: 'nowrap' }}>
+                <Tabs.Tab 
+                  value="barcode" 
+                  style={{ 
+                    minWidth: 0,
+                    padding: '8px 12px'
+                  }}
+                >
+                  Scan
+                </Tabs.Tab>
+                <Tabs.Tab 
+                  value="discogs" 
+                  style={{ 
+                    minWidth: 0,
+                    padding: '8px 12px'
+                  }}
+                >
+                  URL
+                </Tabs.Tab>
+                <Tabs.Tab 
+                  value="search" 
+                  style={{ 
+                    minWidth: 0,
+                    padding: '8px 12px'
+                  }}
+                >
+                  Manual
+                </Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="barcode" pt="xs">
