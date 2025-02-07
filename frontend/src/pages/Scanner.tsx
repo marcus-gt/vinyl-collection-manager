@@ -397,7 +397,7 @@ export function Scanner() {
               <Tabs.List>
                 <Tabs.Tab value="barcode">Scan Barcode</Tabs.Tab>
                 <Tabs.Tab value="discogs">Discogs Link</Tabs.Tab>
-                <Tabs.Tab value="search">Search</Tabs.Tab>
+                <Tabs.Tab value="search">Manual Input</Tabs.Tab>
               </Tabs.List>
 
               <Tabs.Panel value="barcode" pt="xs">
@@ -514,14 +514,14 @@ export function Scanner() {
                       loading={loading}
                       disabled={!artist.trim() || !album.trim()}
                     >
-                      Find Record Info
+                      Get Record Info
                     </Button>
                     <Button
                       variant="light"
                       onClick={handleAddBasicInfo}
                       disabled={!artist.trim() || !album.trim() || loading}
                     >
-                      Add Basic Info
+                      Add Manually
                     </Button>
                   </Group>
                 </Stack>
@@ -557,6 +557,7 @@ export function Scanner() {
               <Paper withBorder p="md" mt="md">
                 <Stack>
                   <Title order={4}>Additional Information</Title>
+                  <Text c="dimmed" size="sm" mb="md">Optional</Text>
                   <Text size="lg" fw={500} mb="xs">
                     {manualRecord.artist} - {manualRecord.album}
                   </Text>
