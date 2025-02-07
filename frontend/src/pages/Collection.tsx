@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
+import { AddRecordsModal } from '../components/AddRecordsModal';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
@@ -70,6 +71,7 @@ function Collection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortState, setSortState] = useState<SortingState>([{ id: 'artist', desc: false }]);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
+  const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
 
   useEffect(() => {
@@ -1043,19 +1045,17 @@ function Collection() {
             />
             <Button
               variant="light"
-              leftSection={<IconDownload size={16} />}
-              onClick={handleDownloadCSV}
-              disabled={userRecords.length === 0}
+              onClick={() => setAddRecordsModalOpened(true)}
             >
-              Export CSV
-              </Button>
+              Add Records
+            </Button>
             <Button
               variant="light"
               onClick={() => setCustomColumnManagerOpened(true)}
             >
               Manage Columns
-              </Button>
-            </Group>
+            </Button>
+          </Group>
         </Group>
 
         {error && (
@@ -1073,7 +1073,7 @@ function Collection() {
               position: 'absolute',
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, calc(50% + 20px))', // Move 20px below center
+              transform: 'translate(-50%, calc(50% + 20px))',
               textAlign: 'center',
               zIndex: 2
             }}>
@@ -1081,23 +1081,44 @@ function Collection() {
             </Box>
           </Box>
         ) : (
-          <Box style={{ height: 'calc(100vh - 140px)' }}>
-            <ResizableTable<VinylRecord>
-              data={paginatedRecords}
-              columns={tableColumns}
-              sortState={sortState}
-              onSortChange={setSortState}
-              tableId="vinyl-collection"
-              loading={loading}
-            />
-          </Box>
+          <Stack>
+            <Box style={{ height: 'calc(100vh - 200px)' }}>
+              <ResizableTable<VinylRecord>
+                data={paginatedRecords}
+                columns={tableColumns}
+                sortState={sortState}
+                onSortChange={setSortState}
+                tableId="vinyl-collection"
+                loading={loading}
+              />
+            </Box>
+            
+            <Group justify="center">
+              <Button
+                variant="light"
+                leftSection={<IconDownload size={16} />}
+                onClick={handleDownloadCSV}
+                disabled={userRecords.length === 0}
+              >
+                Export CSV
+              </Button>
+            </Group>
+          </Stack>
         )}
 
         <CustomColumnManager
           opened={customColumnManagerOpened}
           onClose={() => {
             setCustomColumnManagerOpened(false);
-            loadCustomColumns();  // Refresh columns when modal is closed
+            loadCustomColumns();
+          }}
+        />
+
+        <AddRecordsModal
+          opened={addRecordsModalOpened}
+          onClose={() => {
+            setAddRecordsModalOpened(false);
+            loadRecords();
           }}
         />
       </Stack>

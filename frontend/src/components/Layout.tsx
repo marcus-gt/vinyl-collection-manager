@@ -18,9 +18,6 @@ function Layout() {
       <Button variant="subtle" component={Link} to="/collection" onClick={close}>
         Collection
       </Button>
-      <Button variant="subtle" component={Link} to="/scanner" onClick={close}>
-        Add Records
-      </Button>
       <Button variant="light" onClick={() => { handleLogout(); close(); }}>
         Logout
       </Button>

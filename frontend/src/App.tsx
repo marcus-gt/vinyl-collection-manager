@@ -5,7 +5,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Collection from './pages/Collection';
-import Scanner from './pages/Scanner';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { Notifications } from '@mantine/notifications';
@@ -101,14 +100,6 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Collection />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="scanner"
-                element={
-                  <PrivateRoute>
-                    <Scanner />
                   </PrivateRoute>
                 }
               />
