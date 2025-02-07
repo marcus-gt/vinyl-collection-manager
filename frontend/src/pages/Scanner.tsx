@@ -18,14 +18,21 @@ export function Scanner() {
   const [scannerKey, setScannerKey] = useState(0); // Used to reset scanner state
   const [recentRecords, setRecentRecords] = useState<VinylRecord[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [manualRecord, setManualRecord] = useState<Partial<VinylRecord>>({
+  const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
+    genresText?: string;
+    stylesText?: string;
+    musiciansText?: string;
+  }>({
     artist: '',
     album: '',
     year: undefined,
     label: '',
     genres: [],
     styles: [],
-    musicians: []
+    musicians: [],
+    genresText: '',
+    stylesText: '',
+    musiciansText: ''
   });
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -227,7 +234,10 @@ export function Scanner() {
       label: '',
       genres: [],
       styles: [],
-      musicians: []
+      musicians: [],
+      genresText: '',
+      stylesText: '',
+      musiciansText: ''
     });
     
     // Show the manual form
@@ -240,7 +250,18 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      const response = await records.add(manualRecord);
+      // Convert text fields to arrays
+      const recordToSubmit = {
+        ...manualRecord,
+        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
+        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
+        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
+      };
+
+      // Remove the text fields before submitting
+      const { genresText, stylesText, musiciansText, ...submitData } = recordToSubmit;
+
+      const response = await records.add(submitData);
       if (response.success) {
         setSuccess('Added to collection!');
         // Refresh recent records
@@ -257,7 +278,10 @@ export function Scanner() {
           label: '',
           genres: [],
           styles: [],
-          musicians: []
+          musicians: [],
+          genresText: '',
+          stylesText: '',
+          musiciansText: ''
         });
       } else {
         setError(response.error || 'Failed to add to collection');
@@ -562,42 +586,24 @@ export function Scanner() {
                     label="Genres"
                     placeholder="Rock, Jazz, Classical..."
                     description="Separate multiple genres with commas"
-                    value={manualRecord.genres?.join(', ') || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setManualRecord(prev => ({
-                        ...prev,
-                        genres: value ? value.split(',').map(g => g.trim()).filter(Boolean) : []
-                      }));
-                    }}
+                    value={manualRecord.genresText}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, genresText: e.target.value }))}
                     disabled={loading}
                   />
                   <TextInput
                     label="Styles"
                     placeholder="Hard Rock, Fusion, Baroque..."
                     description="Separate multiple styles with commas"
-                    value={manualRecord.styles?.join(', ') || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setManualRecord(prev => ({
-                        ...prev,
-                        styles: value ? value.split(',').map(s => s.trim()).filter(Boolean) : []
-                      }));
-                    }}
+                    value={manualRecord.stylesText}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, stylesText: e.target.value }))}
                     disabled={loading}
                   />
                   <TextInput
                     label="Musicians"
                     placeholder="John Coltrane (Saxophone), Miles Davis (Trumpet)..."
                     description="Separate multiple musicians with commas"
-                    value={manualRecord.musicians?.join(', ') || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setManualRecord(prev => ({
-                        ...prev,
-                        musicians: value ? value.split(',').map(m => m.trim()).filter(Boolean) : []
-                      }));
-                    }}
+                    value={manualRecord.musiciansText}
+                    onChange={(e) => setManualRecord(prev => ({ ...prev, musiciansText: e.target.value }))}
                     disabled={loading}
                   />
                   <Group>
@@ -618,7 +624,10 @@ export function Scanner() {
                           label: '',
                           genres: [],
                           styles: [],
-                          musicians: []
+                          musicians: [],
+                          genresText: '',
+                          stylesText: '',
+                          musiciansText: ''
                         });
                       }}
                       disabled={loading}
