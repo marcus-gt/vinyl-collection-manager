@@ -22,7 +22,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [recordsAdded, setRecordsAdded] = useState(false);
+  const [recordsChanged, setRecordsChanged] = useState(false);
   const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
     genresText?: string;
     stylesText?: string;
@@ -54,7 +54,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setRecord(null);
       setIsScanning(false);
       setShowManualForm(false);
-      setRecordsAdded(false);
+      setRecordsChanged(false);
       setManualRecord({
         artist: '',
         album: '',
@@ -251,10 +251,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleModalClose = () => {
-    console.log('Modal closing, recordsAdded:', recordsAdded);
-    const shouldRefresh = recordsAdded;  // Capture the value before resetting
-    setRecordsAdded(false);  // Reset first
-    if (shouldRefresh) {  // Use captured value to determine if refresh needed
+    console.log('Modal closing, recordsChanged:', recordsChanged);
+    if (recordsChanged) {
       console.log('Triggering table refresh');
       window.dispatchEvent(new CustomEvent('refresh-table-data'));
     }
@@ -288,7 +286,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (response.success) {
         console.log('Record added successfully');
         setSuccess('Added to collection!');
-        setRecordsAdded(true);  // Record was successfully added
+        setRecordsChanged(true);  // Record was successfully added
         // Reset form
         setArtist('');
         setAlbum('');
@@ -353,7 +351,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (response.success) {
         console.log('Record added successfully');
         setSuccess('Added to collection!');
-        setRecordsAdded(true);  // Record was successfully added
+        setRecordsChanged(true);  // Record was successfully added
         // Reset for next scan
         setRecord(null);
         setBarcode('');
