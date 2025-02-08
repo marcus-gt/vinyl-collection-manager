@@ -85,20 +85,21 @@ function Collection() {
     };
 
     const handleTableRefresh = () => {
-      console.log('Table refresh event received');
+      console.log('Table refresh event received, reloading records...');
       loadRecords();
-      loadCustomColumns();  // Also reload columns when table refreshes
+      loadCustomColumns();
+      console.log('Records reload initiated');
     };
 
     // Add event listeners
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
-    window.addEventListener('refresh-table-data', handleTableRefresh);
+    window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
 
     // Cleanup function
     return () => {
       console.log('Removing event listeners');
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
-      window.removeEventListener('refresh-table-data', handleTableRefresh);
+      window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
     };
   }, []);
 

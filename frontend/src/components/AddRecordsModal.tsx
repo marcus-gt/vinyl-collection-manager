@@ -255,8 +255,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     console.log('Modal closing, recordsChanged:', recordsChanged);
     if (recordsChanged) {
       console.log('Changes detected, triggering table refresh');
-      window.dispatchEvent(new CustomEvent('refresh-table-data'));
-      console.log('Table refresh event dispatched');
+      const refreshEvent = new CustomEvent('vinyl-collection-table-refresh');
+      window.dispatchEvent(refreshEvent);
+      console.log('Table refresh event dispatched:', refreshEvent);
     } else {
       console.log('No changes detected, skipping table refresh');
     }
