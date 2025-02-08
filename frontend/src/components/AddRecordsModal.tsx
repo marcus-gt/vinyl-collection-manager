@@ -355,7 +355,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Add Records"
+      title={
+        <Group justify="space-between" align="center">
+          <Text>Add Records</Text>
+          {loading && <Loader size="sm" />}
+        </Group>
+      }
       size="lg"
       styles={{
         inner: {
