@@ -251,7 +251,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleModalClose = () => {
     if (recordsAdded) {
-      // Only trigger table refresh if records were added
+      // Only trigger table refresh if records were actually added
       window.dispatchEvent(new CustomEvent('refresh-table-data'));
     }
     onClose();
@@ -275,7 +275,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await records.add(submitData);
       if (response.success) {
         setSuccess('Added to collection!');
-        setRecordsAdded(true);
+        setRecordsAdded(true);  // Record was successfully added
         // Reset form
         setArtist('');
         setAlbum('');
@@ -332,7 +332,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await records.add(recordData);
       if (response.success) {
         setSuccess('Added to collection!');
-        setRecordsAdded(true);
+        setRecordsAdded(true);  // Record was successfully added
         // Reset for next scan
         setRecord(null);
         setBarcode('');
