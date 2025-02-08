@@ -67,6 +67,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         stylesText: '',
         musiciansText: ''
       });
+      console.log('States reset complete');
     }
   }, [opened]);
 
@@ -253,8 +254,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleModalClose = () => {
     console.log('Modal closing, recordsChanged:', recordsChanged);
     if (recordsChanged) {
-      console.log('Triggering table refresh');
+      console.log('Changes detected, triggering table refresh');
       window.dispatchEvent(new CustomEvent('refresh-table-data'));
+      console.log('Table refresh event dispatched');
+    } else {
+      console.log('No changes detected, skipping table refresh');
     }
     onClose();
   };
@@ -284,7 +288,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       console.log('Submit response:', response);
 
       if (response.success) {
-        console.log('Record added successfully');
+        console.log('Record added successfully, setting recordsChanged to true');
         setSuccess('Added to collection!');
         setRecordsChanged(true);  // Record was successfully added
         // Reset form
@@ -349,7 +353,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       console.log('Add response:', response);
 
       if (response.success) {
-        console.log('Record added successfully');
+        console.log('Record added successfully, setting recordsChanged to true');
         setSuccess('Added to collection!');
         setRecordsChanged(true);  // Record was successfully added
         // Reset for next scan

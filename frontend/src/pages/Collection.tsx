@@ -80,18 +80,23 @@ function Collection() {
 
     // Add event listeners for data updates
     const handleCustomValuesUpdate = () => {
+      console.log('Custom values update event received');
       loadRecords();
     };
 
     const handleTableRefresh = () => {
+      console.log('Table refresh event received');
       loadRecords();
       loadCustomColumns();  // Also reload columns when table refreshes
     };
 
+    // Add event listeners
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
     window.addEventListener('refresh-table-data', handleTableRefresh);
 
+    // Cleanup function
     return () => {
+      console.log('Removing event listeners');
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
       window.removeEventListener('refresh-table-data', handleTableRefresh);
     };
