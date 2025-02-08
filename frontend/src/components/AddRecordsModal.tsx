@@ -545,7 +545,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       onClick={handleAddBasicInfo}
                       disabled={!artist.trim() || !album.trim() || loading}
                     >
-                      Add Manually
+                      Add Info Manually
+                    </Button>
+                    <Button
+                      onClick={handleManualSubmit}
+                      loading={loading}
+                      disabled={!artist.trim() || !album.trim()}
+                    >
+                      Add to Collection
                     </Button>
                   </Group>
                 </Stack>
