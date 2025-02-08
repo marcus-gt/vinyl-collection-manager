@@ -284,10 +284,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           stylesText: '',
           musiciansText: ''
         });
-        // Close modal after short delay
+        // Clear success message after delay
         setTimeout(() => {
-          onClose();
-        }, 1500);
+          setSuccess(null);
+        }, 3000);
       } else {
         setError(response.error || 'Failed to add to collection');
       }
@@ -329,10 +329,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setRecord(null);
         setBarcode('');
         setScannerKey(prev => prev + 1);
-        // Close modal after short delay
+        // Clear success message after delay
         setTimeout(() => {
-          onClose();
-        }, 1500);
+          setSuccess(null);
+        }, 3000);
       } else {
         setError(response.error || 'Failed to add to collection');
       }
