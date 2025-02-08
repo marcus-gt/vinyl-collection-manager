@@ -22,6 +22,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [recordsAdded, setRecordsAdded] = useState(false);
   const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
     genresText?: string;
     stylesText?: string;
@@ -52,6 +53,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setRecord(null);
       setIsScanning(false);
       setShowManualForm(false);
+      setRecordsAdded(false);
       setManualRecord({
         artist: '',
         album: '',
@@ -247,6 +249,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setShowManualForm(true);
   };
 
+  const handleModalClose = () => {
+    if (recordsAdded) {
+      // Only trigger table refresh if records were added
+      window.dispatchEvent(new CustomEvent('refresh-table-data'));
+    }
+    onClose();
+  };
+
   const handleManualSubmit = async () => {
     setLoading(true);
     setError(null);
@@ -265,8 +275,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await records.add(submitData);
       if (response.success) {
         setSuccess('Added to collection!');
-        // Trigger table refresh
-        window.dispatchEvent(new CustomEvent('refresh-table-data'));
+        setRecordsAdded(true);
         // Reset form
         setArtist('');
         setAlbum('');
@@ -323,8 +332,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await records.add(recordData);
       if (response.success) {
         setSuccess('Added to collection!');
-        // Trigger table refresh
-        window.dispatchEvent(new CustomEvent('refresh-table-data'));
+        setRecordsAdded(true);
         // Reset for next scan
         setRecord(null);
         setBarcode('');
@@ -354,7 +362,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={handleModalClose}
       title={
         <Group justify="space-between" align="center">
           <Text>Add Records</Text>
