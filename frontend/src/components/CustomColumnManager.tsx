@@ -191,12 +191,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         if (response.success) {
           setColumnsChanged(true);
           console.log('Color updated successfully');
-          // Reload columns and trigger table refresh
+          // Reload columns
           await loadColumns();
-          // Ensure the table refresh happens after the columns are loaded
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('refresh-table-data'));
-          }, 100);
         } else {
           console.error('Update failed:', response.error);
           // If the update failed, revert the local state
@@ -269,6 +265,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         // Update local state
         setOptions(options.filter(opt => opt !== optionToRemove));
         setOptionColors(newOptionColors);
+        setColumnsChanged(true);
 
         // Then update all records that use this option
         const updates = recordsToUpdate.map(record => {
@@ -293,9 +290,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         const updateResults = await Promise.all(updates);
         console.log('Update results:', updateResults);
 
-        // Refresh the data
+        // Refresh the columns
         await loadColumns();
-        window.dispatchEvent(new CustomEvent('refresh-table-data'));
 
         notifications.show({
           title: 'Success',
