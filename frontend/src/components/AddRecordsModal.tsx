@@ -252,11 +252,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleModalClose = () => {
     console.log('Modal closing, recordsAdded:', recordsAdded);
-    if (recordsAdded) {
+    const shouldRefresh = recordsAdded;  // Capture the value before resetting
+    setRecordsAdded(false);  // Reset first
+    if (shouldRefresh) {  // Use captured value to determine if refresh needed
       console.log('Triggering table refresh');
       window.dispatchEvent(new CustomEvent('refresh-table-data'));
     }
-    setRecordsAdded(false);  // Reset for next time
     onClose();
   };
 
