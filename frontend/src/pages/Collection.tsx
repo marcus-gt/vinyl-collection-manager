@@ -1123,7 +1123,7 @@ function Collection() {
           opened={addRecordsModalOpened}
           onClose={() => {
             setAddRecordsModalOpened(false);
-            loadRecords();
+            // Records will be loaded via the refresh-table-data event if needed
           }}
         />
       </Stack>
