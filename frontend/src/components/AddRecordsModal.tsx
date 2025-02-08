@@ -654,12 +654,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                   />
                   <Group>
                     <Button
-                      onClick={handleManualSubmit}
-                      loading={loading}
-                    >
-                      Add to Collection
-                    </Button>
-                    <Button
                       variant="light"
                       onClick={() => {
                         setShowManualForm(false);

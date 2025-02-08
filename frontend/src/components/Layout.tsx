@@ -15,9 +15,6 @@ function Layout() {
 
   const NavLinks = () => (
     <>
-      <Button variant="subtle" component={Link} to="/collection" onClick={close}>
-        Collection
-      </Button>
       <Button variant="light" onClick={() => { handleLogout(); close(); }}>
         Logout
       </Button>
