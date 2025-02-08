@@ -44,6 +44,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   // Reset state when modal is opened
   useEffect(() => {
     if (opened) {
+      console.log('Modal opened, resetting states');
       setBarcode('');
       setDiscogsUrl('');
       setArtist('');
@@ -250,10 +251,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleModalClose = () => {
+    console.log('Modal closing, recordsAdded:', recordsAdded);
     if (recordsAdded) {
-      // Only trigger table refresh if records were actually added
+      console.log('Triggering table refresh');
       window.dispatchEvent(new CustomEvent('refresh-table-data'));
     }
+    setRecordsAdded(false);  // Reset for next time
     onClose();
   };
 
@@ -277,8 +280,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         album: album.trim()
       };
 
+      console.log('Submitting record:', recordToSubmit);
       const response = await records.add(recordToSubmit);
+      console.log('Submit response:', response);
+
       if (response.success) {
+        console.log('Record added successfully');
         setSuccess('Added to collection!');
         setRecordsAdded(true);  // Record was successfully added
         // Reset form
@@ -305,9 +312,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           setSuccess(null);
         }, 3000);
       } else {
+        console.log('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
+      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -336,8 +345,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         label: record.label
       };
 
+      console.log('Adding record from search:', recordData);
       const response = await records.add(recordData);
+      console.log('Add response:', response);
+
       if (response.success) {
+        console.log('Record added successfully');
         setSuccess('Added to collection!');
         setRecordsAdded(true);  // Record was successfully added
         // Reset for next scan
@@ -349,9 +362,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           setSuccess(null);
         }, 3000);
       } else {
+        console.log('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
+      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
