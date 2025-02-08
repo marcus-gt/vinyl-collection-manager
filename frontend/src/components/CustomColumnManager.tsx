@@ -22,12 +22,22 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const [defaultValue, setDefaultValue] = useState('');
   const [applyToAll, setApplyToAll] = useState(false);
   const [currentOption, setCurrentOption] = useState('');
+  const [columnsChanged, setColumnsChanged] = useState(false);
 
   useEffect(() => {
     if (opened) {
       loadColumns();
+      setColumnsChanged(false);
     }
   }, [opened]);
+
+  const handleModalClose = () => {
+    if (columnsChanged) {
+      // Only trigger table refresh if columns were modified
+      window.dispatchEvent(new CustomEvent('refresh-table-data'));
+    }
+    onClose();
+  };
 
   const loadColumns = async () => {
     setLoading(true);
@@ -71,6 +81,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         // Update existing column
         const response = await customColumns.update(editingColumn.id, columnData);
         if (response.success) {
+          setColumnsChanged(true);
           notifications.show({
             title: 'Success',
             message: 'Column updated successfully',
@@ -81,6 +92,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         // Create new column
         const response = await customColumns.create(columnData);
         if (response.success) {
+          setColumnsChanged(true);
           notifications.show({
             title: 'Success',
             message: 'Column created successfully',
@@ -89,8 +101,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         }
       }
       await loadColumns();
-      // Trigger table refresh
-      window.dispatchEvent(new CustomEvent('refresh-table-data'));
       resetForm();
     } catch (err) {
       notifications.show({
@@ -113,11 +123,20 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
     try {
       const response = await customColumns.delete(column.id);
       if (response.success) {
-        alert('Column deleted successfully');
+        setColumnsChanged(true);
+        notifications.show({
+          title: 'Success',
+          message: 'Column deleted successfully',
+          color: 'green'
+        });
         await loadColumns();
       }
     } catch (err) {
-      alert('Failed to delete column');
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete column',
+        color: 'red'
+      });
       console.error(err);
     } finally {
       setLoading(false);
@@ -170,6 +189,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         });
         
         if (response.success) {
+          setColumnsChanged(true);
           console.log('Color updated successfully');
           // Reload columns and trigger table refresh
           await loadColumns();
@@ -296,7 +316,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   return (
     <Modal
       opened={opened}
-      onClose={onClose}
+      onClose={handleModalClose}
       title="Manage Custom Columns"
       size="lg"
       styles={{
