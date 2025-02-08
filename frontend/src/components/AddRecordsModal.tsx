@@ -263,16 +263,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      const recordToSubmit = {
-        ...manualRecord,
+      // If we're in the manual form, use all the info, otherwise just use artist and album
+      const recordToSubmit = showManualForm ? {
+        artist: manualRecord.artist,
+        album: manualRecord.album,
+        year: manualRecord.year,
+        label: manualRecord.label,
         genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
         styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
         musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
+      } : {
+        artist: artist.trim(),
+        album: album.trim()
       };
 
-      const { genresText, stylesText, musiciansText, ...submitData } = recordToSubmit;
-
-      const response = await records.add(submitData);
+      const response = await records.add(recordToSubmit);
       if (response.success) {
         setSuccess('Added to collection!');
         setRecordsAdded(true);  // Record was successfully added
@@ -280,19 +285,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setArtist('');
         setAlbum('');
         setRecord(null);
-        setShowManualForm(false);
-        setManualRecord({
-          artist: '',
-          album: '',
-          year: undefined,
-          label: '',
-          genres: [],
-          styles: [],
-          musicians: [],
-          genresText: '',
-          stylesText: '',
-          musiciansText: ''
-        });
+        if (showManualForm) {
+          setShowManualForm(false);
+          setManualRecord({
+            artist: '',
+            album: '',
+            year: undefined,
+            label: '',
+            genres: [],
+            styles: [],
+            musicians: [],
+            genresText: '',
+            stylesText: '',
+            musiciansText: ''
+          });
+        }
         // Clear success message after delay
         setTimeout(() => {
           setSuccess(null);
