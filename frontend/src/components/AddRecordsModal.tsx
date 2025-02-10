@@ -524,15 +524,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
-        const { artist = '', name = '', release_date = '' } = result.data;
-        setManualRecord(prev => ({
-          ...prev,
-          artist,
-          album: name,
-          year: release_date ? parseInt(release_date.split('-')[0]) : undefined
-        }));
-        setSpotifyUrl('');
-        setSuccess('Album information retrieved successfully');
+        // First try to find the record in Discogs
+        const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
+        if (lookupResponse.success && lookupResponse.data) {
+          // Add the record to the collection
+          const addResponse = await records.add(lookupResponse.data);
+          if (addResponse.success) {
+            setSuccess('Added to collection!');
+            setRecordsChanged(true);
+            setSpotifyUrl('');
+          } else {
+            setSpotifyError(addResponse.error || 'Failed to add to collection');
+          }
+        } else {
+          setSpotifyError("Couldn't find record in Discogs");
+        }
       } else if (result.needs_auth) {
         setIsSpotifyAuthenticated(false);
         setSpotifyError('Please connect to Spotify first');
