@@ -953,22 +953,19 @@ def spotify_auth():
     print("\n=== Starting Spotify Auth ===")
     print(f"Session before: {dict(session)}")
     
-    auth_url = get_spotify_auth_url()
-    print(f"Generated auth URL: {auth_url[:50]}...")  # Only print start of URL for security
+    result = get_spotify_auth_url()
+    print(f"Got auth URL result: {result}")
     
-    response = jsonify({
-        'success': True,
-        'data': {
-            'auth_url': auth_url
-        }
-    })
-    
-    # Ensure session cookie is set
+    if not result.get('success'):
+        print(f"Error getting auth URL: {result.get('error')}")
+        return jsonify(result), 500
+        
+    # Set spotify_auth_started in session
     session['spotify_auth_started'] = True
     session.modified = True
-    
     print(f"Session after: {dict(session)}")
-    return response
+    
+    return jsonify(result)
 
 @app.route('/api/spotify/callback')
 def spotify_callback():

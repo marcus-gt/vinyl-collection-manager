@@ -410,15 +410,25 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await spotify.getAuthUrl();
       console.log('Auth URL response:', response);
       
-      if (response.success && response.data && response.data.auth_url) {
-        // Store current location to return after auth
-        localStorage.setItem('spotify_auth_return_path', window.location.pathname);
-        console.log('Redirecting to Spotify auth URL:', response.data.auth_url);
-        window.location.href = response.data.auth_url;
-      } else {
-        console.error('Invalid auth URL response:', response);
+      if (!response.success) {
+        console.error('Failed to get auth URL:', response.error);
         setSpotifyError(response.error || 'Failed to get Spotify authorization URL');
+        return;
       }
+      
+      if (!response.data?.auth_url) {
+        console.error('No auth URL in response:', response);
+        setSpotifyError('Invalid response from server');
+        return;
+      }
+      
+      // Store current location to return after auth
+      localStorage.setItem('spotify_auth_return_path', window.location.pathname);
+      console.log('Stored return path:', window.location.pathname);
+      
+      // Redirect to Spotify auth
+      console.log('Redirecting to Spotify auth URL:', response.data.auth_url);
+      window.location.href = response.data.auth_url;
     } catch (err) {
       console.error('Failed to start Spotify authorization:', err);
       setSpotifyError('Failed to start Spotify authorization');

@@ -85,37 +85,59 @@ def get_spotify_auth_url():
     print(f"CLIENT_ID: {CLIENT_ID}")
     print(f"REDIRECT_URI: {REDIRECT_URI}")
     
-    if not CLIENT_ID or not REDIRECT_URI:
-        print("Error: Missing Spotify configuration")
-        return {
-            'success': False,
-            'error': 'Spotify configuration missing'
-        }
+    try:
+        if not CLIENT_ID:
+            print("Error: Missing CLIENT_ID")
+            return jsonify({
+                'success': False,
+                'error': 'Spotify CLIENT_ID is missing'
+            })
 
-    # Ensure REDIRECT_URI is a string and not None
-    if REDIRECT_URI == 'None' or not isinstance(REDIRECT_URI, str):
-        print(f"Error: Invalid REDIRECT_URI: {REDIRECT_URI}")
-        return {
-            'success': False,
-            'error': 'Invalid redirect URI configuration'
-        }
+        if not REDIRECT_URI:
+            print("Error: Missing REDIRECT_URI")
+            return jsonify({
+                'success': False,
+                'error': 'Spotify REDIRECT_URI is missing'
+            })
 
-    params = {
-        'client_id': CLIENT_ID,
-        'response_type': 'code',
-        'redirect_uri': REDIRECT_URI,
-        'scope': 'playlist-read-private playlist-read-collaborative user-library-read',
-        'show_dialog': True
-    }
-    
-    auth_url = f"{SPOTIFY_AUTH_URL}?{urlencode(params)}"
-    print(f"Generated Spotify auth URL: {auth_url}")
-    return {
-        'success': True,
-        'data': {
-            'auth_url': auth_url
+        # Ensure REDIRECT_URI is a string and not None
+        if REDIRECT_URI == 'None' or not isinstance(REDIRECT_URI, str):
+            print(f"Error: Invalid REDIRECT_URI: {REDIRECT_URI}")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid redirect URI configuration'
+            })
+
+        params = {
+            'client_id': CLIENT_ID,
+            'response_type': 'code',
+            'redirect_uri': REDIRECT_URI,
+            'scope': 'playlist-read-private playlist-read-collaborative user-library-read',
+            'show_dialog': True
         }
-    }
+        
+        auth_url = f"{SPOTIFY_AUTH_URL}?{urlencode(params)}"
+        print(f"Generated Spotify auth URL: {auth_url}")
+        
+        # Set spotify_auth_started in session
+        session['spotify_auth_started'] = True
+        session.modified = True
+        print(f"Session after setting spotify_auth_started: {dict(session)}")
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'auth_url': auth_url
+            }
+        })
+    except Exception as e:
+        print(f"Error generating Spotify auth URL: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to generate Spotify auth URL: {str(e)}'
+        })
 
 def handle_spotify_callback(code):
     """Handle the Spotify OAuth callback"""
