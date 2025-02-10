@@ -261,8 +261,8 @@ def get_spotify_playlists():
         session.modified = True
         return {
             'success': False,
-            'error': 'Not authenticated with Spotify',
-            'needs_auth': True
+            'needs_auth': True,
+            'error': 'Not authenticated with Spotify'
         }
 
     headers = {
@@ -282,8 +282,8 @@ def get_spotify_playlists():
                 session.modified = True
                 return {
                     'success': False,
-                    'error': 'Not authenticated with Spotify',
-                    'needs_auth': True
+                    'needs_auth': True,
+                    'error': 'Not authenticated with Spotify'
                 }
             
             # Retry with new token
@@ -314,21 +314,35 @@ def get_spotify_playlists():
             session.modified = True
             return {
                 'success': False,
-                'error': 'Not authenticated with Spotify',
-                'needs_auth': True
+                'needs_auth': True,
+                'error': 'Not authenticated with Spotify'
             }
-        return {'success': False, 'error': 'Failed to get playlists', 'needs_auth': True}
+        return {
+            'success': False,
+            'needs_auth': True,
+            'error': 'Failed to get playlists'
+        }
 
 def get_playlist_tracks(playlist_id):
     """Get tracks from a specific playlist"""
+    print("\n=== Getting Playlist Tracks ===")
+    print(f"Session data: {dict(session)}")
+    
     if 'spotify_access_token' not in session:
-        return {'success': False, 'error': 'Not authenticated with Spotify', 'needs_auth': True}
+        print("No Spotify access token in session")
+        session.modified = True
+        return {
+            'success': False,
+            'needs_auth': True,
+            'error': 'Not authenticated with Spotify'
+        }
 
     headers = {
         'Authorization': f"Bearer {session['spotify_access_token']}"
     }
 
     try:
+        print(f"Making request to Spotify API for playlist {playlist_id}...")
         response = requests.get(
             f"{SPOTIFY_API_BASE_URL}/playlists/{playlist_id}/tracks",
             headers=headers
@@ -336,11 +350,19 @@ def get_playlist_tracks(playlist_id):
         
         # If token expired, try to refresh it
         if response.status_code == 401:
+            print("Token expired, attempting refresh")
             refresh_result = refresh_spotify_token()
             if not refresh_result['success']:
-                return refresh_result
+                print("Token refresh failed")
+                session.modified = True
+                return {
+                    'success': False,
+                    'needs_auth': True,
+                    'error': 'Not authenticated with Spotify'
+                }
             
             # Retry with new token
+            print("Retrying with new token")
             headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
             response = requests.get(
                 f"{SPOTIFY_API_BASE_URL}/playlists/{playlist_id}/tracks",
@@ -373,4 +395,18 @@ def get_playlist_tracks(playlist_id):
         }
     except requests.exceptions.RequestException as e:
         print(f"Error getting playlist tracks: {str(e)}")
-        return {'success': False, 'error': 'Failed to get playlist tracks', 'needs_auth': True} 
+        if isinstance(e, requests.exceptions.HTTPError) and e.response.status_code == 401:
+            # Clear invalid tokens
+            session.pop('spotify_access_token', None)
+            session.pop('spotify_refresh_token', None)
+            session.modified = True
+            return {
+                'success': False,
+                'needs_auth': True,
+                'error': 'Not authenticated with Spotify'
+            }
+        return {
+            'success': False,
+            'needs_auth': True,
+            'error': 'Failed to get playlist tracks'
+        } 
