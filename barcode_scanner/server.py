@@ -112,6 +112,43 @@ print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set
 print(f"SESSION_COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
 print(f"SESSION_COOKIE_SAMESITE: {app.config['SESSION_COOKIE_SAMESITE']}")
 
+# At the top of the file, after loading environment variables
+print("\n=== Environment Configuration ===")
+print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
+print(f"SPOTIFY_CLIENT_ID: {os.getenv('SPOTIFY_CLIENT_ID')}")
+print(f"SPOTIFY_CLIENT_SECRET: {'Present' if os.getenv('SPOTIFY_CLIENT_SECRET') else 'Missing'}")
+print(f"SPOTIFY_REDIRECT_URI: {os.getenv('SPOTIFY_REDIRECT_URI')}")
+
+# Validate required environment variables
+required_vars = [
+    'FLASK_SECRET_KEY',
+    'SPOTIFY_CLIENT_ID',
+    'SPOTIFY_CLIENT_SECRET',
+    'SPOTIFY_REDIRECT_URI'
+]
+
+missing_vars = [var for var in required_vars if not os.getenv(var)]
+if missing_vars:
+    print("\nERROR: Missing required environment variables:")
+    for var in missing_vars:
+        print(f"- {var}")
+    sys.exit(1)
+
+# Validate Spotify redirect URI format
+spotify_redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI')
+if spotify_redirect_uri == 'None' or not isinstance(spotify_redirect_uri, str):
+    print("\nERROR: Invalid SPOTIFY_REDIRECT_URI format")
+    print(f"Current value: {spotify_redirect_uri}")
+    sys.exit(1)
+
+if os.getenv('FLASK_ENV') == 'production':
+    if not spotify_redirect_uri.startswith('https://'):
+        print("\nERROR: SPOTIFY_REDIRECT_URI must use HTTPS in production")
+        print(f"Current value: {spotify_redirect_uri}")
+        sys.exit(1)
+
+print("\nConfiguration validated successfully")
+
 @app.before_request
 def before_request():
     """Debug request information and ensure session is configured."""

@@ -10,9 +10,23 @@ SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1"
 
+# Debug environment variables
+print("\n=== Spotify Configuration ===")
+print(f"Environment variables:")
+print(f"SPOTIFY_CLIENT_ID: {os.getenv('SPOTIFY_CLIENT_ID')}")
+print(f"SPOTIFY_CLIENT_SECRET: {'Present' if os.getenv('SPOTIFY_CLIENT_SECRET') else 'Missing'}")
+print(f"SPOTIFY_REDIRECT_URI: {os.getenv('SPOTIFY_REDIRECT_URI')}")
+
+# Load and validate configuration
 CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
 REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
+
+if not all([CLIENT_ID, CLIENT_SECRET, REDIRECT_URI]):
+    print("\nWARNING: Missing Spotify configuration!")
+    print(f"CLIENT_ID: {'Present' if CLIENT_ID else 'Missing'}")
+    print(f"CLIENT_SECRET: {'Present' if CLIENT_SECRET else 'Missing'}")
+    print(f"REDIRECT_URI: {REDIRECT_URI}")
 
 def require_spotify_auth(f):
     @wraps(f)
@@ -66,13 +80,24 @@ def require_spotify_auth(f):
 
 def get_spotify_auth_url():
     """Generate the Spotify authorization URL"""
+    print("\n=== Generating Spotify Auth URL ===")
+    print(f"Using configuration:")
+    print(f"CLIENT_ID: {CLIENT_ID}")
+    print(f"REDIRECT_URI: {REDIRECT_URI}")
+    
     if not CLIENT_ID or not REDIRECT_URI:
         print("Error: Missing Spotify configuration")
-        print(f"CLIENT_ID: {'Present' if CLIENT_ID else 'Missing'}")
-        print(f"REDIRECT_URI: {REDIRECT_URI}")
         return {
             'success': False,
             'error': 'Spotify configuration missing'
+        }
+
+    # Ensure REDIRECT_URI is a string and not None
+    if REDIRECT_URI == 'None' or not isinstance(REDIRECT_URI, str):
+        print(f"Error: Invalid REDIRECT_URI: {REDIRECT_URI}")
+        return {
+            'success': False,
+            'error': 'Invalid redirect URI configuration'
         }
 
     params = {
