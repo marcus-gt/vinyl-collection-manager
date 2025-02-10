@@ -478,6 +478,27 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  // Add this useEffect after the other useEffect hooks
+  useEffect(() => {
+    // Check if we have a Spotify token in the URL (after OAuth callback)
+    const urlParams = new URLSearchParams(window.location.search);
+    const spotifyCode = urlParams.get('code');
+    
+    if (spotifyCode) {
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Load playlists since we just authenticated
+      loadSpotifyPlaylists();
+    }
+  }, []);
+
+  // Also load playlists when the modal opens if we have any
+  useEffect(() => {
+    if (opened && spotifyPlaylists.length === 0) {
+      loadSpotifyPlaylists();
+    }
+  }, [opened]);
+
   return (
     <Modal
       opened={opened}
