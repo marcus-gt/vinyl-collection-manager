@@ -488,15 +488,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  // Check authentication status when modal opens
+  // Remove the useEffect that checks on modal open
   useEffect(() => {
-    if (opened) {
-      loadSpotifyPlaylists();
-    }
-  }, [opened]);
-
-  // Handle Spotify OAuth callback
-  useEffect(() => {
+    // Only check for Spotify callback code
     const urlParams = new URLSearchParams(window.location.search);
     const spotifyCode = urlParams.get('code');
     
@@ -544,7 +538,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       <Stack>
         <Paper withBorder shadow="md" p="md" radius="md">
           <Stack>
-            <Tabs defaultValue="barcode">
+            <Tabs 
+              defaultValue="barcode" 
+              onChange={(value: string | null) => {
+                if (value === 'spotify' && !isSpotifyAuthenticated) {
+                  loadSpotifyPlaylists();
+                }
+              }}
+            >
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
                 <Tabs.Tab 
                   value="barcode" 
@@ -719,13 +720,16 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
               <Tabs.Panel value="spotify" pt="xs">
                 <Stack>
                   {!isSpotifyAuthenticated ? (
-                    <Button
-                      leftSection={<IconBrandSpotify size={20} />}
-                      onClick={handleSpotifyAuth}
-                      loading={loadingSpotify}
-                    >
-                      Connect Spotify
-                    </Button>
+                    <Stack align="center" gap="md">
+                      <Text c="dimmed" size="sm">Connect your Spotify account to import albums from your playlists</Text>
+                      <Button
+                        leftSection={<IconBrandSpotify size={20} />}
+                        onClick={handleSpotifyAuth}
+                        loading={loadingSpotify}
+                      >
+                        Connect Spotify
+                      </Button>
+                    </Stack>
                   ) : (
                     <>
                       <Select
@@ -775,7 +779,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       )}
                     </>
                   )}
-                  {spotifyError && (
+                  {spotifyError && spotifyError !== 'Not authenticated with Spotify' && (
                     <Alert color="red" title="Error" variant="light">
                       {spotifyError}
                     </Alert>
