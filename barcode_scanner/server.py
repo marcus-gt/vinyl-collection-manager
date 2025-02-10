@@ -986,13 +986,17 @@ def spotify_callback():
 @require_spotify_auth
 def spotify_playlists():
     """Get user's Spotify playlists"""
-    return jsonify(get_spotify_playlists())
+    print("\n=== Getting Spotify Playlists ===")
+    result = get_spotify_playlists()
+    return jsonify(result)
 
 @app.route('/api/spotify/playlists/<playlist_id>/tracks')
 @require_spotify_auth
 def spotify_playlist_tracks(playlist_id):
     """Get tracks from a specific playlist"""
-    return jsonify(get_playlist_tracks(playlist_id))
+    print(f"\n=== Getting Playlist Tracks: {playlist_id} ===")
+    result = get_playlist_tracks(playlist_id)
+    return jsonify(result)
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
