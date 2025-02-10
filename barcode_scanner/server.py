@@ -78,7 +78,7 @@ if os.getenv('FLASK_ENV') == 'production':
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
@@ -94,7 +94,7 @@ else:
     session_config = {
         'SESSION_COOKIE_SECURE': True,
         'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
         'SESSION_COOKIE_PATH': '/',
         'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
         'SESSION_PROTECTION': 'strong',
@@ -913,10 +913,25 @@ def lookup_artist_album():
 @app.route('/api/spotify/auth')
 def spotify_auth():
     """Start Spotify OAuth flow"""
-    return jsonify({
+    print("\n=== Starting Spotify Auth ===")
+    print(f"Session before: {dict(session)}")
+    
+    auth_url = get_spotify_auth_url()
+    print(f"Generated auth URL: {auth_url[:50]}...")  # Only print start of URL for security
+    
+    response = jsonify({
         'success': True,
-        'auth_url': get_spotify_auth_url()
+        'data': {
+            'auth_url': auth_url
+        }
     })
+    
+    # Ensure session cookie is set
+    session['spotify_auth_started'] = True
+    session.modified = True
+    
+    print(f"Session after: {dict(session)}")
+    return response
 
 @app.route('/api/spotify/callback')
 def spotify_callback():
