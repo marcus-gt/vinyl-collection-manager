@@ -27,6 +27,13 @@ from .db import (
     remove_record_from_collection,
     get_supabase_client
 )
+from .spotify import (
+    get_spotify_auth_url,
+    handle_spotify_callback,
+    get_spotify_playlists,
+    get_playlist_tracks,
+    require_spotify_auth
+)
 
 # Set up static file serving
 static_folder = os.path.join(parent_dir, 'frontend', 'dist')
@@ -901,6 +908,50 @@ def lookup_artist_album():
             'success': False,
             'error': str(e)
         }), 500
+
+# Add Spotify endpoints
+@app.route('/api/spotify/auth')
+def spotify_auth():
+    """Start Spotify OAuth flow"""
+    return jsonify({
+        'success': True,
+        'auth_url': get_spotify_auth_url()
+    })
+
+@app.route('/api/spotify/callback')
+def spotify_callback():
+    """Handle Spotify OAuth callback"""
+    error = request.args.get('error')
+    if error:
+        return jsonify({
+            'success': False,
+            'error': f'Spotify auth error: {error}'
+        })
+
+    code = request.args.get('code')
+    if not code:
+        return jsonify({
+            'success': False,
+            'error': 'No authorization code received'
+        })
+
+    result = handle_spotify_callback(code)
+    if result['success']:
+        return redirect('/collection')
+    else:
+        return jsonify(result)
+
+@app.route('/api/spotify/playlists')
+@require_spotify_auth
+def spotify_playlists():
+    """Get user's Spotify playlists"""
+    return jsonify(get_spotify_playlists())
+
+@app.route('/api/spotify/playlists/<playlist_id>/tracks')
+@require_spotify_auth
+def spotify_playlist_tracks(playlist_id):
+    """Get tracks from a specific playlist"""
+    return jsonify(get_playlist_tracks(playlist_id))
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'

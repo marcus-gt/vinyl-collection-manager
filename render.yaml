@@ -2,13 +2,15 @@ services:
   - type: web
     name: vinyl-collection-manager
     runtime: python
+    buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build
+    startCommand: python -m barcode_scanner.server
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: FLASK_ENV
         value: production
       - key: FLASK_SECRET_KEY
-        sync: false
+        generateValue: true
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
@@ -17,6 +19,12 @@ services:
         sync: false
       - key: DISCOGS_TOKEN
         sync: false
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_REDIRECT_URI
+        value: https://vinyl-collection-manager.onrender.com/api/spotify/callback
 
 databases:
   - name: vinyl-collection-db

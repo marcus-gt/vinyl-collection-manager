@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs } from '@mantine/core';
-import { IconX } from '@tabler/icons-react';
-import { lookup, records } from '../services/api';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, ScrollArea } from '@mantine/core';
+import { IconX, IconBrandSpotify } from '@tabler/icons-react';
+import { lookup, records, spotify } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 
@@ -40,6 +40,22 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     musiciansText: ''
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [spotifyPlaylists, setSpotifyPlaylists] = useState<Array<{
+    id: string;
+    name: string;
+    tracks: number;
+  }>>([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  const [playlistAlbums, setPlaylistAlbums] = useState<Array<{
+    id: string;
+    name: string;
+    artist: string;
+    release_date: string;
+    total_tracks: number;
+    image_url: string | null;
+  }>>([]);
+  const [loadingSpotify, setLoadingSpotify] = useState(false);
+  const [spotifyError, setSpotifyError] = useState<string | null>(null);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -385,6 +401,83 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setScannerKey(prev => prev + 1);
   };
 
+  const handleSpotifyAuth = async () => {
+    try {
+      const response = await spotify.getAuthUrl();
+      if (response.success && response.data) {
+        window.location.href = response.data.auth_url;
+      } else {
+        setSpotifyError('Failed to get Spotify authorization URL');
+      }
+    } catch (err) {
+      setSpotifyError('Failed to start Spotify authorization');
+    }
+  };
+
+  const loadSpotifyPlaylists = async () => {
+    setLoadingSpotify(true);
+    setSpotifyError(null);
+    try {
+      const response = await spotify.getPlaylists();
+      if (response.success && response.data) {
+        setSpotifyPlaylists(response.data);
+      } else {
+        setSpotifyError(response.error || 'Failed to load playlists');
+      }
+    } catch (err) {
+      setSpotifyError('Failed to load playlists');
+    } finally {
+      setLoadingSpotify(false);
+    }
+  };
+
+  const handlePlaylistSelect = async (playlistId: string) => {
+    setSelectedPlaylist(playlistId);
+    setLoadingSpotify(true);
+    setSpotifyError(null);
+    try {
+      const response = await spotify.getPlaylistTracks(playlistId);
+      if (response.success && response.data) {
+        setPlaylistAlbums(response.data);
+      } else {
+        setSpotifyError(response.error || 'Failed to load playlist tracks');
+      }
+    } catch (err) {
+      setSpotifyError('Failed to load playlist tracks');
+    } finally {
+      setLoadingSpotify(false);
+    }
+  };
+
+  const handleAddSpotifyAlbum = async (album: {
+    name: string;
+    artist: string;
+    release_date: string;
+  }) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const response = await lookup.byArtistAlbum(album.artist, album.name);
+      if (response.success && response.data) {
+        const addResponse = await records.add(response.data);
+        if (addResponse.success) {
+          setSuccess('Added to collection!');
+          setRecordsChanged(true);
+        } else {
+          setError(addResponse.error || 'Failed to add to collection');
+        }
+      } else {
+        setError("Couldn't find record in Discogs");
+      }
+    } catch (err) {
+      setError('Failed to add album');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       opened={opened}
@@ -449,6 +542,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                   }}
                 >
                   Manual
+                </Tabs.Tab>
+                <Tabs.Tab 
+                  value="spotify" 
+                  style={{ 
+                    minWidth: 0,
+                    padding: '8px 12px'
+                  }}
+                >
+                  Spotify
                 </Tabs.Tab>
               </Tabs.List>
 
@@ -581,6 +683,73 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       Add to Collection
                     </Button>
                   </Group>
+                </Stack>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="spotify" pt="xs">
+                <Stack>
+                  {spotifyPlaylists.length === 0 ? (
+                    <Button
+                      leftSection={<IconBrandSpotify size={20} />}
+                      onClick={handleSpotifyAuth}
+                      loading={loadingSpotify}
+                    >
+                      Connect Spotify
+                    </Button>
+                  ) : (
+                    <>
+                      <Select
+                        label="Select Playlist"
+                        placeholder="Choose a playlist"
+                        data={spotifyPlaylists.map(playlist => ({
+                          value: playlist.id,
+                          label: `${playlist.name} (${playlist.tracks} tracks)`
+                        }))}
+                        value={selectedPlaylist}
+                        onChange={(value) => value && handlePlaylistSelect(value)}
+                        searchable
+                        withAsterisk={false}
+                      />
+                      {playlistAlbums.length > 0 && (
+                        <Stack>
+                          <Text size="sm" fw={500}>Albums in Playlist</Text>
+                          <ScrollArea h={300}>
+                            {playlistAlbums.map(album => (
+                              <Paper
+                                key={album.id}
+                                withBorder
+                                p="xs"
+                                mb="xs"
+                              >
+                                <Group justify="space-between">
+                                  <Box>
+                                    <Text size="sm" fw={500}>{album.name}</Text>
+                                    <Text size="xs" c="dimmed">{album.artist}</Text>
+                                    <Text size="xs" c="dimmed">
+                                      Released: {new Date(album.release_date).getFullYear()}
+                                    </Text>
+                                  </Box>
+                                  <Button
+                                    size="xs"
+                                    variant="light"
+                                    onClick={() => handleAddSpotifyAlbum(album)}
+                                    loading={loading}
+                                  >
+                                    Add
+                                  </Button>
+                                </Group>
+                              </Paper>
+                            ))}
+                          </ScrollArea>
+                        </Stack>
+                      )}
+                    </>
+                  )}
+                  {spotifyError && (
+                    <Alert color="red" title="Error" variant="light">
+                      {spotifyError}
+                    </Alert>
+                  )}
                 </Stack>
               </Tabs.Panel>
             </Tabs>

@@ -355,4 +355,58 @@ export const customValues = {
       return { success: false, error: 'Failed to update custom values' };
     }
   }
+};
+
+export const spotify = {
+  getAuthUrl: async (): Promise<ApiResponse<{ auth_url: string }>> => {
+    try {
+      const response = await api.get<ApiResponse<{ auth_url: string }>>('/api/spotify/auth');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get Spotify auth URL:', err);
+      return { success: false, error: 'Failed to get Spotify auth URL' };
+    }
+  },
+
+  getPlaylists: async (): Promise<ApiResponse<Array<{
+    id: string;
+    name: string;
+    tracks: number;
+  }>>> => {
+    try {
+      const response = await api.get<ApiResponse<Array<{
+        id: string;
+        name: string;
+        tracks: number;
+      }>>>('/api/spotify/playlists');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get Spotify playlists:', err);
+      return { success: false, error: 'Failed to get Spotify playlists' };
+    }
+  },
+
+  getPlaylistTracks: async (playlistId: string): Promise<ApiResponse<Array<{
+    id: string;
+    name: string;
+    artist: string;
+    release_date: string;
+    total_tracks: number;
+    image_url: string | null;
+  }>>> => {
+    try {
+      const response = await api.get<ApiResponse<Array<{
+        id: string;
+        name: string;
+        artist: string;
+        release_date: string;
+        total_tracks: number;
+        image_url: string | null;
+      }>>>(`/api/spotify/playlists/${playlistId}/tracks`);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get playlist tracks:', err);
+      return { success: false, error: 'Failed to get playlist tracks' };
+    }
+  }
 }; 
