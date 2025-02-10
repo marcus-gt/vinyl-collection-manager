@@ -56,6 +56,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   }>>([]);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
+  const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -421,11 +422,20 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await spotify.getPlaylists();
       if (response.success && response.data) {
         setSpotifyPlaylists(response.data);
+        setIsSpotifyAuthenticated(true);
+      } else if (response.error === 'Not authenticated with Spotify') {
+        setIsSpotifyAuthenticated(false);
+        // Don't set error message for authentication errors
       } else {
         setSpotifyError(response.error || 'Failed to load playlists');
       }
     } catch (err) {
-      setSpotifyError('Failed to load playlists');
+      if (err instanceof Error && err.message.includes('401')) {
+        setIsSpotifyAuthenticated(false);
+        // Don't set error message for authentication errors
+      } else {
+        setSpotifyError('Failed to load playlists');
+      }
     } finally {
       setLoadingSpotify(false);
     }
@@ -478,9 +488,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  // Add this useEffect after the other useEffect hooks
+  // Check authentication status when modal opens
   useEffect(() => {
-    // Check if we have a Spotify token in the URL (after OAuth callback)
+    if (opened) {
+      loadSpotifyPlaylists();
+    }
+  }, [opened]);
+
+  // Handle Spotify OAuth callback
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const spotifyCode = urlParams.get('code');
     
@@ -491,13 +507,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       loadSpotifyPlaylists();
     }
   }, []);
-
-  // Also load playlists when the modal opens if we have any
-  useEffect(() => {
-    if (opened && spotifyPlaylists.length === 0) {
-      loadSpotifyPlaylists();
-    }
-  }, [opened]);
 
   return (
     <Modal
@@ -709,7 +718,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
               <Tabs.Panel value="spotify" pt="xs">
                 <Stack>
-                  {spotifyPlaylists.length === 0 ? (
+                  {!isSpotifyAuthenticated ? (
                     <Button
                       leftSection={<IconBrandSpotify size={20} />}
                       onClick={handleSpotifyAuth}
