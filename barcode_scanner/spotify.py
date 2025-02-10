@@ -22,6 +22,7 @@ def require_spotify_auth(f):
         
         if 'spotify_token' not in session:
             print("No Spotify token in session")
+            session.modified = True  # Ensure session is saved
             return jsonify({
                 'success': False,
                 'error': 'Not authenticated with Spotify',
@@ -43,6 +44,7 @@ def require_spotify_auth(f):
                     # Clear invalid tokens
                     session.pop('spotify_token', None)
                     session.pop('spotify_refresh_token', None)
+                    session.modified = True  # Ensure session is saved
                     return jsonify({
                         'success': False,
                         'error': 'Not authenticated with Spotify',
@@ -52,10 +54,12 @@ def require_spotify_auth(f):
             
         except Exception as e:
             print(f"Error checking token: {str(e)}")
+            session.modified = True  # Ensure session is saved
             return jsonify({
                 'success': False,
-                'error': 'Failed to validate Spotify session'
-            }), 500
+                'error': 'Failed to validate Spotify session',
+                'needs_auth': True
+            }), 401
             
         return f(*args, **kwargs)
     return decorated_function
@@ -166,6 +170,7 @@ def get_spotify_playlists():
     
     if 'spotify_token' not in session:
         print("No Spotify token in session")
+        session.modified = True  # Ensure session is saved
         return {
             'success': False,
             'error': 'Not authenticated with Spotify',
@@ -186,6 +191,7 @@ def get_spotify_playlists():
             refresh_result = refresh_spotify_token()
             if not refresh_result['success']:
                 print("Token refresh failed")
+                session.modified = True  # Ensure session is saved
                 return {
                     'success': False,
                     'error': 'Not authenticated with Spotify',
@@ -201,6 +207,7 @@ def get_spotify_playlists():
         playlists = response.json()
         
         print(f"Got {len(playlists['items'])} playlists")
+        session.modified = True  # Ensure session is saved
         
         return {
             'success': True,
@@ -216,13 +223,13 @@ def get_spotify_playlists():
             # Clear invalid tokens
             session.pop('spotify_token', None)
             session.pop('spotify_refresh_token', None)
-            session.modified = True
+            session.modified = True  # Ensure session is saved
             return {
                 'success': False,
                 'error': 'Not authenticated with Spotify',
                 'needs_auth': True
             }
-        return {'success': False, 'error': 'Failed to get playlists'}
+        return {'success': False, 'error': 'Failed to get playlists', 'needs_auth': True}
 
 def get_playlist_tracks(playlist_id):
     """Get tracks from a specific playlist"""

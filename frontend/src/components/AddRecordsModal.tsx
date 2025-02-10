@@ -424,13 +424,13 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setSpotifyPlaylists(response.data);
         setIsSpotifyAuthenticated(true);
       } else if (response.needs_auth) {
-        // Only set not authenticated if we explicitly get needs_auth flag
         setIsSpotifyAuthenticated(false);
-        // Don't set error message for authentication errors
+        // Don't set error message for authentication needs
       } else {
         setSpotifyError(response.error || 'Failed to load playlists');
       }
     } catch (err) {
+      console.error('Failed to get Spotify playlists:', err);
       if (err instanceof Error && err.message.includes('401')) {
         setIsSpotifyAuthenticated(false);
         // Don't set error message for authentication errors
