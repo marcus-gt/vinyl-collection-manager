@@ -521,21 +521,17 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!spotifyUrl) return;
     
     setIsLoadingAlbumLookup(true);
+    setSpotifyError(null);
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
         // First try to find the record in Discogs
         const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
         if (lookupResponse.success && lookupResponse.data) {
-          // Add the record to the collection
-          const addResponse = await records.add(lookupResponse.data);
-          if (addResponse.success) {
-            setSuccess('Added to collection!');
-            setRecordsChanged(true);
-            setSpotifyUrl('');
-          } else {
-            setSpotifyError(addResponse.error || 'Failed to add to collection');
-          }
+          // Show the record preview instead of adding directly
+          setRecord(lookupResponse.data);
+          setSpotifyUrl('');
+          setError(null);
         } else {
           setSpotifyError("Couldn't find record in Discogs");
         }
