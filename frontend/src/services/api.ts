@@ -408,5 +408,28 @@ export const spotify = {
       console.error('Failed to get playlist tracks:', err);
       return { success: false, error: 'Failed to get playlist tracks' };
     }
+  },
+
+  getAlbumFromUrl: async (url: string): Promise<{
+    success: boolean;
+    needs_auth?: boolean;
+    error?: string;
+    data?: {
+      name: string;
+      artist: string;
+      release_date: string;
+    };
+  }> => {
+    try {
+      const response = await fetch(`/api/spotify/album-from-url?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error getting album from URL:', error);
+      return {
+        success: false,
+        error: 'Failed to get album information'
+      };
+    }
   }
 }; 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, ScrollArea } from '@mantine/core';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, ScrollArea, Divider } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify } from '../services/api';
 import type { VinylRecord } from '../types';
@@ -58,6 +58,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
   const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [isLoadingAlbumLookup, setIsLoadingAlbumLookup] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -515,6 +517,36 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  const handleSpotifyUrlLookup = async () => {
+    if (!spotifyUrl) return;
+    
+    setIsLoadingAlbumLookup(true);
+    try {
+      const result = await spotify.getAlbumFromUrl(spotifyUrl);
+      if (result.success && result.data) {
+        const { artist = '', name = '', release_date = '' } = result.data;
+        setManualRecord(prev => ({
+          ...prev,
+          artist,
+          album: name,
+          year: release_date ? parseInt(release_date.split('-')[0]) : undefined
+        }));
+        setSpotifyUrl('');
+        setSuccess('Album information retrieved successfully');
+      } else if (result.needs_auth) {
+        setIsSpotifyAuthenticated(false);
+        setSpotifyError('Please connect to Spotify first');
+      } else {
+        setSpotifyError(result.error || 'Failed to get album information');
+      }
+    } catch (error) {
+      console.error('Error looking up Spotify URL:', error);
+      setSpotifyError('Failed to get album information');
+    } finally {
+      setIsLoadingAlbumLookup(false);
+    }
+  };
+
   // Update the useEffect to handle Spotify auth callback
   useEffect(() => {
     // Check for Spotify callback code
@@ -767,6 +799,28 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                     </Stack>
                   ) : (
                     <>
+                      <Box mb="md">
+                        <Text size="sm" mb={5}>Paste a Spotify album/track URL:</Text>
+                        <Group>
+                          <TextInput
+                            placeholder="https://open.spotify.com/album/..."
+                            value={spotifyUrl}
+                            onChange={(e) => setSpotifyUrl(e.target.value)}
+                            style={{ flex: 1 }}
+                            disabled={isLoadingAlbumLookup}
+                          />
+                          <Button
+                            onClick={handleSpotifyUrlLookup}
+                            loading={isLoadingAlbumLookup}
+                            disabled={!spotifyUrl}
+                          >
+                            Lookup
+                          </Button>
+                        </Group>
+                      </Box>
+                      <Divider my="md" />
+
+                      <Title order={4} mb="md">Add from Playlists</Title>
                       <Select
                         label="Select Playlist"
                         placeholder="Choose a playlist"
