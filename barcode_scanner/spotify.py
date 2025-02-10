@@ -409,4 +409,102 @@ def get_playlist_tracks(playlist_id):
             'success': False,
             'needs_auth': True,
             'error': 'Failed to get playlist tracks'
+        }
+
+def get_album_from_url(url):
+    """Get album information from a Spotify URL"""
+    print("\n=== Getting Album from Spotify URL ===")
+    print(f"Session data: {dict(session)}")
+    
+    if 'spotify_access_token' not in session:
+        print("No Spotify access token in session")
+        return {
+            'success': False,
+            'needs_auth': True,
+            'error': 'Not authenticated with Spotify'
+        }
+
+    try:
+        # Extract ID from URL
+        if 'spotify.com/track/' in url:
+            track_id = url.split('track/')[1].split('?')[0].split('/')[0]
+            endpoint = f"{SPOTIFY_API_BASE_URL}/tracks/{track_id}"
+        elif 'spotify.com/album/' in url:
+            album_id = url.split('album/')[1].split('?')[0].split('/')[0]
+            endpoint = f"{SPOTIFY_API_BASE_URL}/albums/{album_id}"
+        else:
+            return {
+                'success': False,
+                'error': 'Invalid Spotify URL. Must be a track or album URL.'
+            }
+
+        headers = {
+            'Authorization': f"Bearer {session['spotify_access_token']}"
+        }
+
+        response = requests.get(endpoint, headers=headers)
+        
+        # Handle token expiration
+        if response.status_code == 401:
+            print("Token expired, attempting refresh")
+            refresh_result = refresh_spotify_token()
+            if not refresh_result['success']:
+                print("Token refresh failed")
+                session.modified = True
+                return {
+                    'success': False,
+                    'needs_auth': True,
+                    'error': 'Not authenticated with Spotify'
+                }
+            
+            # Retry with new token
+            headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
+            response = requests.get(endpoint, headers=headers)
+
+        response.raise_for_status()
+        data = response.json()
+
+        # For tracks, we need to get the album information
+        if 'spotify.com/track/' in url:
+            album_id = data['album']['id']
+            album_response = requests.get(
+                f"{SPOTIFY_API_BASE_URL}/albums/{album_id}",
+                headers=headers
+            )
+            album_response.raise_for_status()
+            data = album_response.json()
+
+        # Extract the relevant information
+        album_info = {
+            'name': data['name'],
+            'artist': data['artists'][0]['name'],  # Using first artist
+            'release_date': data['release_date']
+        }
+
+        return {
+            'success': True,
+            'data': album_info
+        }
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting album from URL: {str(e)}")
+        if isinstance(e, requests.exceptions.HTTPError) and e.response.status_code == 401:
+            # Clear invalid tokens
+            session.pop('spotify_access_token', None)
+            session.pop('spotify_refresh_token', None)
+            session.modified = True
+            return {
+                'success': False,
+                'needs_auth': True,
+                'error': 'Not authenticated with Spotify'
+            }
+        return {
+            'success': False,
+            'error': 'Failed to get album information'
+        }
+    except Exception as e:
+        print(f"Error processing Spotify URL: {str(e)}")
+        return {
+            'success': False,
+            'error': 'Failed to process Spotify URL'
         } 

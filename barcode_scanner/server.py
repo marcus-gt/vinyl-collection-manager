@@ -34,7 +34,8 @@ from .spotify import (
     get_spotify_playlists,
     get_playlist_tracks,
     require_spotify_auth,
-    refresh_spotify_token
+    refresh_spotify_token,
+    get_album_from_url
 )
 
 # Set up static file serving
@@ -1054,107 +1055,15 @@ def spotify_album_from_url():
     print("\n=== Getting Album from Spotify URL ===")
     print(f"Session data: {dict(session)}")
     
-    # Check for Spotify authentication
-    if 'spotify_access_token' not in session:
-        print("No Spotify access token in session")
-        return jsonify({
-            'success': False,
-            'needs_auth': True,
-            'error': 'Not authenticated with Spotify'
-        })
-
     url = request.args.get('url')
     if not url:
         return jsonify({
             'success': False,
             'error': 'No URL provided'
         })
-
-    # Extract ID from URL
-    try:
-        # Handle both track and album URLs
-        if 'spotify.com/track/' in url:
-            track_id = url.split('track/')[1].split('?')[0].split('/')[0]
-            endpoint = f"{SPOTIFY_API_BASE_URL}/tracks/{track_id}"
-        elif 'spotify.com/album/' in url:
-            album_id = url.split('album/')[1].split('?')[0].split('/')[0]
-            endpoint = f"{SPOTIFY_API_BASE_URL}/albums/{album_id}"
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Invalid Spotify URL. Must be a track or album URL.'
-            })
-
-        headers = {
-            'Authorization': f"Bearer {session['spotify_access_token']}"
-        }
-
-        response = requests.get(endpoint, headers=headers)
         
-        # Handle token expiration
-        if response.status_code == 401:
-            print("Token expired, attempting refresh")
-            refresh_result = refresh_spotify_token()
-            if not refresh_result['success']:
-                print("Token refresh failed")
-                session.modified = True
-                return jsonify({
-                    'success': False,
-                    'needs_auth': True,
-                    'error': 'Not authenticated with Spotify'
-                })
-            
-            # Retry with new token
-            headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
-            response = requests.get(endpoint, headers=headers)
-
-        response.raise_for_status()
-        data = response.json()
-
-        # For tracks, we need to get the album information
-        if 'spotify.com/track/' in url:
-            album_id = data['album']['id']
-            album_response = requests.get(
-                f"{SPOTIFY_API_BASE_URL}/albums/{album_id}",
-                headers=headers
-            )
-            album_response.raise_for_status()
-            data = album_response.json()
-
-        # Extract the relevant information
-        album_info = {
-            'name': data['name'],
-            'artist': data['artists'][0]['name'],  # Using first artist
-            'release_date': data['release_date']
-        }
-
-        return jsonify({
-            'success': True,
-            'data': album_info
-        })
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error getting album from URL: {str(e)}")
-        if isinstance(e, requests.exceptions.HTTPError) and e.response.status_code == 401:
-            # Clear invalid tokens
-            session.pop('spotify_access_token', None)
-            session.pop('spotify_refresh_token', None)
-            session.modified = True
-            return jsonify({
-                'success': False,
-                'needs_auth': True,
-                'error': 'Not authenticated with Spotify'
-            })
-        return jsonify({
-            'success': False,
-            'error': 'Failed to get album information'
-        })
-    except Exception as e:
-        print(f"Error processing Spotify URL: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Failed to process Spotify URL'
-        })
+    result = get_album_from_url(url)
+    return jsonify(result)
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
