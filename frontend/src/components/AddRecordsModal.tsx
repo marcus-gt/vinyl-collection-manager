@@ -411,7 +411,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleSpotifyAuth = async () => {
-    setLoadingSpotify(true);
+    setIsLoadingSpotifyAuth(true);
     setSpotifyError(null);
     try {
       console.log('Getting Spotify auth URL...');
@@ -441,7 +441,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       console.error('Failed to start Spotify authorization:', err);
       setSpotifyError('Failed to start Spotify authorization');
     } finally {
-      setLoadingSpotify(false);
+      setIsLoadingSpotifyAuth(false);
     }
   };
 
