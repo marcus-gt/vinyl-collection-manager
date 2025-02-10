@@ -66,6 +66,15 @@ def require_spotify_auth(f):
 
 def get_spotify_auth_url():
     """Generate the Spotify authorization URL"""
+    if not CLIENT_ID or not REDIRECT_URI:
+        print("Error: Missing Spotify configuration")
+        print(f"CLIENT_ID: {'Present' if CLIENT_ID else 'Missing'}")
+        print(f"REDIRECT_URI: {REDIRECT_URI}")
+        return {
+            'success': False,
+            'error': 'Spotify configuration missing'
+        }
+
     params = {
         'client_id': CLIENT_ID,
         'response_type': 'code',
@@ -73,13 +82,26 @@ def get_spotify_auth_url():
         'scope': 'playlist-read-private playlist-read-collaborative user-library-read',
         'show_dialog': True
     }
-    return f"{SPOTIFY_AUTH_URL}?{urlencode(params)}"
+    
+    auth_url = f"{SPOTIFY_AUTH_URL}?{urlencode(params)}"
+    print(f"Generated Spotify auth URL: {auth_url}")
+    return {
+        'success': True,
+        'data': {
+            'auth_url': auth_url
+        }
+    }
 
 def handle_spotify_callback(code):
     """Handle the Spotify OAuth callback"""
     print("\n=== Handling Spotify Callback ===")
     print(f"Code received: {code[:10]}...")
+    print(f"Using redirect URI: {REDIRECT_URI}")
     
+    if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
+        print("Error: Missing Spotify configuration")
+        return {'success': False, 'error': 'Spotify configuration missing'}
+
     auth_header = base64.b64encode(
         f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
     ).decode()
@@ -96,7 +118,9 @@ def handle_spotify_callback(code):
     }
 
     try:
+        print("Making token request to Spotify...")
         response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
+        print(f"Token response status: {response.status_code}")
         response.raise_for_status()
         token_info = response.json()
         
@@ -114,6 +138,8 @@ def handle_spotify_callback(code):
         return {'success': True}
     except requests.exceptions.RequestException as e:
         print(f"Error getting Spotify token: {str(e)}")
+        if hasattr(e.response, 'text'):
+            print(f"Error response: {e.response.text}")
         return {'success': False, 'error': 'Failed to authenticate with Spotify'}
 
 def refresh_spotify_token():
