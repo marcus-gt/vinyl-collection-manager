@@ -423,7 +423,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (response.success && response.data) {
         setSpotifyPlaylists(response.data);
         setIsSpotifyAuthenticated(true);
-      } else if (response.error === 'Not authenticated with Spotify') {
+      } else if (response.needs_auth) {
+        // Only set not authenticated if we explicitly get needs_auth flag
         setIsSpotifyAuthenticated(false);
         // Don't set error message for authentication errors
       } else {

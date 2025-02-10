@@ -29,6 +29,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  needs_auth?: boolean;
 }
 
 export interface AuthResponse {

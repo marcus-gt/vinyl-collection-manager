@@ -17,8 +17,46 @@ REDIRECT_URI = os.getenv('SPOTIFY_REDIRECT_URI')
 def require_spotify_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        print("\n=== Checking Spotify Auth ===")
+        print(f"Session data: {dict(session)}")
+        
         if 'spotify_token' not in session:
-            return jsonify({'success': False, 'error': 'Not authenticated with Spotify'}), 401
+            print("No Spotify token in session")
+            return jsonify({
+                'success': False,
+                'error': 'Not authenticated with Spotify',
+                'needs_auth': True
+            }), 401
+            
+        # Check if token is expired
+        try:
+            headers = {
+                'Authorization': f"Bearer {session['spotify_token']}"
+            }
+            response = requests.get(f"{SPOTIFY_API_BASE_URL}/me", headers=headers)
+            
+            if response.status_code == 401:
+                print("Token expired, attempting refresh")
+                refresh_result = refresh_spotify_token()
+                if not refresh_result['success']:
+                    print("Token refresh failed")
+                    # Clear invalid tokens
+                    session.pop('spotify_token', None)
+                    session.pop('spotify_refresh_token', None)
+                    return jsonify({
+                        'success': False,
+                        'error': 'Not authenticated with Spotify',
+                        'needs_auth': True
+                    }), 401
+                print("Token refreshed successfully")
+            
+        except Exception as e:
+            print(f"Error checking token: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': 'Failed to validate Spotify session'
+            }), 500
+            
         return f(*args, **kwargs)
     return decorated_function
 
@@ -35,6 +73,9 @@ def get_spotify_auth_url():
 
 def handle_spotify_callback(code):
     """Handle the Spotify OAuth callback"""
+    print("\n=== Handling Spotify Callback ===")
+    print(f"Code received: {code[:10]}...")  # Only print first 10 chars for security
+    
     auth_header = base64.b64encode(
         f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
     ).decode()
@@ -55,10 +96,16 @@ def handle_spotify_callback(code):
         response.raise_for_status()
         token_info = response.json()
         
+        print("Got token response from Spotify")
+        
         # Store token info in session
         session['spotify_token'] = token_info['access_token']
         session['spotify_refresh_token'] = token_info.get('refresh_token')
         session['spotify_token_type'] = token_info.get('token_type', 'Bearer')
+        session.modified = True  # Ensure session is saved
+        
+        print("Stored tokens in session")
+        print(f"Session data: {dict(session)}")
         
         return {'success': True}
     except requests.exceptions.RequestException as e:
