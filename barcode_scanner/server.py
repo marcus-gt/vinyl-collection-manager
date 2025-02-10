@@ -956,16 +956,8 @@ def spotify_auth():
     result = get_spotify_auth_url()
     print(f"Got auth URL result: {result}")
     
-    if not result.get('success'):
-        print(f"Error getting auth URL: {result.get('error')}")
-        return jsonify(result), 500
-        
-    # Set spotify_auth_started in session
-    session['spotify_auth_started'] = True
-    session.modified = True
-    print(f"Session after: {dict(session)}")
-    
-    return jsonify(result)
+    # Since get_spotify_auth_url returns a Response object, we can just return it directly
+    return result
 
 @app.route('/api/spotify/callback')
 def spotify_callback():

@@ -124,12 +124,27 @@ def get_spotify_auth_url():
         session.modified = True
         print(f"Session after setting spotify_auth_started: {dict(session)}")
         
-        return jsonify({
+        # Return the response directly
+        response = jsonify({
             'success': True,
             'data': {
                 'auth_url': auth_url
             }
         })
+        
+        # Ensure cookie settings
+        if 'Set-Cookie' in response.headers:
+            cookie = response.headers['Set-Cookie']
+            if 'SameSite=' not in cookie:
+                cookie += '; SameSite=None'
+            if 'Secure' not in cookie:
+                cookie += '; Secure'
+            if 'HttpOnly' not in cookie:
+                cookie += '; HttpOnly'
+            response.headers['Set-Cookie'] = cookie
+            
+        return response
+        
     except Exception as e:
         print(f"Error generating Spotify auth URL: {str(e)}")
         import traceback
