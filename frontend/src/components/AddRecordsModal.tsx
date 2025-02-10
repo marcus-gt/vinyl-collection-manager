@@ -57,6 +57,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [loadingSpotify, setLoadingSpotify] = useState(false);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
+  const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -84,6 +85,13 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         stylesText: '',
         musiciansText: ''
       });
+      // Reset Spotify states
+      setSpotifyPlaylists([]);
+      setSelectedPlaylist(null);
+      setPlaylistAlbums([]);
+      setLoadingSpotify(false);
+      setSpotifyError(null);
+      setIsSpotifyAuthenticated(false);
       console.log('States reset complete');
     }
   }, [opened]);
@@ -437,30 +445,26 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const loadSpotifyPlaylists = async () => {
+  const checkSpotifyAuth = async () => {
     setLoadingSpotify(true);
     setSpotifyError(null);
     try {
       const response = await spotify.getPlaylists();
-      if (response.success && response.data) {
-        setSpotifyPlaylists(response.data);
-        setIsSpotifyAuthenticated(true);
-      } else if (response.needs_auth) {
-        setIsSpotifyAuthenticated(false);
-        // Don't set error message for authentication needs
-      } else {
-        setSpotifyError(response.error || 'Failed to load playlists');
+      setIsSpotifyAuthenticated(!response.needs_auth);
+      if (!response.needs_auth && response.success) {
+        setSpotifyPlaylists(response.data || []);
       }
     } catch (err) {
-      console.error('Failed to get Spotify playlists:', err);
-      if (err instanceof Error && err.message.includes('401')) {
-        setIsSpotifyAuthenticated(false);
-        // Don't set error message for authentication errors
-      } else {
-        setSpotifyError('Failed to load playlists');
-      }
+      console.log('Failed to check Spotify auth:', err);
+      setIsSpotifyAuthenticated(false);
     } finally {
       setLoadingSpotify(false);
+    }
+  };
+
+  const handleSpotifyTabChange = (value: string | null) => {
+    if (value === 'spotify') {
+      checkSpotifyAuth();
     }
   };
 
@@ -524,7 +528,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       // Clear stored return path
       localStorage.removeItem('spotify_auth_return_path');
       // Load playlists since we just authenticated
-      loadSpotifyPlaylists();
+      checkSpotifyAuth();
       // Return to previous location if available
       if (returnPath) {
         window.location.href = returnPath;
@@ -570,11 +574,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           <Stack>
             <Tabs 
               defaultValue="barcode" 
-              onChange={(value: string | null) => {
-                if (value === 'spotify' && !isSpotifyAuthenticated) {
-                  loadSpotifyPlaylists();
-                }
-              }}
+              onChange={handleSpotifyTabChange}
             >
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
                 <Tabs.Tab 
@@ -749,13 +749,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
               <Tabs.Panel value="spotify" pt="xs">
                 <Stack>
-                  {!isSpotifyAuthenticated ? (
+                  {loadingSpotify ? (
+                    <Stack align="center" gap="md">
+                      <Loader size="sm" />
+                      <Text c="dimmed" size="sm">Checking Spotify connection...</Text>
+                    </Stack>
+                  ) : !isSpotifyAuthenticated ? (
                     <Stack align="center" gap="md">
                       <Text c="dimmed" size="sm">Connect your Spotify account to import albums from your playlists</Text>
                       <Button
                         leftSection={<IconBrandSpotify size={20} />}
                         onClick={handleSpotifyAuth}
-                        loading={loadingSpotify}
+                        loading={isLoadingSpotifyAuth}
                       >
                         Connect Spotify
                       </Button>
