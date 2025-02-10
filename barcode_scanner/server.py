@@ -983,20 +983,68 @@ def spotify_callback():
         return jsonify(result)
 
 @app.route('/api/spotify/playlists')
-@require_spotify_auth
 def spotify_playlists():
     """Get user's Spotify playlists"""
     print("\n=== Getting Spotify Playlists ===")
-    result = get_spotify_playlists()
-    return jsonify(result)
+    print(f"Session data: {dict(session)}")
+    
+    # Check for Spotify authentication
+    if 'spotify_access_token' not in session:
+        print("No Spotify access token in session")
+        return jsonify({
+            'success': False,
+            'needs_auth': True,
+            'error': 'Not authenticated with Spotify'
+        })
+
+    # Try to get playlists
+    try:
+        result = get_spotify_playlists()
+        if not result['success'] and result.get('needs_auth'):
+            # Clear invalid tokens if authentication failed
+            session.pop('spotify_access_token', None)
+            session.pop('spotify_refresh_token', None)
+            session.modified = True
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error getting playlists: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to get playlists',
+            'needs_auth': True
+        })
 
 @app.route('/api/spotify/playlists/<playlist_id>/tracks')
-@require_spotify_auth
 def spotify_playlist_tracks(playlist_id):
     """Get tracks from a specific playlist"""
     print(f"\n=== Getting Playlist Tracks: {playlist_id} ===")
-    result = get_playlist_tracks(playlist_id)
-    return jsonify(result)
+    print(f"Session data: {dict(session)}")
+    
+    # Check for Spotify authentication
+    if 'spotify_access_token' not in session:
+        print("No Spotify access token in session")
+        return jsonify({
+            'success': False,
+            'needs_auth': True,
+            'error': 'Not authenticated with Spotify'
+        })
+
+    # Try to get playlist tracks
+    try:
+        result = get_playlist_tracks(playlist_id)
+        if not result['success'] and result.get('needs_auth'):
+            # Clear invalid tokens if authentication failed
+            session.pop('spotify_access_token', None)
+            session.pop('spotify_refresh_token', None)
+            session.modified = True
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error getting playlist tracks: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to get playlist tracks',
+            'needs_auth': True
+        })
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
