@@ -403,15 +403,20 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleSpotifyAuth = async () => {
+    setLoadingSpotify(true);
     try {
       const response = await spotify.getAuthUrl();
       if (response.success && response.data) {
+        // Store current location to return after auth
+        localStorage.setItem('spotify_auth_return_path', window.location.pathname);
         window.location.href = response.data.auth_url;
       } else {
         setSpotifyError('Failed to get Spotify authorization URL');
       }
     } catch (err) {
       setSpotifyError('Failed to start Spotify authorization');
+    } finally {
+      setLoadingSpotify(false);
     }
   };
 
@@ -489,17 +494,24 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  // Remove the useEffect that checks on modal open
+  // Update the useEffect to handle Spotify auth callback
   useEffect(() => {
-    // Only check for Spotify callback code
+    // Check for Spotify callback code
     const urlParams = new URLSearchParams(window.location.search);
     const spotifyCode = urlParams.get('code');
+    const returnPath = localStorage.getItem('spotify_auth_return_path');
     
     if (spotifyCode) {
       // Clear the URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
+      // Clear stored return path
+      localStorage.removeItem('spotify_auth_return_path');
       // Load playlists since we just authenticated
       loadSpotifyPlaylists();
+      // Return to previous location if available
+      if (returnPath) {
+        window.location.href = returnPath;
+      }
     }
   }, []);
 

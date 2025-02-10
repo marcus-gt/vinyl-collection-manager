@@ -20,9 +20,9 @@ def require_spotify_auth(f):
         print("\n=== Checking Spotify Auth ===")
         print(f"Session data: {dict(session)}")
         
-        if 'spotify_token' not in session:
-            print("No Spotify token in session")
-            session.modified = True  # Ensure session is saved
+        if 'spotify_access_token' not in session:
+            print("No Spotify access token in session")
+            session.modified = True
             return jsonify({
                 'success': False,
                 'error': 'Not authenticated with Spotify',
@@ -32,7 +32,7 @@ def require_spotify_auth(f):
         # Check if token is expired
         try:
             headers = {
-                'Authorization': f"Bearer {session['spotify_token']}"
+                'Authorization': f"Bearer {session['spotify_access_token']}"
             }
             response = requests.get(f"{SPOTIFY_API_BASE_URL}/me", headers=headers)
             
@@ -42,9 +42,9 @@ def require_spotify_auth(f):
                 if not refresh_result['success']:
                     print("Token refresh failed")
                     # Clear invalid tokens
-                    session.pop('spotify_token', None)
+                    session.pop('spotify_access_token', None)
                     session.pop('spotify_refresh_token', None)
-                    session.modified = True  # Ensure session is saved
+                    session.modified = True
                     return jsonify({
                         'success': False,
                         'error': 'Not authenticated with Spotify',
@@ -54,7 +54,7 @@ def require_spotify_auth(f):
             
         except Exception as e:
             print(f"Error checking token: {str(e)}")
-            session.modified = True  # Ensure session is saved
+            session.modified = True
             return jsonify({
                 'success': False,
                 'error': 'Failed to validate Spotify session',
@@ -78,7 +78,7 @@ def get_spotify_auth_url():
 def handle_spotify_callback(code):
     """Handle the Spotify OAuth callback"""
     print("\n=== Handling Spotify Callback ===")
-    print(f"Code received: {code[:10]}...")  # Only print first 10 chars for security
+    print(f"Code received: {code[:10]}...")
     
     auth_header = base64.b64encode(
         f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
@@ -102,13 +102,13 @@ def handle_spotify_callback(code):
         
         print("Got token response from Spotify")
         
-        # Store token info in session
-        session['spotify_token'] = token_info['access_token']
+        # Store token info in session with explicit names
+        session['spotify_access_token'] = token_info['access_token']
         session['spotify_refresh_token'] = token_info.get('refresh_token')
         session['spotify_token_type'] = token_info.get('token_type', 'Bearer')
-        session.modified = True  # Ensure session is saved
+        session.modified = True
         
-        print("Stored tokens in session")
+        print("Stored Spotify tokens in session")
         print(f"Session data: {dict(session)}")
         
         return {'success': True}
@@ -122,7 +122,7 @@ def refresh_spotify_token():
     print(f"Session before refresh: {dict(session)}")
     
     if 'spotify_refresh_token' not in session:
-        print("No refresh token in session")
+        print("No Spotify refresh token in session")
         return {'success': False, 'error': 'No refresh token available'}
 
     auth_header = base64.b64encode(
@@ -146,11 +146,11 @@ def refresh_spotify_token():
         
         print("Got new token from Spotify")
         
-        # Update token in session
-        session['spotify_token'] = token_info['access_token']
+        # Update token in session with explicit names
+        session['spotify_access_token'] = token_info['access_token']
         if 'refresh_token' in token_info:
             session['spotify_refresh_token'] = token_info['refresh_token']
-        session.modified = True  # Ensure session is saved
+        session.modified = True
         
         print(f"Session after refresh: {dict(session)}")
         
@@ -158,7 +158,7 @@ def refresh_spotify_token():
     except requests.exceptions.RequestException as e:
         print(f"Error refreshing token: {str(e)}")
         # Clear invalid tokens
-        session.pop('spotify_token', None)
+        session.pop('spotify_access_token', None)
         session.pop('spotify_refresh_token', None)
         session.modified = True
         return {'success': False, 'error': 'Failed to refresh token'}
@@ -168,9 +168,9 @@ def get_spotify_playlists():
     print("\n=== Getting Spotify Playlists ===")
     print(f"Session data: {dict(session)}")
     
-    if 'spotify_token' not in session:
-        print("No Spotify token in session")
-        session.modified = True  # Ensure session is saved
+    if 'spotify_access_token' not in session:
+        print("No Spotify access token in session")
+        session.modified = True
         return {
             'success': False,
             'error': 'Not authenticated with Spotify',
@@ -178,7 +178,7 @@ def get_spotify_playlists():
         }
 
     headers = {
-        'Authorization': f"Bearer {session['spotify_token']}"
+        'Authorization': f"Bearer {session['spotify_access_token']}"
     }
 
     try:
@@ -191,7 +191,7 @@ def get_spotify_playlists():
             refresh_result = refresh_spotify_token()
             if not refresh_result['success']:
                 print("Token refresh failed")
-                session.modified = True  # Ensure session is saved
+                session.modified = True
                 return {
                     'success': False,
                     'error': 'Not authenticated with Spotify',
@@ -200,14 +200,14 @@ def get_spotify_playlists():
             
             # Retry with new token
             print("Retrying with new token")
-            headers['Authorization'] = f"Bearer {session['spotify_token']}"
+            headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
             response = requests.get(f"{SPOTIFY_API_BASE_URL}/me/playlists", headers=headers)
         
         response.raise_for_status()
         playlists = response.json()
         
         print(f"Got {len(playlists['items'])} playlists")
-        session.modified = True  # Ensure session is saved
+        session.modified = True
         
         return {
             'success': True,
@@ -221,9 +221,9 @@ def get_spotify_playlists():
         print(f"Error getting playlists: {str(e)}")
         if isinstance(e, requests.exceptions.HTTPError) and e.response.status_code == 401:
             # Clear invalid tokens
-            session.pop('spotify_token', None)
+            session.pop('spotify_access_token', None)
             session.pop('spotify_refresh_token', None)
-            session.modified = True  # Ensure session is saved
+            session.modified = True
             return {
                 'success': False,
                 'error': 'Not authenticated with Spotify',
@@ -233,11 +233,11 @@ def get_spotify_playlists():
 
 def get_playlist_tracks(playlist_id):
     """Get tracks from a specific playlist"""
-    if 'spotify_token' not in session:
-        return {'success': False, 'error': 'Not authenticated with Spotify'}
+    if 'spotify_access_token' not in session:
+        return {'success': False, 'error': 'Not authenticated with Spotify', 'needs_auth': True}
 
     headers = {
-        'Authorization': f"Bearer {session['spotify_token']}"
+        'Authorization': f"Bearer {session['spotify_access_token']}"
     }
 
     try:
@@ -253,7 +253,7 @@ def get_playlist_tracks(playlist_id):
                 return refresh_result
             
             # Retry with new token
-            headers['Authorization'] = f"Bearer {session['spotify_token']}"
+            headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
             response = requests.get(
                 f"{SPOTIFY_API_BASE_URL}/playlists/{playlist_id}/tracks",
                 headers=headers
@@ -285,4 +285,4 @@ def get_playlist_tracks(playlist_id):
         }
     except requests.exceptions.RequestException as e:
         print(f"Error getting playlist tracks: {str(e)}")
-        return {'success': False, 'error': 'Failed to get playlist tracks'} 
+        return {'success': False, 'error': 'Failed to get playlist tracks', 'needs_auth': True} 
