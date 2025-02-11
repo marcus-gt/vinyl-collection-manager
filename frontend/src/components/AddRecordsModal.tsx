@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, ScrollArea, Divider } from '@mantine/core';
-import { IconTrash, IconEdit, IconX, IconBrandSpotify } from '@tabler/icons-react';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider } from '@mantine/core';
+import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -47,14 +47,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     tracks: number;
   }>>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
-  const [playlistAlbums, setPlaylistAlbums] = useState<Array<{
-    id: string;
-    name: string;
-    artist: string;
-    release_date: string;
-    total_tracks: number;
-    image_url: string | null;
-  }>>([]);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
@@ -97,7 +89,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       // Reset Spotify states
       setSpotifyPlaylists([]);
       setSelectedPlaylist(null);
-      setPlaylistAlbums([]);
       setLoadingSpotify(false);
       setSpotifyError(null);
       setIsSpotifyAuthenticated(false);
@@ -478,53 +469,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handlePlaylistSelect = async (playlistId: string) => {
-    setSelectedPlaylist(playlistId);
-    setLoadingSpotify(true);
-    setSpotifyError(null);
-    try {
-      const response = await spotify.getPlaylistTracks(playlistId);
-      if (response.success && response.data) {
-        setPlaylistAlbums(response.data);
-      } else {
-        setSpotifyError(response.error || 'Failed to load playlist tracks');
-      }
-    } catch (err) {
-      setSpotifyError('Failed to load playlist tracks');
-    } finally {
-      setLoadingSpotify(false);
-    }
-  };
-
-  const handleAddSpotifyAlbum = async (album: {
-    name: string;
-    artist: string;
-    release_date: string;
-  }) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    try {
-      const response = await lookup.byArtistAlbum(album.artist, album.name);
-      if (response.success && response.data) {
-        const addResponse = await records.add(response.data);
-        if (addResponse.success) {
-          setSuccess('Added to collection!');
-          setRecordsChanged(true);
-        } else {
-          setError(addResponse.error || 'Failed to add to collection');
-        }
-      } else {
-        setError("Couldn't find record in Discogs");
-      }
-    } catch (err) {
-      setError('Failed to add album');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSpotifyUrlLookup = async () => {
     if (!spotifyUrl) return;
     
@@ -566,7 +510,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setIsSpotifyAuthenticated(false);
         setSpotifyPlaylists([]);
         setSelectedPlaylist(null);
-        setPlaylistAlbums([]);
         setSpotifyUrl('');
       } else {
         setSpotifyError(response.error || 'Failed to disconnect from Spotify');
