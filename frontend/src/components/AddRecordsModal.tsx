@@ -703,563 +703,575 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={handleModalClose}
-      title={
-        <Group justify="space-between" align="center">
-          <Text>Add Records</Text>
-          {loading && <Loader size="sm" />}
-        </Group>
-      }
-      size="lg"
-      styles={{
-        inner: {
-          '@media (max-width: 48em)': {
-            padding: 0
-          }
-        },
-        body: {
-          '@media (max-width: 48em)': {
-            padding: '0.5rem'
-          }
-        },
-        content: {
-          '@media (max-width: 48em)': {
-            width: '100vw',
-            height: '100vh',
-            margin: 0,
-            maxWidth: 'none',
-            maxHeight: 'none'
-          }
+    <>
+      <Modal
+        opened={opened}
+        onClose={handleModalClose}
+        title={
+          <Group justify="space-between" align="center">
+            <Text>Add Records</Text>
+            {loading && <Loader size="sm" />}
+          </Group>
         }
-      }}
-    >
-      <Stack>
-        <Paper withBorder shadow="md" p="md" radius="md">
-          <Stack>
-            <Tabs 
-              defaultValue="barcode" 
-              onChange={handleSpotifyTabChange}
-            >
-              <Tabs.List style={{ flexWrap: 'nowrap' }}>
-                <Tabs.Tab 
-                  value="barcode" 
-                  style={{ 
-                    minWidth: 0,
-                    padding: '8px 12px'
-                  }}
-                >
-                  Scan
-                </Tabs.Tab>
-                <Tabs.Tab 
-                  value="discogs" 
-                  style={{ 
-                    minWidth: 0,
-                    padding: '8px 12px'
-                  }}
-                >
-                  URL
-                </Tabs.Tab>
-                <Tabs.Tab 
-                  value="search" 
-                  style={{ 
-                    minWidth: 0,
-                    padding: '8px 12px'
-                  }}
-                >
-                  Manual
-                </Tabs.Tab>
-                <Tabs.Tab 
-                  value="spotify" 
-                  style={{ 
-                    minWidth: 0,
-                    padding: '8px 12px'
-                  }}
-                >
-                  Spotify
-                </Tabs.Tab>
-              </Tabs.List>
+        size="lg"
+        styles={{
+          inner: {
+            '@media (max-width: 48em)': {
+              padding: 0
+            }
+          },
+          body: {
+            '@media (max-width: 48em)': {
+              padding: '0.5rem'
+            }
+          },
+          content: {
+            '@media (max-width: 48em)': {
+              width: '100vw',
+              height: '100vh',
+              margin: 0,
+              maxWidth: 'none',
+              maxHeight: 'none'
+            }
+          }
+        }}
+      >
+        <Stack>
+          <Paper withBorder shadow="md" p="md" radius="md">
+            <Stack>
+              <Tabs 
+                defaultValue="barcode" 
+                onChange={handleSpotifyTabChange}
+              >
+                <Tabs.List style={{ flexWrap: 'nowrap' }}>
+                  <Tabs.Tab 
+                    value="barcode" 
+                    style={{ 
+                      minWidth: 0,
+                      padding: '8px 12px'
+                    }}
+                  >
+                    Scan
+                  </Tabs.Tab>
+                  <Tabs.Tab 
+                    value="discogs" 
+                    style={{ 
+                      minWidth: 0,
+                      padding: '8px 12px'
+                    }}
+                  >
+                    URL
+                  </Tabs.Tab>
+                  <Tabs.Tab 
+                    value="search" 
+                    style={{ 
+                      minWidth: 0,
+                      padding: '8px 12px'
+                    }}
+                  >
+                    Manual
+                  </Tabs.Tab>
+                  <Tabs.Tab 
+                    value="spotify" 
+                    style={{ 
+                      minWidth: 0,
+                      padding: '8px 12px'
+                    }}
+                  >
+                    Spotify
+                  </Tabs.Tab>
+                </Tabs.List>
 
-              <Tabs.Panel value="barcode" pt="xs">
-                {isScanning ? (
-                  <>
-                    <BarcodeScanner 
-                      key={scannerKey}
-                      onScan={handleScan} 
-                      isScanning={isScanning} 
-                      isLoading={loading}
-                    />
-                    {barcode && (
-                      <>
-                        <Text ta="center" size="sm" fw={500} mt="xs">
-                          Captured barcode: {barcode}
-                        </Text>
-                        {loading && (
-                          <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                            <Loader size="sm" />
-                            <Text size="sm" c="dimmed">
-                              Looking up record in Discogs...
-                            </Text>
-                          </Box>
-                        )}
-                      </>
-                    )}
-                    <Button 
-                      color="red" 
-                      onClick={() => {
-                        setIsScanning(false);
-                        setError(null);
-                        setSuccess(null);
-                      }}
-                    >
-                      Stop Scanning
-                    </Button>
-                  </>
-                ) : (
-                  <Stack>
-                    <TextInput
-                      label="Barcode"
-                      placeholder="Enter or scan barcode"
-                      value={barcode}
-                      onChange={(e) => setBarcode(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
-                      disabled={loading}
-                    />
-                    <Group grow>
+                <Tabs.Panel value="barcode" pt="xs">
+                  {isScanning ? (
+                    <>
+                      <BarcodeScanner 
+                        key={scannerKey}
+                        onScan={handleScan} 
+                        isScanning={isScanning} 
+                        isLoading={loading}
+                      />
+                      {barcode && (
+                        <>
+                          <Text ta="center" size="sm" fw={500} mt="xs">
+                            Captured barcode: {barcode}
+                          </Text>
+                          {loading && (
+                            <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                              <Loader size="sm" />
+                              <Text size="sm" c="dimmed">
+                                Looking up record in Discogs...
+                              </Text>
+                            </Box>
+                          )}
+                        </>
+                      )}
                       <Button 
-                        onClick={handleManualLookup} 
-                        loading={loading}
-                        disabled={!barcode.trim()}
-                      >
-                        Look up Record
-                      </Button>
-                      <Button 
+                        color="red" 
                         onClick={() => {
-                          setIsScanning(true);
+                          setIsScanning(false);
                           setError(null);
                           setSuccess(null);
-                        }} 
-                        variant="light"
-                        disabled={loading}
+                        }}
                       >
-                        Start Camera
+                        Stop Scanning
+                      </Button>
+                    </>
+                  ) : (
+                    <Stack>
+                      <TextInput
+                        label="Barcode"
+                        placeholder="Enter or scan barcode"
+                        value={barcode}
+                        onChange={(e) => setBarcode(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
+                        disabled={loading}
+                      />
+                      <Group grow>
+                        <Button 
+                          onClick={handleManualLookup} 
+                          loading={loading}
+                          disabled={!barcode.trim()}
+                        >
+                          Look up Record
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            setIsScanning(true);
+                            setError(null);
+                            setSuccess(null);
+                          }} 
+                          variant="light"
+                          disabled={loading}
+                        >
+                          Start Camera
+                        </Button>
+                      </Group>
+                    </Stack>
+                  )}
+                </Tabs.Panel>
+
+                <Tabs.Panel value="discogs" pt="xs">
+                  <Stack>
+                    <TextInput
+                      label="Discogs Release URL"
+                      placeholder="https://www.discogs.com/release/123456"
+                      value={discogsUrl}
+                      onChange={(e) => setDiscogsUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleDiscogsLookup()}
+                      disabled={loading}
+                    />
+                    <Button 
+                      onClick={handleDiscogsLookup}
+                      loading={loading}
+                      disabled={!discogsUrl.trim()}
+                    >
+                      Look up Release
+                    </Button>
+                  </Stack>
+                </Tabs.Panel>
+
+                <Tabs.Panel value="search" pt="xs">
+                  <Stack>
+                    <TextInput
+                      label="Artist"
+                      placeholder="Enter artist name"
+                      value={artist}
+                      onChange={(e) => setArtist(e.target.value)}
+                      disabled={loading}
+                    />
+                    <TextInput
+                      label="Album"
+                      placeholder="Enter album name"
+                      value={album}
+                      onChange={(e) => setAlbum(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleArtistAlbumLookup()}
+                      disabled={loading}
+                    />
+                    <Group>
+                      <Button 
+                        onClick={handleArtistAlbumLookup}
+                        loading={loading}
+                        disabled={!artist.trim() || !album.trim()}
+                      >
+                        Get Record Info
+                      </Button>
+                      <Button
+                        variant="light"
+                        onClick={handleAddBasicInfo}
+                        disabled={!artist.trim() || !album.trim() || loading}
+                      >
+                        Add Info Manually
+                      </Button>
+                      <Button
+                        onClick={handleManualSubmit}
+                        loading={loading}
+                        disabled={!artist.trim() || !album.trim()}
+                      >
+                        Add to Collection
                       </Button>
                     </Group>
                   </Stack>
-                )}
-              </Tabs.Panel>
+                </Tabs.Panel>
 
-              <Tabs.Panel value="discogs" pt="xs">
-                <Stack>
-                  <TextInput
-                    label="Discogs Release URL"
-                    placeholder="https://www.discogs.com/release/123456"
-                    value={discogsUrl}
-                    onChange={(e) => setDiscogsUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleDiscogsLookup()}
-                    disabled={loading}
-                  />
-                  <Button 
-                    onClick={handleDiscogsLookup}
-                    loading={loading}
-                    disabled={!discogsUrl.trim()}
-                  >
-                    Look up Release
-                  </Button>
-                </Stack>
-              </Tabs.Panel>
+                <Tabs.Panel value="spotify" pt="xs">
+                  <Stack>
+                    {loadingSpotify ? (
+                      <Stack align="center" gap="md">
+                        <Loader size="sm" />
+                        <Text c="dimmed" size="sm">Checking Spotify connection...</Text>
+                      </Stack>
+                    ) : !isSpotifyAuthenticated ? (
+                      <Stack align="center" gap="md">
+                        <Text c="dimmed" size="sm">Connect your Spotify account to import albums from your playlists</Text>
+                        <Button
+                          leftSection={<IconBrandSpotify size={20} />}
+                          onClick={handleSpotifyAuth}
+                          loading={isLoadingSpotifyAuth}
+                        >
+                          Connect Spotify
+                        </Button>
+                      </Stack>
+                    ) : (
+                      <>
+                        <Box mb="md">
+                          <Text size="sm" mb={5}>Paste a Spotify album/track URL:</Text>
+                          <Group>
+                            <TextInput
+                              placeholder="https://open.spotify.com/album/..."
+                              value={spotifyUrl}
+                              onChange={(e) => setSpotifyUrl(e.target.value)}
+                              style={{ flex: 1 }}
+                              disabled={isLoadingAlbumLookup}
+                            />
+                            <Button
+                              onClick={handleSpotifyUrlLookup}
+                              loading={isLoadingAlbumLookup}
+                              disabled={!spotifyUrl}
+                            >
+                              Lookup
+                            </Button>
+                          </Group>
+                        </Box>
+                        <Divider my="md" />
 
-              <Tabs.Panel value="search" pt="xs">
-                <Stack>
-                  <TextInput
-                    label="Artist"
-                    placeholder="Enter artist name"
-                    value={artist}
-                    onChange={(e) => setArtist(e.target.value)}
-                    disabled={loading}
-                  />
-                  <TextInput
-                    label="Album"
-                    placeholder="Enter album name"
-                    value={album}
-                    onChange={(e) => setAlbum(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleArtistAlbumLookup()}
-                    disabled={loading}
-                  />
-                  <Group>
-                    <Button 
-                      onClick={handleArtistAlbumLookup}
-                      loading={loading}
-                      disabled={!artist.trim() || !album.trim()}
-                    >
-                      Get Record Info
-                    </Button>
-                    <Button
-                      variant="light"
-                      onClick={handleAddBasicInfo}
-                      disabled={!artist.trim() || !album.trim() || loading}
-                    >
-                      Add Info Manually
-                    </Button>
-                    <Button
-                      onClick={handleManualSubmit}
-                      loading={loading}
-                      disabled={!artist.trim() || !album.trim()}
-                    >
-                      Add to Collection
-                    </Button>
-                  </Group>
-                </Stack>
-              </Tabs.Panel>
+                        <Title order={4} mb="md">Browse Playlists</Title>
+                        <Select
+                          label="Select Playlist"
+                          placeholder="Choose a playlist to view albums"
+                          data={spotifyPlaylists.map(playlist => ({
+                            value: playlist.id,
+                            label: `${playlist.name} (${playlist.tracks} tracks)`
+                          }))}
+                          value={selectedPlaylist}
+                          onChange={(value) => value && handlePlaylistSelect(value)}
+                          searchable
+                          clearable
+                        />
 
-              <Tabs.Panel value="spotify" pt="xs">
-                <Stack>
-                  {loadingSpotify ? (
-                    <Stack align="center" gap="md">
-                      <Loader size="sm" />
-                      <Text c="dimmed" size="sm">Checking Spotify connection...</Text>
-                    </Stack>
-                  ) : !isSpotifyAuthenticated ? (
-                    <Stack align="center" gap="md">
-                      <Text c="dimmed" size="sm">Connect your Spotify account to import albums from your playlists</Text>
-                      <Button
-                        leftSection={<IconBrandSpotify size={20} />}
-                        onClick={handleSpotifyAuth}
-                        loading={isLoadingSpotifyAuth}
-                      >
-                        Connect Spotify
-                      </Button>
-                    </Stack>
-                  ) : (
-                    <>
-                      <Box mb="md">
-                        <Text size="sm" mb={5}>Paste a Spotify album/track URL:</Text>
-                        <Group>
-                          <TextInput
-                            placeholder="https://open.spotify.com/album/..."
-                            value={spotifyUrl}
-                            onChange={(e) => setSpotifyUrl(e.target.value)}
-                            style={{ flex: 1 }}
-                            disabled={isLoadingAlbumLookup}
-                          />
-                          <Button
-                            onClick={handleSpotifyUrlLookup}
-                            loading={isLoadingAlbumLookup}
-                            disabled={!spotifyUrl}
-                          >
-                            Lookup
-                          </Button>
-                        </Group>
-                      </Box>
-                      <Divider my="md" />
-
-                      <Title order={4} mb="md">Browse Playlists</Title>
-                      <Select
-                        label="Select Playlist"
-                        placeholder="Choose a playlist to view albums"
-                        data={spotifyPlaylists.map(playlist => ({
-                          value: playlist.id,
-                          label: `${playlist.name} (${playlist.tracks} tracks)`
-                        }))}
-                        value={selectedPlaylist}
-                        onChange={(value) => value && handlePlaylistSelect(value)}
-                        searchable
-                        clearable
-                      />
-
-                      {playlistAlbums.length > 0 && (
-                        <Stack mt="md">
-                          <Text size="sm" fw={500}>Albums in Playlist</Text>
-                          <ScrollArea h={300}>
-                            {playlistAlbums.map(album => (
-                              <Paper
-                                key={album.id}
-                                withBorder
-                                p="xs"
-                                mb="xs"
-                              >
-                                <Group justify="space-between">
-                                  <Box>
-                                    <Text size="sm" fw={500}>{album.name}</Text>
-                                    <Text size="xs" c="dimmed">{album.artist}</Text>
-                                    <Text size="xs" c="dimmed">
-                                      Released: {new Date(album.release_date).getFullYear()}
-                                    </Text>
-                                  </Box>
-                                  <Button
-                                    size="xs"
-                                    variant="light"
-                                    onClick={() => handleAddSpotifyAlbum(album)}
-                                    loading={loading}
-                                  >
-                                    Add
-                                  </Button>
-                                </Group>
-                              </Paper>
-                            ))}
-                          </ScrollArea>
-                        </Stack>
-                      )}
-
-                      <Divider my="xl" label="Or Subscribe to a Playlist" labelPosition="center" />
-
-                      <Title order={4} mb="md">Playlist Subscription</Title>
-                      <Text size="sm" c="dimmed" mb="md">
-                        Subscribe to a playlist to automatically import new albums when they're added.
-                      </Text>
-
-                      {loadingSpotify ? (
-                        <Stack align="center" gap="md">
-                          <Loader size="sm" />
-                          <Text c="dimmed" size="sm">Loading playlists...</Text>
-                        </Stack>
-                      ) : (
-                        <>
-                          {subscribedPlaylist ? (
-                            <Paper withBorder p="md" mb="md">
-                              <Stack>
-                                <Group justify="space-between">
-                                  <div>
-                                    <Text size="sm" fw={500}>Currently Subscribed</Text>
-                                    <Text size="sm">{subscribedPlaylist.playlist_name}</Text>
-                                    <Text size="xs" c="dimmed">
-                                      Last checked: {new Date(subscribedPlaylist.last_checked_at).toLocaleString()}
-                                    </Text>
-                                  </div>
-                                  <Stack gap="xs">
+                        {playlistAlbums.length > 0 && (
+                          <Stack mt="md">
+                            <Text size="sm" fw={500}>Albums in Playlist</Text>
+                            <ScrollArea h={300}>
+                              {playlistAlbums.map(album => (
+                                <Paper
+                                  key={album.id}
+                                  withBorder
+                                  p="xs"
+                                  mb="xs"
+                                >
+                                  <Group justify="space-between">
+                                    <Box>
+                                      <Text size="sm" fw={500}>{album.name}</Text>
+                                      <Text size="xs" c="dimmed">{album.artist}</Text>
+                                      <Text size="xs" c="dimmed">
+                                        Released: {new Date(album.release_date).getFullYear()}
+                                      </Text>
+                                    </Box>
                                     <Button
-                                      variant="light"
                                       size="xs"
-                                      onClick={handleSyncPlaylists}
+                                      variant="light"
+                                      onClick={() => handleAddSpotifyAlbum(album)}
                                       loading={loading}
                                     >
-                                      Sync Now
+                                      Add
                                     </Button>
-                                    <Button
-                                      variant="light"
-                                      color="red"
-                                      size="xs"
-                                      onClick={handleUnsubscribe}
-                                      loading={isSubscribing}
-                                    >
-                                      Unsubscribe
-                                    </Button>
-                                  </Stack>
-                                </Group>
+                                  </Group>
+                                </Paper>
+                              ))}
+                            </ScrollArea>
+                          </Stack>
+                        )}
 
-                                {/* Show recently added albums */}
-                                {recentlyAddedAlbums.length > 0 && (
-                                  <Box mt="md">
-                                    <Divider 
-                                      label={`Added ${recentlyAddedAlbums.length} album${recentlyAddedAlbums.length === 1 ? '' : 's'}`} 
-                                      labelPosition="center" 
-                                    />
-                                    <ScrollArea h={150} mt="xs">
-                                      <Group gap="xs" wrap="wrap">
-                                        {recentlyAddedAlbums.map((album, index) => (
-                                          <Paper 
-                                            key={index} 
-                                            withBorder 
-                                            p="xs" 
-                                            style={{ 
-                                              flex: '1 1 calc(50% - 8px)',
-                                              minWidth: 'calc(50% - 8px)',
-                                              maxWidth: 'calc(50% - 8px)'
-                                            }}
-                                          >
-                                            <Stack gap={2}>
-                                              <Text size="xs" fw={500} lineClamp={1}>{album.artist}</Text>
-                                              <Text size="xs" c="dimmed" lineClamp={1}>{album.album}</Text>
-                                            </Stack>
-                                          </Paper>
-                                        ))}
-                                      </Group>
-                                    </ScrollArea>
-                                  </Box>
-                                )}
-                              </Stack>
-                            </Paper>
-                          ) : (
-                            <Select
-                              label="Select Playlist to Subscribe"
-                              placeholder="Choose a playlist"
-                              data={spotifyPlaylists.map(playlist => ({
-                                value: playlist.id,
-                                label: `${playlist.name} (${playlist.tracks} tracks)`
-                              }))}
-                              value={selectedPlaylist}
-                              onChange={(value) => value && handleSubscribe(value)}
-                              searchable
-                              clearable
-                              disabled={isSubscribing}
-                            />
-                          )}
-                          <Text size="xs" c="dimmed" mt={5}>
-                            {subscribedPlaylist 
-                              ? 'New albums added to this playlist will be automatically imported into your collection.'
-                              : 'Select a playlist to automatically import new albums when they are added.'}
-                          </Text>
-                        </>
-                      )}
-                    </>
-                  )}
-                </Stack>
-              </Tabs.Panel>
-            </Tabs>
+                        <Divider my="xl" label="Or Subscribe to a Playlist" labelPosition="center" />
 
-            {loading && (
-              <Group justify="center">
-                <Button 
-                  variant="light" 
-                  color="red" 
-                  onClick={handleCancel}
-                  leftSection={<IconX size={16} />}
-                >
-                  Cancel Search
-                </Button>
-              </Group>
-            )}
+                        <Title order={4} mb="md">Playlist Subscription</Title>
+                        <Text size="sm" c="dimmed" mb="md">
+                          Subscribe to a playlist to automatically import new albums when they're added.
+                        </Text>
 
-            {error && (
-              <Alert color="red" title="Error" variant="light">
-                {error}
-              </Alert>
-            )}
+                        {loadingSpotify ? (
+                          <Stack align="center" gap="md">
+                            <Loader size="sm" />
+                            <Text c="dimmed" size="sm">Loading playlists...</Text>
+                          </Stack>
+                        ) : (
+                          <>
+                            {subscribedPlaylist ? (
+                              <Paper withBorder p="md" mb="md">
+                                <Stack>
+                                  <Group justify="space-between">
+                                    <div>
+                                      <Text size="sm" fw={500}>Currently Subscribed</Text>
+                                      <Text size="sm">{subscribedPlaylist.playlist_name}</Text>
+                                      <Text size="xs" c="dimmed">
+                                        Last checked: {new Date(subscribedPlaylist.last_checked_at).toLocaleString()}
+                                      </Text>
+                                    </div>
+                                    <Stack gap="xs">
+                                      <Button
+                                        variant="light"
+                                        size="xs"
+                                        onClick={handleSyncPlaylists}
+                                        loading={loading}
+                                      >
+                                        Sync Now
+                                      </Button>
+                                      <Button
+                                        variant="light"
+                                        color="red"
+                                        size="xs"
+                                        onClick={handleUnsubscribe}
+                                        loading={isSubscribing}
+                                      >
+                                        Unsubscribe
+                                      </Button>
+                                    </Stack>
+                                  </Group>
 
-            {success && (
-              <Alert color="green" title="Success" variant="light">
-                {success}
-              </Alert>
-            )}
+                                  {/* Show recently added albums */}
+                                  {recentlyAddedAlbums.length > 0 && (
+                                    <Box mt="md">
+                                      <Divider 
+                                        label={`Added ${recentlyAddedAlbums.length} album${recentlyAddedAlbums.length === 1 ? '' : 's'}`} 
+                                        labelPosition="center" 
+                                      />
+                                      <ScrollArea h={150} mt="xs">
+                                        <Group gap="xs" wrap="wrap">
+                                          {recentlyAddedAlbums.map((album, index) => (
+                                            <Paper 
+                                              key={index} 
+                                              withBorder 
+                                              p="xs" 
+                                              style={{ 
+                                                flex: '1 1 calc(50% - 8px)',
+                                                minWidth: 'calc(50% - 8px)',
+                                                maxWidth: 'calc(50% - 8px)'
+                                              }}
+                                            >
+                                              <Stack gap={2}>
+                                                <Text size="xs" fw={500} lineClamp={1}>{album.artist}</Text>
+                                                <Text size="xs" c="dimmed" lineClamp={1}>{album.album}</Text>
+                                              </Stack>
+                                            </Paper>
+                                          ))}
+                                        </Group>
+                                      </ScrollArea>
+                                    </Box>
+                                  )}
+                                </Stack>
+                              </Paper>
+                            ) : (
+                              <Select
+                                label="Select Playlist to Subscribe"
+                                placeholder="Choose a playlist"
+                                data={spotifyPlaylists.map(playlist => ({
+                                  value: playlist.id,
+                                  label: `${playlist.name} (${playlist.tracks} tracks)`
+                                }))}
+                                value={selectedPlaylist}
+                                onChange={(value) => value && handleSubscribe(value)}
+                                searchable
+                                clearable
+                                disabled={isSubscribing}
+                              />
+                            )}
+                            <Text size="xs" c="dimmed" mt={5}>
+                              {subscribedPlaylist 
+                                ? 'New albums added to this playlist will be automatically imported into your collection.'
+                                : 'Select a playlist to automatically import new albums when they are added.'}
+                            </Text>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Stack>
+                </Tabs.Panel>
+              </Tabs>
 
-            {showManualForm && (
-              <Paper withBorder p="md" mt="md">
-                <Stack>
-                  <Title order={4}>Additional Information</Title>
-                  <Text c="dimmed" size="sm" mb="md">Optional</Text>
-                  <TextInput
-                    label="Year"
-                    type="number"
-                    value={manualRecord.year || ''}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, year: parseInt(e.target.value) || undefined }))}
-                    disabled={loading}
-                  />
-                  <TextInput
-                    label="Label"
-                    value={manualRecord.label || ''}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, label: e.target.value }))}
-                    disabled={loading}
-                  />
-                  <TextInput
-                    label="Genres"
-                    placeholder="Rock, Jazz, Classical..."
-                    description="Separate multiple genres with commas"
-                    value={manualRecord.genresText}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, genresText: e.target.value }))}
-                    disabled={loading}
-                  />
-                  <TextInput
-                    label="Styles"
-                    placeholder="Hard Rock, Fusion, Baroque..."
-                    description="Separate multiple styles with commas"
-                    value={manualRecord.stylesText}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, stylesText: e.target.value }))}
-                    disabled={loading}
-                  />
-                  <TextInput
-                    label="Musicians"
-                    placeholder="John Coltrane (Saxophone), Miles Davis (Trumpet)..."
-                    description="Separate multiple musicians with commas"
-                    value={manualRecord.musiciansText}
-                    onChange={(e) => setManualRecord(prev => ({ ...prev, musiciansText: e.target.value }))}
-                    disabled={loading}
-                  />
-                  <Group>
-                    <Button
-                      variant="light"
-                      onClick={() => {
-                        setShowManualForm(false);
-                        setManualRecord({
-                          artist: '',
-                          album: '',
-                          year: undefined,
-                          label: '',
-                          genres: [],
-                          styles: [],
-                          musicians: [],
-                          genresText: '',
-                          stylesText: '',
-                          musiciansText: ''
-                        });
-                      }}
+              {loading && (
+                <Group justify="center">
+                  <Button 
+                    variant="light" 
+                    color="red" 
+                    onClick={handleCancel}
+                    leftSection={<IconX size={16} />}
+                  >
+                    Cancel Search
+                  </Button>
+                </Group>
+              )}
+
+              {error && (
+                <Alert color="red" title="Error" variant="light">
+                  {error}
+                </Alert>
+              )}
+
+              {success && (
+                <Alert color="green" title="Success" variant="light">
+                  {success}
+                </Alert>
+              )}
+
+              {showManualForm && (
+                <Paper withBorder p="md" mt="md">
+                  <Stack>
+                    <Title order={4}>Additional Information</Title>
+                    <Text c="dimmed" size="sm" mb="md">Optional</Text>
+                    <TextInput
+                      label="Year"
+                      type="number"
+                      value={manualRecord.year || ''}
+                      onChange={(e) => setManualRecord(prev => ({ ...prev, year: parseInt(e.target.value) || undefined }))}
                       disabled={loading}
-                    >
-                      Cancel
-                    </Button>
-                  </Group>
-                </Stack>
-              </Paper>
-            )}
-
-            {record && (
-              <Paper withBorder p="md">
-                <Stack>
-                  <div>
-                    <Text fw={500} size="lg">{record.artist} - {record.album}</Text>
-                    {record.genres && <Text size="sm">Genres: {record.genres.join(', ')}</Text>}
-                    {record.styles && <Text size="sm">Styles: {record.styles.join(', ')}</Text>}
-                    {record.musicians && <Text size="sm">Musicians: {record.musicians.join(', ')}</Text>}
-                    {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
-                    {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
-                    {record.label && <Text size="sm">Label: {record.label}</Text>}
-                    <Group gap="xs" mt="xs">
-                      {record.master_url && (
-                        <Button 
-                          component="a" 
-                          href={record.master_url} 
-                          target="_blank" 
-                          variant="light" 
-                          size="xs"
-                        >
-                          View Master
-                        </Button>
-                      )}
-                      {record.current_release_url && (
-                        <Button 
-                          component="a" 
-                          href={record.current_release_url} 
-                          target="_blank" 
-                          variant="light" 
-                          size="xs"
-                        >
-                          View Release
-                        </Button>
-                      )}
+                    />
+                    <TextInput
+                      label="Label"
+                      value={manualRecord.label || ''}
+                      onChange={(e) => setManualRecord(prev => ({ ...prev, label: e.target.value }))}
+                      disabled={loading}
+                    />
+                    <TextInput
+                      label="Genres"
+                      placeholder="Rock, Jazz, Classical..."
+                      description="Separate multiple genres with commas"
+                      value={manualRecord.genresText}
+                      onChange={(e) => setManualRecord(prev => ({ ...prev, genresText: e.target.value }))}
+                      disabled={loading}
+                    />
+                    <TextInput
+                      label="Styles"
+                      placeholder="Hard Rock, Fusion, Baroque..."
+                      description="Separate multiple styles with commas"
+                      value={manualRecord.stylesText}
+                      onChange={(e) => setManualRecord(prev => ({ ...prev, stylesText: e.target.value }))}
+                      disabled={loading}
+                    />
+                    <TextInput
+                      label="Musicians"
+                      placeholder="John Coltrane (Saxophone), Miles Davis (Trumpet)..."
+                      description="Separate multiple musicians with commas"
+                      value={manualRecord.musiciansText}
+                      onChange={(e) => setManualRecord(prev => ({ ...prev, musiciansText: e.target.value }))}
+                      disabled={loading}
+                    />
+                    <Group>
+                      <Button
+                        variant="light"
+                        onClick={() => {
+                          setShowManualForm(false);
+                          setManualRecord({
+                            artist: '',
+                            album: '',
+                            year: undefined,
+                            label: '',
+                            genres: [],
+                            styles: [],
+                            musicians: [],
+                            genresText: '',
+                            stylesText: '',
+                            musiciansText: ''
+                          });
+                        }}
+                        disabled={loading}
+                      >
+                        Cancel
+                      </Button>
                     </Group>
-                  </div>
+                  </Stack>
+                </Paper>
+              )}
 
-                  <Group>
-                    <Button 
-                      onClick={handleAddToCollection} 
-                      loading={loading}
-                    >
-                      Add to Collection
-                    </Button>
-                    <Button 
-                      variant="light" 
-                      onClick={handleClear}
-                      disabled={loading}
-                    >
-                      {isScanning ? 'New Scan' : 'Clear'}
-                    </Button>
-                  </Group>
-                </Stack>
-              </Paper>
-            )}
-          </Stack>
-        </Paper>
-      </Stack>
-    </Modal>
+              {record && (
+                <Paper withBorder p="md">
+                  <Stack>
+                    <div>
+                      <Text fw={500} size="lg">{record.artist} - {record.album}</Text>
+                      {record.genres && <Text size="sm">Genres: {record.genres.join(', ')}</Text>}
+                      {record.styles && <Text size="sm">Styles: {record.styles.join(', ')}</Text>}
+                      {record.musicians && <Text size="sm">Musicians: {record.musicians.join(', ')}</Text>}
+                      {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
+                      {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
+                      {record.label && <Text size="sm">Label: {record.label}</Text>}
+                      <Group gap="xs" mt="xs">
+                        {record.master_url && (
+                          <Button 
+                            component="a" 
+                            href={record.master_url} 
+                            target="_blank" 
+                            variant="light" 
+                            size="xs"
+                          >
+                            View Master
+                          </Button>
+                        )}
+                        {record.current_release_url && (
+                          <Button 
+                            component="a" 
+                            href={record.current_release_url} 
+                            target="_blank" 
+                            variant="light" 
+                            size="xs"
+                          >
+                            View Release
+                          </Button>
+                        )}
+                      </Group>
+                    </div>
+
+                    <Group>
+                      <Button 
+                        onClick={handleAddToCollection} 
+                        loading={loading}
+                      >
+                        Add to Collection
+                      </Button>
+                      <Button 
+                        variant="light" 
+                        onClick={handleClear}
+                        disabled={loading}
+                      >
+                        {isScanning ? 'New Scan' : 'Clear'}
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
+          </Paper>
+        </Stack>
+      </Modal>
+
+      {/* Add Results Modal */}
+      <Modal
+        opened={showModal}
+        onClose={() => setShowModal(false)}
+        title={modalContent?.title || ''}
+        size="md"
+      >
+        {modalContent?.content}
+      </Modal>
+    </>
   );
 } 
