@@ -1011,7 +1011,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                             label: `${playlist.name} (${playlist.tracks} tracks)`
                           }))}
                           value={selectedPlaylist}
-                          onChange={(value) => value && handlePlaylistSelect(value)}
+                          onChange={handlePlaylistSelect}
                           searchable
                           clearable
                         />
