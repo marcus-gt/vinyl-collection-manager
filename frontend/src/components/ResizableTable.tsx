@@ -13,7 +13,7 @@ import {
   Cell,
   OnChangeFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
 
 interface ResizableTableProps<T> {
@@ -23,6 +23,10 @@ interface ResizableTableProps<T> {
   onSortChange?: OnChangeFn<SortingState>;
   tableId: string;  // Unique ID for storing column widths
   loading?: boolean;  // Add loading prop
+  totalRecords: number;
+  recordsPerPage: number;
+  page: number;
+  onPageChange: (page: number) => void;
 }
 
 export function ResizableTable<T>({ 
@@ -31,7 +35,11 @@ export function ResizableTable<T>({
   sortState, 
   onSortChange,
   tableId,
-  loading = false  // Add loading prop with default value
+  loading = false,
+  totalRecords,
+  recordsPerPage,
+  page,
+  onPageChange
 }: ResizableTableProps<T>) {
   // Store column widths in localStorage
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -66,7 +74,10 @@ export function ResizableTable<T>({
       overflow: 'auto',
       width: '100%',
       minWidth: '100%',
-      position: 'relative'
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1rem'
     }}>
       <LoadingOverlay visible={loading} />
       <Table
@@ -248,6 +259,15 @@ export function ResizableTable<T>({
           ))}
         </Table.Tbody>
       </Table>
+      {totalRecords > recordsPerPage && (
+        <Group justify="center" mt="md">
+          <Pagination
+            value={page}
+            onChange={onPageChange}
+            total={Math.ceil(totalRecords / recordsPerPage)}
+          />
+        </Group>
+      )}
     </Box>
   );
 } 

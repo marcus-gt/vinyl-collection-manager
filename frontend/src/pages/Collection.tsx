@@ -1096,6 +1096,10 @@ function Collection() {
                 onSortChange={setSortState}
                 tableId="vinyl-collection"
                 loading={loading}
+                totalRecords={filteredRecords.length}
+                recordsPerPage={PAGE_SIZE}
+                page={page}
+                onPageChange={setPage}
               />
             </Box>
             
