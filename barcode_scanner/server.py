@@ -35,7 +35,11 @@ from .spotify import (
     get_playlist_tracks,
     require_spotify_auth,
     refresh_spotify_token,
-    get_album_from_url
+    get_album_from_url,
+    subscribe_to_playlist,
+    unsubscribe_from_playlist,
+    get_subscribed_playlist,
+    sync_subscribed_playlists
 )
 
 # Set up static file serving
@@ -1084,6 +1088,79 @@ def spotify_disconnect():
         'success': True,
         'message': 'Spotify disconnected successfully'
     })
+
+@app.route('/api/spotify/playlist/subscribe', methods=['POST'])
+@require_auth
+def subscribe_playlist():
+    """Subscribe to a Spotify playlist for automatic album imports"""
+    try:
+        data = request.get_json()
+        if not data or 'playlist_id' not in data or 'playlist_name' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing playlist_id or playlist_name'
+            }), 400
+            
+        result = subscribe_to_playlist(
+            data['playlist_id'],
+            data['playlist_name']
+        )
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error subscribing to playlist: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to subscribe to playlist'
+        }), 500
+
+@app.route('/api/spotify/playlist/unsubscribe', methods=['POST'])
+@require_auth
+def unsubscribe_playlist():
+    """Unsubscribe from the current Spotify playlist"""
+    try:
+        result = unsubscribe_from_playlist()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error unsubscribing from playlist: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to unsubscribe from playlist'
+        }), 500
+
+@app.route('/api/spotify/playlist/subscription', methods=['GET'])
+@require_auth
+def get_playlist_subscription():
+    """Get the currently subscribed playlist"""
+    try:
+        result = get_subscribed_playlist()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error getting playlist subscription: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to get playlist subscription'
+        }), 500
+
+@app.route('/api/spotify/playlist/sync', methods=['POST'])
+def sync_playlists():
+    """Manually trigger playlist sync (protected by secret key)"""
+    try:
+        # Verify secret key to prevent unauthorized access
+        secret = request.headers.get('X-Sync-Key')
+        if not secret or secret != os.getenv('SYNC_SECRET_KEY'):
+            return jsonify({
+                'success': False,
+                'error': 'Unauthorized'
+            }), 401
+            
+        result = sync_subscribed_playlists()
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error syncing playlists: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to sync playlists'
+        }), 500
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'

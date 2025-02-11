@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from flask import session, redirect, request, jsonify
 from functools import wraps
 from .db import get_supabase_client
+from datetime import datetime
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -567,3 +568,179 @@ def get_album_from_url(url):
         'success': True,
         'data': album_info
     }
+
+def subscribe_to_playlist(playlist_id: str, playlist_name: str):
+    """Subscribe to a Spotify playlist for automatic album imports"""
+    print("\n=== Subscribing to Spotify Playlist ===")
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return {
+            'success': False,
+            'error': 'Not authenticated'
+        }
+    
+    try:
+        client = get_supabase_client()
+        
+        # Update or insert subscription
+        response = client.table('spotify_playlist_subscriptions').upsert({
+            'user_id': user_id,
+            'playlist_id': playlist_id,
+            'playlist_name': playlist_name,
+            'last_checked_at': datetime.utcnow().isoformat()
+        }).execute()
+        
+        return {
+            'success': True,
+            'message': 'Successfully subscribed to playlist'
+        }
+    except Exception as e:
+        print(f"Error subscribing to playlist: {str(e)}")
+        return {
+            'success': False,
+            'error': 'Failed to subscribe to playlist'
+        }
+
+def unsubscribe_from_playlist():
+    """Unsubscribe from the current Spotify playlist"""
+    print("\n=== Unsubscribing from Spotify Playlist ===")
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return {
+            'success': False,
+            'error': 'Not authenticated'
+        }
+    
+    try:
+        client = get_supabase_client()
+        
+        # Delete subscription
+        response = client.table('spotify_playlist_subscriptions').delete().eq('user_id', user_id).execute()
+        
+        return {
+            'success': True,
+            'message': 'Successfully unsubscribed from playlist'
+        }
+    except Exception as e:
+        print(f"Error unsubscribing from playlist: {str(e)}")
+        return {
+            'success': False,
+            'error': 'Failed to unsubscribe from playlist'
+        }
+
+def get_subscribed_playlist():
+    """Get the currently subscribed playlist for the user"""
+    print("\n=== Getting Subscribed Playlist ===")
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return {
+            'success': False,
+            'error': 'Not authenticated'
+        }
+    
+    try:
+        client = get_supabase_client()
+        
+        # Get subscription
+        response = client.table('spotify_playlist_subscriptions').select('*').eq('user_id', user_id).execute()
+        
+        if response.data and len(response.data) > 0:
+            return {
+                'success': True,
+                'data': response.data[0]
+            }
+        else:
+            return {
+                'success': True,
+                'data': None
+            }
+    except Exception as e:
+        print(f"Error getting subscribed playlist: {str(e)}")
+        return {
+            'success': False,
+            'error': 'Failed to get subscribed playlist'
+        }
+
+def sync_subscribed_playlists():
+    """Sync all subscribed playlists (to be called by cron job)"""
+    print("\n=== Syncing Subscribed Playlists ===")
+    
+    try:
+        client = get_supabase_client()
+        
+        # Get all subscriptions
+        subscriptions = client.table('spotify_playlist_subscriptions').select('*').execute()
+        
+        for sub in subscriptions.data:
+            try:
+                print(f"Processing subscription for user {sub['user_id']}")
+                
+                # Get user's Spotify tokens
+                tokens = get_spotify_tokens_from_db(sub['user_id'])
+                if not tokens:
+                    print(f"No Spotify tokens found for user {sub['user_id']}")
+                    continue
+                
+                # Set up session for this user
+                session['spotify_access_token'] = tokens['access_token']
+                session['spotify_refresh_token'] = tokens['refresh_token']
+                session['user_id'] = sub['user_id']
+                
+                # Get playlist tracks
+                tracks_response = get_playlist_tracks(sub['playlist_id'])
+                if not tracks_response['success']:
+                    print(f"Failed to get tracks for playlist {sub['playlist_id']}")
+                    continue
+                
+                # Get already processed albums
+                processed = client.table('spotify_processed_albums').select('album_id').eq(
+                    'user_id', sub['user_id']
+                ).eq('playlist_id', sub['playlist_id']).execute()
+                
+                processed_ids = set(item['album_id'] for item in processed.data)
+                
+                # Process new albums
+                for album in tracks_response['data']:
+                    if album['id'] not in processed_ids:
+                        print(f"Processing new album: {album['name']}")
+                        
+                        # Look up in Discogs
+                        lookup_response = lookup.byArtistAlbum(album['artist'], album['name'])
+                        if lookup_response['success'] and lookup_response['data']:
+                            # Add to collection
+                            add_response = records.add(lookup_response['data'])
+                            if add_response['success']:
+                                # Mark as processed
+                                client.table('spotify_processed_albums').insert({
+                                    'user_id': sub['user_id'],
+                                    'playlist_id': sub['playlist_id'],
+                                    'album_id': album['id']
+                                }).execute()
+                                print(f"Successfully added album: {album['name']}")
+                            else:
+                                print(f"Failed to add album: {album['name']}")
+                        else:
+                            print(f"Could not find album in Discogs: {album['name']}")
+                
+                # Update last checked timestamp
+                client.table('spotify_playlist_subscriptions').update({
+                    'last_checked_at': datetime.utcnow().isoformat()
+                }).eq('id', sub['id']).execute()
+                
+            except Exception as e:
+                print(f"Error processing subscription: {str(e)}")
+                continue
+        
+        return {
+            'success': True,
+            'message': 'Successfully synced subscribed playlists'
+        }
+    except Exception as e:
+        print(f"Error syncing subscribed playlists: {str(e)}")
+        return {
+            'success': False,
+            'error': 'Failed to sync subscribed playlists'
+        }

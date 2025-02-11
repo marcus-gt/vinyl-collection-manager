@@ -1,0 +1,7 @@
+{
+  "name": "sync-spotify-playlists",
+  "schedule": "0 */6 * * *",
+  "enabled": true,
+  "httpMethod": "POST",
+  "timeout": 300
+} 

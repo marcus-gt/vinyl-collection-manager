@@ -433,6 +433,52 @@ export const spotify = {
     }
   },
 
+  subscribeToPlaylist: async (playlistId: string, playlistName: string): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.post('/api/spotify/playlist/subscribe', {
+        playlist_id: playlistId,
+        playlist_name: playlistName
+      });
+      return response.data;
+    } catch (err) {
+      console.error('Failed to subscribe to playlist:', err);
+      return {
+        success: false,
+        error: 'Failed to subscribe to playlist'
+      };
+    }
+  },
+
+  unsubscribeFromPlaylist: async (): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.post('/api/spotify/playlist/unsubscribe');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to unsubscribe from playlist:', err);
+      return {
+        success: false,
+        error: 'Failed to unsubscribe from playlist'
+      };
+    }
+  },
+
+  getSubscribedPlaylist: async (): Promise<ApiResponse<{
+    playlist_id: string;
+    playlist_name: string;
+    last_checked_at: string;
+  }>> => {
+    try {
+      const response = await api.get('/api/spotify/playlist/subscription');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get subscribed playlist:', err);
+      return {
+        success: false,
+        error: 'Failed to get subscribed playlist'
+      };
+    }
+  },
+
   disconnectSpotify: async (): Promise<ApiResponse<void>> => {
     try {
       const response = await api.post('/api/spotify/disconnect');
