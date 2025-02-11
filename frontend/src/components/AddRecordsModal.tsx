@@ -526,10 +526,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await spotify.getSubscribedPlaylist();
       if (response.success && response.data) {
         setSubscribedPlaylist(response.data);
-        setSelectedPlaylist(response.data.playlist_id);
       } else {
         setSubscribedPlaylist(null);
-        setSelectedPlaylist(null);
       }
     } catch (err) {
       console.error('Failed to load subscribed playlist:', err);
