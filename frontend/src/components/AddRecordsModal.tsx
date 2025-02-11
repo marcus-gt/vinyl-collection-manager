@@ -1043,6 +1043,16 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                 </Paper>
                               ))}
                             </ScrollArea>
+                            {error && (
+                              <Alert color="red" title="Error" variant="light">
+                                {error}
+                              </Alert>
+                            )}
+                            {success && (
+                              <Alert color="green" title="Success" variant="light">
+                                {success}
+                              </Alert>
+                            )}
                           </Stack>
                         )}
 
