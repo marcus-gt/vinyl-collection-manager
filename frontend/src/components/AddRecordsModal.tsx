@@ -652,26 +652,44 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await spotify.syncPlaylists();
       if (response.success && response.data) {
-        if (response.data.total_added > 0) {
-          notifications.show({
-            title: 'Sync Complete',
-            message: `Added ${response.data.total_added} albums to your collection`,
-            color: 'green'
-          });
-          // Show modal with details
+        const { added_albums, failed_lookups, total_added } = response.data;
+        const total_failed = failed_lookups?.length || 0;
+
+        // Show notification
+        notifications.show({
+          title: 'Sync Complete',
+          message: total_added > 0 
+            ? `Added ${total_added} albums to your collection${total_failed > 0 ? ` (${total_failed} not found)` : ''}`
+            : 'No new albums to add',
+          color: total_added > 0 ? 'green' : 'blue'
+        });
+
+        // Show modal with details if there are any results
+        if (total_added > 0 || total_failed > 0) {
           setModalContent({
-            title: `Added ${response.data.total_added} albums`,
+            title: total_added > 0 
+              ? `Added ${total_added} albums${total_failed > 0 ? ` (${total_failed} not found)` : ''}`
+              : 'Sync Results',
             content: (
               <Stack>
-                {response.data.added_albums.map((album, index) => (
-                  <Text key={index} size="sm">
-                    {album.artist} - {album.album}
-                  </Text>
-                ))}
-                {response.data.failed_lookups && response.data.failed_lookups.length > 0 && (
+                {added_albums.length > 0 && (
                   <>
-                    <Divider my="sm" label="Not Found in Discogs" labelPosition="center" />
-                    {response.data.failed_lookups.map((failed, index) => (
+                    <Text fw={500}>Successfully Added:</Text>
+                    {added_albums.map((album, index) => (
+                      <Text key={index} size="sm">
+                        {album.artist} - {album.album}
+                      </Text>
+                    ))}
+                  </>
+                )}
+                
+                {failed_lookups && failed_lookups.length > 0 && (
+                  <>
+                    <Divider my="sm" label={`${failed_lookups.length} Albums Not Found`} labelPosition="center" />
+                    <Text c="dimmed" size="sm" mb="xs">
+                      The following albums couldn't be found in Discogs:
+                    </Text>
+                    {failed_lookups.map((failed, index) => (
                       <Text key={`failed-${index}`} size="sm" c="dimmed">
                         {failed.artist} - {failed.album}
                       </Text>
@@ -683,12 +701,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           });
           setShowModal(true);
           setRecordsChanged(true);
-        } else {
-          notifications.show({
-            title: 'Sync Complete',
-            message: 'No new albums to add',
-            color: 'blue'
-          });
         }
       } else {
         setError(response.error || 'Failed to sync playlists');
