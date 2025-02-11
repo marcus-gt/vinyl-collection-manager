@@ -431,5 +431,18 @@ export const spotify = {
         error: 'Failed to get album information'
       };
     }
+  },
+
+  disconnectSpotify: async (): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.post('/api/spotify/disconnect');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to disconnect Spotify:', err);
+      return {
+        success: false,
+        error: 'Failed to disconnect Spotify'
+      };
+    }
   }
 }; 

@@ -1065,6 +1065,26 @@ def spotify_album_from_url():
     result = get_album_from_url(url)
     return jsonify(result)
 
+@app.route('/api/spotify/disconnect', methods=['POST'])
+def spotify_disconnect():
+    """Disconnect Spotify integration by clearing tokens"""
+    print("\n=== Disconnecting Spotify ===")
+    print(f"Session before: {dict(session)}")
+    
+    # Clear Spotify-related session data
+    session.pop('spotify_access_token', None)
+    session.pop('spotify_refresh_token', None)
+    session.pop('spotify_token_type', None)
+    session.pop('spotify_auth_started', None)
+    session.modified = True
+    
+    print(f"Session after: {dict(session)}")
+    
+    return jsonify({
+        'success': True,
+        'message': 'Spotify disconnected successfully'
+    })
+
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
     port = int(os.environ.get('PORT', 10000))

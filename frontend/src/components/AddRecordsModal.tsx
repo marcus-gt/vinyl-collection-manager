@@ -549,6 +549,28 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  const handleSpotifyDisconnect = async () => {
+    setLoadingSpotify(true);
+    setSpotifyError(null);
+    try {
+      const response = await spotify.disconnectSpotify();
+      if (response.success) {
+        setIsSpotifyAuthenticated(false);
+        setSpotifyPlaylists([]);
+        setSelectedPlaylist(null);
+        setPlaylistAlbums([]);
+        setSpotifyUrl('');
+      } else {
+        setSpotifyError(response.error || 'Failed to disconnect from Spotify');
+      }
+    } catch (err) {
+      console.error('Failed to disconnect Spotify:', err);
+      setSpotifyError('Failed to disconnect from Spotify');
+    } finally {
+      setLoadingSpotify(false);
+    }
+  };
+
   // Update the useEffect to handle Spotify auth callback
   useEffect(() => {
     // Check for Spotify callback code
@@ -801,6 +823,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                     </Stack>
                   ) : (
                     <>
+                      <Group justify="space-between" mb="md">
+                        <Text size="sm" c="dimmed">Connected to Spotify</Text>
+                        <Button
+                          variant="light"
+                          color="red"
+                          size="xs"
+                          onClick={handleSpotifyDisconnect}
+                          loading={loadingSpotify}
+                        >
+                          Disconnect
+                        </Button>
+                      </Group>
                       <Box mb="md">
                         <Text size="sm" mb={5}>Paste a Spotify album/track URL:</Text>
                         <Group>
