@@ -600,8 +600,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handlePlaylistSelect = async (playlistId: string) => {
+  const handlePlaylistSelect = async (playlistId: string | null) => {
     setSelectedPlaylist(playlistId);
+    if (!playlistId) {
+      setPlaylistAlbums([]);
+      return;
+    }
     setLoadingSpotify(true);
     setError(null);
     try {
