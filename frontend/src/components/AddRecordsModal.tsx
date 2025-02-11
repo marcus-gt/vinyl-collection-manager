@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, ScrollArea, Divider } from '@mantine/core';
-import { IconX, IconBrandSpotify } from '@tabler/icons-react';
+import { IconTrash, IconEdit, IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
+import { notifications } from '@mantine/notifications';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -60,6 +61,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState('');
   const [isLoadingAlbumLookup, setIsLoadingAlbumLookup] = useState(false);
+  const [subscribedPlaylist, setSubscribedPlaylist] = useState<{
+    playlist_id: string;
+    playlist_name: string;
+    last_checked_at: string;
+  } | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -467,6 +474,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleSpotifyTabChange = (value: string | null) => {
     if (value === 'spotify') {
       checkSpotifyAuth();
+      loadSubscribedPlaylist();
     }
   };
 
@@ -591,6 +599,86 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       }
     }
   }, []);
+
+  // Add function to load subscribed playlist
+  const loadSubscribedPlaylist = async () => {
+    try {
+      const response = await spotify.getSubscribedPlaylist();
+      if (response.success && response.data) {
+        setSubscribedPlaylist(response.data);
+        setSelectedPlaylist(response.data.playlist_id);
+      } else {
+        setSubscribedPlaylist(null);
+        setSelectedPlaylist(null);
+      }
+    } catch (err) {
+      console.error('Failed to load subscribed playlist:', err);
+      setSubscribedPlaylist(null);
+    }
+  };
+
+  // Add subscription handling
+  const handleSubscribe = async (playlistId: string) => {
+    setIsSubscribing(true);
+    try {
+      const playlist = spotifyPlaylists.find(p => p.id === playlistId);
+      if (!playlist) return;
+
+      const response = await spotify.subscribeToPlaylist(playlist.id, playlist.name);
+      if (response.success) {
+        notifications.show({
+          title: 'Success',
+          message: `Subscribed to playlist: ${playlist.name}`,
+          color: 'green'
+        });
+        await loadSubscribedPlaylist();
+      } else {
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to subscribe to playlist',
+          color: 'red'
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to subscribe to playlist',
+        color: 'red'
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    setIsSubscribing(true);
+    try {
+      const response = await spotify.unsubscribeFromPlaylist();
+      if (response.success) {
+        notifications.show({
+          title: 'Success',
+          message: 'Unsubscribed from playlist',
+          color: 'green'
+        });
+        setSubscribedPlaylist(null);
+        setSelectedPlaylist(null);
+      } else {
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to unsubscribe from playlist',
+          color: 'red'
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to unsubscribe from playlist',
+        color: 'red'
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
 
   return (
     <Modal
@@ -856,51 +944,62 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       </Box>
                       <Divider my="md" />
 
-                      <Title order={4} mb="md">Add from Playlists</Title>
-                      <Select
-                        label="Select Playlist"
-                        placeholder="Choose a playlist"
-                        data={spotifyPlaylists.map(playlist => ({
-                          value: playlist.id,
-                          label: `${playlist.name} (${playlist.tracks} tracks)`
-                        }))}
-                        value={selectedPlaylist}
-                        onChange={(value) => value && handlePlaylistSelect(value)}
-                        searchable
-                        withAsterisk={false}
-                      />
-                      {playlistAlbums.length > 0 && (
-                        <Stack>
-                          <Text size="sm" fw={500}>Albums in Playlist</Text>
-                          <ScrollArea h={300}>
-                            {playlistAlbums.map(album => (
-                              <Paper
-                                key={album.id}
-                                withBorder
-                                p="xs"
-                                mb="xs"
-                              >
+                      <Title order={4} mb="md">Playlist Subscription</Title>
+                      <Text size="sm" c="dimmed" mb="md">
+                        Subscribe to a playlist to automatically import new albums when they're added.
+                      </Text>
+
+                      {loadingSpotify ? (
+                        <Stack align="center" gap="md">
+                          <Loader size="sm" />
+                          <Text c="dimmed" size="sm">Loading playlists...</Text>
+                        </Stack>
+                      ) : (
+                        <>
+                          {subscribedPlaylist ? (
+                            <Paper withBorder p="md" mb="md">
+                              <Stack>
                                 <Group justify="space-between">
-                                  <Box>
-                                    <Text size="sm" fw={500}>{album.name}</Text>
-                                    <Text size="xs" c="dimmed">{album.artist}</Text>
+                                  <div>
+                                    <Text size="sm" fw={500}>Currently Subscribed</Text>
+                                    <Text size="sm">{subscribedPlaylist.playlist_name}</Text>
                                     <Text size="xs" c="dimmed">
-                                      Released: {new Date(album.release_date).getFullYear()}
+                                      Last checked: {new Date(subscribedPlaylist.last_checked_at).toLocaleString()}
                                     </Text>
-                                  </Box>
+                                  </div>
                                   <Button
-                                    size="xs"
                                     variant="light"
-                                    onClick={() => handleAddSpotifyAlbum(album)}
-                                    loading={loading}
+                                    color="red"
+                                    size="xs"
+                                    onClick={handleUnsubscribe}
+                                    loading={isSubscribing}
                                   >
-                                    Add
+                                    Unsubscribe
                                   </Button>
                                 </Group>
-                              </Paper>
-                            ))}
-                          </ScrollArea>
-                        </Stack>
+                              </Stack>
+                            </Paper>
+                          ) : (
+                            <Select
+                              label="Select Playlist to Subscribe"
+                              placeholder="Choose a playlist"
+                              data={spotifyPlaylists.map(playlist => ({
+                                value: playlist.id,
+                                label: `${playlist.name} (${playlist.tracks} tracks)`
+                              }))}
+                              value={selectedPlaylist}
+                              onChange={(value) => value && handleSubscribe(value)}
+                              searchable
+                              clearable
+                              disabled={isSubscribing}
+                            />
+                          )}
+                          <Text size="xs" c="dimmed" mt={5}>
+                            {subscribedPlaylist 
+                              ? 'New albums added to this playlist will be automatically imported into your collection.'
+                              : 'Select a playlist to automatically import new albums when they are added.'}
+                          </Text>
+                        </>
                       )}
                     </>
                   )}
