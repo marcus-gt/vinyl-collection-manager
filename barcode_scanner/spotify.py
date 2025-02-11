@@ -5,6 +5,7 @@ import requests
 from urllib.parse import urlencode
 from flask import session, redirect, request, jsonify
 from functools import wraps
+from .db import get_supabase_client
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -28,15 +29,80 @@ if not all([CLIENT_ID, CLIENT_SECRET, REDIRECT_URI]):
     print(f"CLIENT_SECRET: {'Present' if CLIENT_SECRET else 'Missing'}")
     print(f"REDIRECT_URI: {REDIRECT_URI}")
 
+def get_spotify_tokens_from_db(user_id):
+    """Get Spotify tokens from the database"""
+    try:
+        client = get_supabase_client()
+        response = client.table('spotify_tokens').select('*').eq('user_id', user_id).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0]
+        return None
+    except Exception as e:
+        print(f"Error getting Spotify tokens from DB: {str(e)}")
+        return None
+
+def save_spotify_tokens_to_db(user_id, access_token, refresh_token):
+    """Save or update Spotify tokens in the database"""
+    try:
+        client = get_supabase_client()
+        
+        # Check if tokens already exist for this user
+        existing = client.table('spotify_tokens').select('*').eq('user_id', user_id).execute()
+        
+        if existing.data and len(existing.data) > 0:
+            # Update existing tokens
+            response = client.table('spotify_tokens').update({
+                'access_token': access_token,
+                'refresh_token': refresh_token
+            }).eq('user_id', user_id).execute()
+        else:
+            # Insert new tokens
+            response = client.table('spotify_tokens').insert({
+                'user_id': user_id,
+                'access_token': access_token,
+                'refresh_token': refresh_token
+            }).execute()
+            
+        return True
+    except Exception as e:
+        print(f"Error saving Spotify tokens to DB: {str(e)}")
+        return False
+
+def remove_spotify_tokens_from_db(user_id):
+    """Remove Spotify tokens from the database"""
+    try:
+        client = get_supabase_client()
+        response = client.table('spotify_tokens').delete().eq('user_id', user_id).execute()
+        return True
+    except Exception as e:
+        print(f"Error removing Spotify tokens from DB: {str(e)}")
+        return False
+
 def require_spotify_auth(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         print("\n=== Checking Spotify Auth ===")
-        print(f"Session data: {dict(session)}")
         
-        if 'spotify_access_token' not in session:
-            print("No Spotify access token in session")
+        # Get user_id from session
+        user_id = session.get('user_id')
+        if not user_id:
+            print("No user_id in session")
+            return jsonify({
+                'success': False,
+                'error': 'Not authenticated',
+                'needs_auth': True
+            }), 401
+            
+        # Try to get tokens from database first
+        db_tokens = get_spotify_tokens_from_db(user_id)
+        if db_tokens:
+            print("Found Spotify tokens in database")
+            session['spotify_access_token'] = db_tokens['access_token']
+            session['spotify_refresh_token'] = db_tokens['refresh_token']
             session.modified = True
+            
+        if 'spotify_access_token' not in session:
+            print("No Spotify access token available")
             return jsonify({
                 'success': False,
                 'error': 'Not authenticated with Spotify',
@@ -59,6 +125,7 @@ def require_spotify_auth(f):
                     session.pop('spotify_access_token', None)
                     session.pop('spotify_refresh_token', None)
                     session.modified = True
+                    remove_spotify_tokens_from_db(user_id)
                     return jsonify({
                         'success': False,
                         'error': 'Not authenticated with Spotify',
@@ -68,7 +135,6 @@ def require_spotify_auth(f):
             
         except Exception as e:
             print(f"Error checking token: {str(e)}")
-            session.modified = True
             return jsonify({
                 'success': False,
                 'error': 'Failed to validate Spotify session',
@@ -158,7 +224,6 @@ def handle_spotify_callback(code):
     """Handle the Spotify OAuth callback"""
     print("\n=== Handling Spotify Callback ===")
     print(f"Code received: {code[:10]}...")
-    print(f"Using redirect URI: {REDIRECT_URI}")
     
     if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
         print("Error: Missing Spotify configuration")
@@ -188,14 +253,21 @@ def handle_spotify_callback(code):
         
         print("Got token response from Spotify")
         
-        # Store token info in session with explicit names
+        # Store tokens in session
         session['spotify_access_token'] = token_info['access_token']
         session['spotify_refresh_token'] = token_info.get('refresh_token')
-        session['spotify_token_type'] = token_info.get('token_type', 'Bearer')
         session.modified = True
         
-        print("Stored Spotify tokens in session")
-        print(f"Session data: {dict(session)}")
+        # Store tokens in database
+        user_id = session.get('user_id')
+        if user_id:
+            save_spotify_tokens_to_db(
+                user_id,
+                token_info['access_token'],
+                token_info.get('refresh_token')
+            )
+        
+        print("Stored Spotify tokens in session and database")
         
         return {'success': True}
     except requests.exceptions.RequestException as e:
@@ -207,10 +279,21 @@ def handle_spotify_callback(code):
 def refresh_spotify_token():
     """Refresh the Spotify access token"""
     print("\n=== Refreshing Spotify Token ===")
-    print(f"Session before refresh: {dict(session)}")
     
-    if 'spotify_refresh_token' not in session:
-        print("No Spotify refresh token in session")
+    user_id = session.get('user_id')
+    if not user_id:
+        print("No user_id in session")
+        return {'success': False, 'error': 'Not authenticated'}
+        
+    # Try to get refresh token from database first
+    db_tokens = get_spotify_tokens_from_db(user_id)
+    if db_tokens and db_tokens['refresh_token']:
+        refresh_token = db_tokens['refresh_token']
+    else:
+        refresh_token = session.get('spotify_refresh_token')
+        
+    if not refresh_token:
+        print("No refresh token available")
         return {'success': False, 'error': 'No refresh token available'}
 
     auth_header = base64.b64encode(
@@ -224,7 +307,7 @@ def refresh_spotify_token():
 
     data = {
         'grant_type': 'refresh_token',
-        'refresh_token': session['spotify_refresh_token']
+        'refresh_token': refresh_token
     }
 
     try:
@@ -234,13 +317,21 @@ def refresh_spotify_token():
         
         print("Got new token from Spotify")
         
-        # Update token in session with explicit names
+        # Update tokens in session
         session['spotify_access_token'] = token_info['access_token']
         if 'refresh_token' in token_info:
             session['spotify_refresh_token'] = token_info['refresh_token']
+            refresh_token = token_info['refresh_token']
         session.modified = True
         
-        print(f"Session after refresh: {dict(session)}")
+        # Update tokens in database
+        save_spotify_tokens_to_db(
+            user_id,
+            token_info['access_token'],
+            refresh_token
+        )
+        
+        print("Updated tokens in session and database")
         
         return {'success': True}
     except requests.exceptions.RequestException as e:
@@ -249,6 +340,7 @@ def refresh_spotify_token():
         session.pop('spotify_access_token', None)
         session.pop('spotify_refresh_token', None)
         session.modified = True
+        remove_spotify_tokens_from_db(user_id)
         return {'success': False, 'error': 'Failed to refresh token'}
 
 def get_spotify_playlists():
@@ -416,95 +508,62 @@ def get_album_from_url(url):
     print("\n=== Getting Album from Spotify URL ===")
     print(f"Session data: {dict(session)}")
     
-    if 'spotify_access_token' not in session:
-        print("No Spotify access token in session")
+    if 'spotify.com/track/' in url:
+        track_id = url.split('track/')[1].split('?')[0].split('/')[0]
+        endpoint = f"{SPOTIFY_API_BASE_URL}/tracks/{track_id}"
+    elif 'spotify.com/album/' in url:
+        album_id = url.split('album/')[1].split('?')[0].split('/')[0]
+        endpoint = f"{SPOTIFY_API_BASE_URL}/albums/{album_id}"
+    else:
         return {
             'success': False,
-            'needs_auth': True,
-            'error': 'Not authenticated with Spotify'
+            'error': 'Invalid Spotify URL. Must be a track or album URL.'
         }
 
-    try:
-        # Extract ID from URL
-        if 'spotify.com/track/' in url:
-            track_id = url.split('track/')[1].split('?')[0].split('/')[0]
-            endpoint = f"{SPOTIFY_API_BASE_URL}/tracks/{track_id}"
-        elif 'spotify.com/album/' in url:
-            album_id = url.split('album/')[1].split('?')[0].split('/')[0]
-            endpoint = f"{SPOTIFY_API_BASE_URL}/albums/{album_id}"
-        else:
-            return {
-                'success': False,
-                'error': 'Invalid Spotify URL. Must be a track or album URL.'
-            }
+    headers = {
+        'Authorization': f"Bearer {session['spotify_access_token']}"
+    }
 
-        headers = {
-            'Authorization': f"Bearer {session['spotify_access_token']}"
-        }
-
-        response = requests.get(endpoint, headers=headers)
-        
-        # Handle token expiration
-        if response.status_code == 401:
-            print("Token expired, attempting refresh")
-            refresh_result = refresh_spotify_token()
-            if not refresh_result['success']:
-                print("Token refresh failed")
-                session.modified = True
-                return {
-                    'success': False,
-                    'needs_auth': True,
-                    'error': 'Not authenticated with Spotify'
-                }
-            
-            # Retry with new token
-            headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
-            response = requests.get(endpoint, headers=headers)
-
-        response.raise_for_status()
-        data = response.json()
-
-        # For tracks, we need to get the album information
-        if 'spotify.com/track/' in url:
-            album_id = data['album']['id']
-            album_response = requests.get(
-                f"{SPOTIFY_API_BASE_URL}/albums/{album_id}",
-                headers=headers
-            )
-            album_response.raise_for_status()
-            data = album_response.json()
-
-        # Extract the relevant information
-        album_info = {
-            'name': data['name'],
-            'artist': data['artists'][0]['name'],  # Using first artist
-            'release_date': data['release_date']
-        }
-
-        return {
-            'success': True,
-            'data': album_info
-        }
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error getting album from URL: {str(e)}")
-        if isinstance(e, requests.exceptions.HTTPError) and e.response.status_code == 401:
-            # Clear invalid tokens
-            session.pop('spotify_access_token', None)
-            session.pop('spotify_refresh_token', None)
+    response = requests.get(endpoint, headers=headers)
+    
+    # Handle token expiration
+    if response.status_code == 401:
+        print("Token expired, attempting refresh")
+        refresh_result = refresh_spotify_token()
+        if not refresh_result['success']:
+            print("Token refresh failed")
             session.modified = True
             return {
                 'success': False,
                 'needs_auth': True,
                 'error': 'Not authenticated with Spotify'
             }
-        return {
-            'success': False,
-            'error': 'Failed to get album information'
-        }
-    except Exception as e:
-        print(f"Error processing Spotify URL: {str(e)}")
-        return {
-            'success': False,
-            'error': 'Failed to process Spotify URL'
-        } 
+        
+        # Retry with new token
+        headers['Authorization'] = f"Bearer {session['spotify_access_token']}"
+        response = requests.get(endpoint, headers=headers)
+
+    response.raise_for_status()
+    data = response.json()
+
+    # For tracks, we need to get the album information
+    if 'spotify.com/track/' in url:
+        album_id = data['album']['id']
+        album_response = requests.get(
+            f"{SPOTIFY_API_BASE_URL}/albums/{album_id}",
+            headers=headers
+        )
+        album_response.raise_for_status()
+        data = album_response.json()
+
+    # Extract the relevant information
+    album_info = {
+        'name': data['name'],
+        'artist': data['artists'][0]['name'],  # Using first artist
+        'release_date': data['release_date']
+    }
+
+    return {
+        'success': True,
+        'data': album_info
+    }
