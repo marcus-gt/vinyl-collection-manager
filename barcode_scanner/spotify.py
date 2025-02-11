@@ -680,6 +680,7 @@ def sync_subscribed_playlists():
     
     try:
         client = get_supabase_client()
+        added_albums = []  # Track added albums
         
         # Get all subscriptions
         subscriptions = client.table('spotify_playlist_subscriptions').select('*').execute()
@@ -754,6 +755,11 @@ def sync_subscribed_playlists():
                                     'album_id': album['id']
                                 }).execute()
                                 print(f"Successfully added album: {album['name']}")
+                                # Track added album
+                                added_albums.append({
+                                    'artist': lookup_response['data']['artist'],
+                                    'album': lookup_response['data']['album']
+                                })
                             else:
                                 print(f"Failed to add album: {album['name']}")
                         else:
@@ -773,7 +779,11 @@ def sync_subscribed_playlists():
         
         return {
             'success': True,
-            'message': 'Successfully synced subscribed playlists'
+            'message': 'Successfully synced subscribed playlists',
+            'data': {
+                'added_albums': added_albums,
+                'total_added': len(added_albums)
+            }
         }
     except Exception as e:
         print(f"Error syncing subscribed playlists: {str(e)}")

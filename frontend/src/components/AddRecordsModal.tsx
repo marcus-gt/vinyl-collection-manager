@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify } from '../services/api';
-import type { VinylRecord } from '../types';
+import type { VinylRecord, AddedAlbum } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
 
@@ -973,12 +973,39 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                         setIsSubscribing(true);
                                         try {
                                           const response = await spotify.syncPlaylists();
-                                          if (response.success) {
+                                          if (response.success && response.data) {
+                                            const addedAlbums: AddedAlbum[] = response.data.added_albums;
+                                            const totalAdded = response.data.total_added;
+
+                                            // Show success notification with details
                                             notifications.show({
-                                              title: 'Success',
-                                              message: 'Playlist sync started',
+                                              title: 'Sync Complete',
+                                              message: totalAdded > 0 
+                                                ? `Added ${totalAdded} new album${totalAdded === 1 ? '' : 's'} to your collection`
+                                                : 'No new albums found to add',
                                               color: 'green'
                                             });
+
+                                            // If albums were added, show details in a modal
+                                            if (totalAdded > 0) {
+                                              notifications.show({
+                                                title: 'Added Albums',
+                                                message: (
+                                                  <Box>
+                                                    {addedAlbums.map((album: AddedAlbum, index: number) => (
+                                                      <Text key={index} size="sm">
+                                                        {album.artist} - {album.album}
+                                                      </Text>
+                                                    ))}
+                                                  </Box>
+                                                ),
+                                                color: 'green',
+                                                autoClose: false
+                                              });
+                                              // Set recordsChanged to true to trigger table refresh
+                                              setRecordsChanged(true);
+                                            }
+
                                             // Refresh the subscription to get updated last_checked time
                                             await loadSubscribedPlaylist();
                                           } else {

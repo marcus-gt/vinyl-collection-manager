@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue } from '../types';
+import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse } from '../types';
 import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
@@ -492,7 +492,7 @@ export const spotify = {
     }
   },
 
-  syncPlaylists: async (): Promise<ApiResponse<void>> => {
+  syncPlaylists: async (): Promise<ApiResponse<SyncPlaylistsResponse>> => {
     try {
       const response = await api.post('/api/spotify/playlist/sync');
       return response.data;

@@ -99,4 +99,14 @@ export const PILL_COLORS = {
     { value: 'green', label: 'Green' },
     { value: 'orange', label: 'Orange' }
   ]
-} as const; 
+} as const;
+
+export interface AddedAlbum {
+  artist: string;
+  album: string;
+}
+
+export interface SyncPlaylistsResponse {
+  added_albums: AddedAlbum[];
+  total_added: number;
+} 
