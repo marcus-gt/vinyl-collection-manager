@@ -67,6 +67,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     total_tracks: number;
     image_url: string | null;
   }>>([]);
+  const [recentlyAddedAlbums, setRecentlyAddedAlbums] = useState<AddedAlbum[]>([]);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -971,13 +972,17 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                       size="xs"
                                       onClick={async () => {
                                         setIsSubscribing(true);
+                                        setRecentlyAddedAlbums([]); // Clear previous results
                                         try {
                                           const response = await spotify.syncPlaylists();
                                           if (response.success && response.data) {
                                             const addedAlbums: AddedAlbum[] = response.data.added_albums;
                                             const totalAdded = response.data.total_added;
 
-                                            // Show success notification with details
+                                            // Store the added albums to display in the modal
+                                            setRecentlyAddedAlbums(addedAlbums);
+
+                                            // Show success notification
                                             notifications.show({
                                               title: 'Sync Complete',
                                               message: totalAdded > 0 
@@ -986,22 +991,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                               color: 'green'
                                             });
 
-                                            // If albums were added, show details in a modal
                                             if (totalAdded > 0) {
-                                              notifications.show({
-                                                title: 'Added Albums',
-                                                message: (
-                                                  <Box>
-                                                    {addedAlbums.map((album: AddedAlbum, index: number) => (
-                                                      <Text key={index} size="sm">
-                                                        {album.artist} - {album.album}
-                                                      </Text>
-                                                    ))}
-                                                  </Box>
-                                                ),
-                                                color: 'green',
-                                                autoClose: false
-                                              });
                                               // Set recordsChanged to true to trigger table refresh
                                               setRecordsChanged(true);
                                             }
@@ -1040,6 +1030,28 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                     </Button>
                                   </Stack>
                                 </Group>
+
+                                {/* Show recently added albums */}
+                                {recentlyAddedAlbums.length > 0 && (
+                                  <Box mt="md">
+                                    <Divider label="Recently Added Albums" labelPosition="center" />
+                                    <ScrollArea h={200} mt="xs">
+                                      <Stack gap="xs">
+                                        {recentlyAddedAlbums.map((album, index) => (
+                                          <Paper key={index} withBorder p="xs">
+                                            <Group justify="space-between">
+                                              <div>
+                                                <Text size="sm" fw={500}>{album.artist}</Text>
+                                                <Text size="sm">{album.album}</Text>
+                                              </div>
+                                              <Text size="xs" c="green">Added</Text>
+                                            </Group>
+                                          </Paper>
+                                        ))}
+                                      </Stack>
+                                    </ScrollArea>
+                                  </Box>
+                                )}
                               </Stack>
                             </Paper>
                           ) : (
