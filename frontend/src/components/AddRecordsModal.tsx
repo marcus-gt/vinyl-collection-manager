@@ -965,15 +965,53 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                       Last checked: {new Date(subscribedPlaylist.last_checked_at).toLocaleString()}
                                     </Text>
                                   </div>
-                                  <Button
-                                    variant="light"
-                                    color="red"
-                                    size="xs"
-                                    onClick={handleUnsubscribe}
-                                    loading={isSubscribing}
-                                  >
-                                    Unsubscribe
-                                  </Button>
+                                  <Stack gap="xs">
+                                    <Button
+                                      variant="light"
+                                      size="xs"
+                                      onClick={async () => {
+                                        setIsSubscribing(true);
+                                        try {
+                                          const response = await spotify.syncPlaylists();
+                                          if (response.success) {
+                                            notifications.show({
+                                              title: 'Success',
+                                              message: 'Playlist sync started',
+                                              color: 'green'
+                                            });
+                                            // Refresh the subscription to get updated last_checked time
+                                            await loadSubscribedPlaylist();
+                                          } else {
+                                            notifications.show({
+                                              title: 'Error',
+                                              message: response.error || 'Failed to sync playlist',
+                                              color: 'red'
+                                            });
+                                          }
+                                        } catch (err) {
+                                          notifications.show({
+                                            title: 'Error',
+                                            message: 'Failed to sync playlist',
+                                            color: 'red'
+                                          });
+                                        } finally {
+                                          setIsSubscribing(false);
+                                        }
+                                      }}
+                                      loading={isSubscribing}
+                                    >
+                                      Sync Now
+                                    </Button>
+                                    <Button
+                                      variant="light"
+                                      color="red"
+                                      size="xs"
+                                      onClick={handleUnsubscribe}
+                                      loading={isSubscribing}
+                                    >
+                                      Unsubscribe
+                                    </Button>
+                                  </Stack>
                                 </Group>
                               </Stack>
                             </Paper>

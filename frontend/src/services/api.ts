@@ -490,5 +490,18 @@ export const spotify = {
         error: 'Failed to disconnect Spotify'
       };
     }
+  },
+
+  syncPlaylists: async (): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.post('/api/spotify/playlist/sync');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to sync playlists:', err);
+      return {
+        success: false,
+        error: 'Failed to sync playlists'
+      };
+    }
   }
 }; 
