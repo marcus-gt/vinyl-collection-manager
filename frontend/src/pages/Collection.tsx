@@ -91,15 +91,22 @@ function Collection() {
       console.log('Records reload initiated');
     };
 
+    const handleExportCSV = () => {
+      console.log('Export CSV event received');
+      handleDownloadCSV();
+    };
+
     // Add event listeners
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
     window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
+    window.addEventListener('export-collection-csv', handleExportCSV);
 
     // Cleanup function
     return () => {
       console.log('Removing event listeners');
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
       window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
+      window.removeEventListener('export-collection-csv', handleExportCSV);
     };
   }, []);
 
@@ -1102,35 +1109,24 @@ function Collection() {
                 onPageChange={setPage}
               />
             </Box>
-            
-            <Group justify="center">
-              <Button
-                variant="light"
-                leftSection={<IconDownload size={16} />}
-                onClick={handleDownloadCSV}
-                disabled={userRecords.length === 0}
-              >
-                Export CSV
-              </Button>
-            </Group>
+
+            <CustomColumnManager
+              opened={customColumnManagerOpened}
+              onClose={() => {
+                setCustomColumnManagerOpened(false);
+                loadCustomColumns();
+              }}
+            />
+
+            <AddRecordsModal
+              opened={addRecordsModalOpened}
+              onClose={() => {
+                setAddRecordsModalOpened(false);
+                // Records will be loaded via the refresh-table-data event if needed
+              }}
+            />
           </Stack>
         )}
-
-        <CustomColumnManager
-          opened={customColumnManagerOpened}
-          onClose={() => {
-            setCustomColumnManagerOpened(false);
-            loadCustomColumns();
-          }}
-        />
-
-        <AddRecordsModal
-          opened={addRecordsModalOpened}
-          onClose={() => {
-            setAddRecordsModalOpened(false);
-            // Records will be loaded via the refresh-table-data event if needed
-          }}
-        />
       </Stack>
     </Container>
   );
