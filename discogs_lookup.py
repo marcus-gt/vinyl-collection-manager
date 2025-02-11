@@ -352,20 +352,28 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
         query = f"{artist} {album}"
         print(f"Search query: {query}")
         
-        # Search for releases
-        results = d.search(query, type='release')
-        if not results:
-            print("No results found")
+        # Search for releases with a timeout
+        try:
+            results = d.search(query, type='release', timeout=30)  # 30 second timeout
+            if not results:
+                print("No results found")
+                return {
+                    'success': False,
+                    'error': 'No results found'
+                }
+        except Exception as search_err:
+            print(f"Search timed out or failed: {str(search_err)}")
             return {
                 'success': False,
-                'error': 'No results found'
+                'error': 'Search timed out or failed'
             }
             
         # Find best match by comparing artist and album names
         best_match = None
         best_score = 0
         
-        for result in results:
+        # Only check first 10 results to avoid timeouts
+        for result in list(results)[:10]:
             # Get artist name(s)
             result_artists = [a.name.lower() for a in result.artists]
             artist_match = any(artist.lower() in result_artist or result_artist in artist.lower() 
@@ -400,20 +408,27 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
             
         print(f"Best match found: {best_match.title} by {[a.name for a in best_match.artists]}")
         
-        # Get the full release data
-        full_release = d.release(best_match.id)
-        formatted_data = format_release_data(full_release)
-        
-        if not formatted_data:
+        try:
+            # Get the full release data with timeout
+            full_release = d.release(best_match.id)
+            formatted_data = format_release_data(full_release)
+            
+            if not formatted_data:
+                return {
+                    'success': False,
+                    'error': 'Failed to format release data'
+                }
+                
+            return {
+                'success': True,
+                'data': formatted_data
+            }
+        except Exception as release_err:
+            print(f"Failed to get full release data: {str(release_err)}")
             return {
                 'success': False,
-                'error': 'Failed to format release data'
+                'error': 'Failed to get full release data'
             }
-            
-        return {
-            'success': True,
-            'data': formatted_data
-        }
         
     except Exception as e:
         print(f"Error searching by artist/album: {str(e)}")
