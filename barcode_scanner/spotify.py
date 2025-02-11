@@ -7,8 +7,16 @@ from flask import session, redirect, request, jsonify
 from functools import wraps
 from .db import get_supabase_client
 from datetime import datetime
-from .discogs_lookup import search_by_artist_album
-from .discogs_data import get_album_data_from_id
+import sys
+from pathlib import Path
+
+# Add the parent directory to sys.path
+parent_dir = str(Path(__file__).parent.parent)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
+from discogs_lookup import search_by_artist_album
+from discogs_data import get_album_data_from_id
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"

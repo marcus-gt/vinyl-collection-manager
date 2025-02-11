@@ -1,4 +1,13 @@
-from .discogs_lookup import (
+import sys
+import os
+from pathlib import Path
+
+# Add the parent directory to sys.path
+parent_dir = str(Path(__file__).parent.parent)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
+from discogs_lookup import (
     search_by_barcode,
     search_by_discogs_id,
     search_by_discogs_url,
@@ -8,7 +17,7 @@ from .discogs_lookup import (
     get_label_info
 )
 
-from .discogs_data import (
+from discogs_data import (
     get_album_data_from_id,
     extract_master_id
 )
