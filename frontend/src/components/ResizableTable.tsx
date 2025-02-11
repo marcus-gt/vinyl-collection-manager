@@ -265,6 +265,9 @@ export function ResizableTable<T>({
             value={page}
             onChange={onPageChange}
             total={Math.ceil(totalRecords / recordsPerPage)}
+            siblings={1}
+            boundaries={1}
+            withEdges
           />
         </Group>
       )}
