@@ -910,18 +910,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                     </Stack>
                   ) : (
                     <>
-                      <Group justify="space-between" mb="md">
-                        <Text size="sm" c="dimmed">Connected to Spotify</Text>
-                        <Button
-                          variant="light"
-                          color="red"
-                          size="xs"
-                          onClick={handleSpotifyDisconnect}
-                          loading={loadingSpotify}
-                        >
-                          Disconnect
-                        </Button>
-                      </Group>
                       <Box mb="md">
                         <Text size="sm" mb={5}>Paste a Spotify album/track URL:</Text>
                         <Group>
@@ -942,6 +930,56 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         </Group>
                       </Box>
                       <Divider my="md" />
+
+                      <Title order={4} mb="md">Browse Playlists</Title>
+                      <Select
+                        label="Select Playlist"
+                        placeholder="Choose a playlist to view albums"
+                        data={spotifyPlaylists.map(playlist => ({
+                          value: playlist.id,
+                          label: `${playlist.name} (${playlist.tracks} tracks)`
+                        }))}
+                        value={selectedPlaylist}
+                        onChange={(value) => value && handlePlaylistSelect(value)}
+                        searchable
+                        clearable
+                      />
+
+                      {playlistAlbums.length > 0 && (
+                        <Stack mt="md">
+                          <Text size="sm" fw={500}>Albums in Playlist</Text>
+                          <ScrollArea h={300}>
+                            {playlistAlbums.map(album => (
+                              <Paper
+                                key={album.id}
+                                withBorder
+                                p="xs"
+                                mb="xs"
+                              >
+                                <Group justify="space-between">
+                                  <Box>
+                                    <Text size="sm" fw={500}>{album.name}</Text>
+                                    <Text size="xs" c="dimmed">{album.artist}</Text>
+                                    <Text size="xs" c="dimmed">
+                                      Released: {new Date(album.release_date).getFullYear()}
+                                    </Text>
+                                  </Box>
+                                  <Button
+                                    size="xs"
+                                    variant="light"
+                                    onClick={() => handleAddSpotifyAlbum(album)}
+                                    loading={loading}
+                                  >
+                                    Add
+                                  </Button>
+                                </Group>
+                              </Paper>
+                            ))}
+                          </ScrollArea>
+                        </Stack>
+                      )}
+
+                      <Divider my="xl" label="Or Subscribe to a Playlist" labelPosition="center" />
 
                       <Title order={4} mb="md">Playlist Subscription</Title>
                       <Text size="sm" c="dimmed" mb="md">
@@ -1034,21 +1072,30 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                 {/* Show recently added albums */}
                                 {recentlyAddedAlbums.length > 0 && (
                                   <Box mt="md">
-                                    <Divider label="Recently Added Albums" labelPosition="center" />
-                                    <ScrollArea h={200} mt="xs">
-                                      <Stack gap="xs">
+                                    <Divider 
+                                      label={`Added ${recentlyAddedAlbums.length} album${recentlyAddedAlbums.length === 1 ? '' : 's'}`} 
+                                      labelPosition="center" 
+                                    />
+                                    <ScrollArea h={150} mt="xs">
+                                      <Group gap="xs" wrap="wrap">
                                         {recentlyAddedAlbums.map((album, index) => (
-                                          <Paper key={index} withBorder p="xs">
-                                            <Group justify="space-between">
-                                              <div>
-                                                <Text size="sm" fw={500}>{album.artist}</Text>
-                                                <Text size="sm">{album.album}</Text>
-                                              </div>
-                                              <Text size="xs" c="green">Added</Text>
-                                            </Group>
+                                          <Paper 
+                                            key={index} 
+                                            withBorder 
+                                            p="xs" 
+                                            style={{ 
+                                              flex: '1 1 calc(50% - 8px)',
+                                              minWidth: 'calc(50% - 8px)',
+                                              maxWidth: 'calc(50% - 8px)'
+                                            }}
+                                          >
+                                            <Stack gap={2}>
+                                              <Text size="xs" fw={500} lineClamp={1}>{album.artist}</Text>
+                                              <Text size="xs" c="dimmed" lineClamp={1}>{album.album}</Text>
+                                            </Stack>
                                           </Paper>
                                         ))}
-                                      </Stack>
+                                      </Group>
                                     </ScrollArea>
                                   </Box>
                                 )}
@@ -1074,61 +1121,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                               ? 'New albums added to this playlist will be automatically imported into your collection.'
                               : 'Select a playlist to automatically import new albums when they are added.'}
                           </Text>
-
-                          <Divider my="xl" label="Or Browse Playlists" labelPosition="center" />
-
-                          <Select
-                            label="Browse Playlist"
-                            placeholder="Choose a playlist to view albums"
-                            data={spotifyPlaylists.map(playlist => ({
-                              value: playlist.id,
-                              label: `${playlist.name} (${playlist.tracks} tracks)`
-                            }))}
-                            value={selectedPlaylist}
-                            onChange={(value) => value && handlePlaylistSelect(value)}
-                            searchable
-                            clearable
-                          />
-
-                          {playlistAlbums.length > 0 && (
-                            <Stack mt="md">
-                              <Text size="sm" fw={500}>Albums in Playlist</Text>
-                              <ScrollArea h={300}>
-                                {playlistAlbums.map(album => (
-                                  <Paper
-                                    key={album.id}
-                                    withBorder
-                                    p="xs"
-                                    mb="xs"
-                                  >
-                                    <Group justify="space-between">
-                                      <Box>
-                                        <Text size="sm" fw={500}>{album.name}</Text>
-                                        <Text size="xs" c="dimmed">{album.artist}</Text>
-                                        <Text size="xs" c="dimmed">
-                                          Released: {new Date(album.release_date).getFullYear()}
-                                        </Text>
-                                      </Box>
-                                      <Button
-                                        size="xs"
-                                        variant="light"
-                                        onClick={() => handleAddSpotifyAlbum(album)}
-                                        loading={loading}
-                                      >
-                                        Add
-                                      </Button>
-                                    </Group>
-                                  </Paper>
-                                ))}
-                              </ScrollArea>
-                            </Stack>
-                          )}
                         </>
-                      )}
-                      {spotifyError && spotifyError !== 'Not authenticated with Spotify' && (
-                        <Alert color="red" title="Error" variant="light">
-                          {spotifyError}
-                        </Alert>
                       )}
                     </>
                   )}
