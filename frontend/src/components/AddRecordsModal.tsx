@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify } from '../services/api';
-import type { VinylRecord, AddedAlbum } from '../types';
+import type { VinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
 
@@ -66,7 +66,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     total_tracks: number;
     image_url: string | null;
   }>>([]);
-  const [recentlyAddedAlbums, setRecentlyAddedAlbums] = useState<AddedAlbum[]>([]);
   const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -1048,37 +1047,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                       </Button>
                                     </Stack>
                                   </Group>
-
-                                  {/* Show recently added albums */}
-                                  {recentlyAddedAlbums.length > 0 && (
-                                    <Box mt="md">
-                                      <Divider 
-                                        label={`Added ${recentlyAddedAlbums.length} album${recentlyAddedAlbums.length === 1 ? '' : 's'}`} 
-                                        labelPosition="center" 
-                                      />
-                                      <ScrollArea h={150} mt="xs">
-                                        <Group gap="xs" wrap="wrap">
-                                          {recentlyAddedAlbums.map((album, index) => (
-                                            <Paper 
-                                              key={index} 
-                                              withBorder 
-                                              p="xs" 
-                                              style={{ 
-                                                flex: '1 1 calc(50% - 8px)',
-                                                minWidth: 'calc(50% - 8px)',
-                                                maxWidth: 'calc(50% - 8px)'
-                                              }}
-                                            >
-                                              <Stack gap={2}>
-                                                <Text size="xs" fw={500} lineClamp={1}>{album.artist}</Text>
-                                                <Text size="xs" c="dimmed" lineClamp={1}>{album.album}</Text>
-                                              </Stack>
-                                            </Paper>
-                                          ))}
-                                        </Group>
-                                      </ScrollArea>
-                                    </Box>
-                                  )}
                                 </Stack>
                               </Paper>
                             ) : (
