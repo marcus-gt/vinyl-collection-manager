@@ -265,9 +265,31 @@ export function ResizableTable<T>({
             value={page}
             onChange={onPageChange}
             total={Math.ceil(totalRecords / recordsPerPage)}
-            siblings={1}
-            boundaries={1}
+            siblings={0}
+            boundaries={0}
             withEdges
+            getControlProps={(control) => {
+              // Hide first/last page buttons on mobile
+              if (control === 'first' || control === 'last') {
+                return {
+                  style: {
+                    '@media (max-width: 600px)': {
+                      display: 'none'
+                    }
+                  }
+                };
+              }
+              return {};
+            }}
+            styles={{
+              control: {
+                '@media (max-width: 600px)': {
+                  minWidth: '32px',
+                  height: '32px',
+                  padding: 0
+                }
+              }
+            }}
           />
         </Group>
       )}
