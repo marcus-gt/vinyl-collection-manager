@@ -7,6 +7,8 @@ from flask import session, redirect, request, jsonify
 from functools import wraps
 from .db import get_supabase_client
 from datetime import datetime
+from . import lookup
+from . import records
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -673,10 +675,11 @@ def sync_subscribed_playlists():
         
         # Get all subscriptions
         subscriptions = client.table('spotify_playlist_subscriptions').select('*').execute()
+        print(f"Found {len(subscriptions.data)} subscriptions")
         
         for sub in subscriptions.data:
             try:
-                print(f"Processing subscription for user {sub['user_id']}")
+                print(f"\nProcessing subscription for user {sub['user_id']}")
                 
                 # Get user's Spotify tokens
                 tokens = get_spotify_tokens_from_db(sub['user_id'])
@@ -688,6 +691,7 @@ def sync_subscribed_playlists():
                 session['spotify_access_token'] = tokens['access_token']
                 session['spotify_refresh_token'] = tokens['refresh_token']
                 session['user_id'] = sub['user_id']
+                session.modified = True
                 
                 # Get playlist tracks
                 tracks_response = get_playlist_tracks(sub['playlist_id'])
@@ -695,23 +699,30 @@ def sync_subscribed_playlists():
                     print(f"Failed to get tracks for playlist {sub['playlist_id']}")
                     continue
                 
+                print(f"Found {len(tracks_response['data'])} tracks in playlist")
+                
                 # Get already processed albums
                 processed = client.table('spotify_processed_albums').select('album_id').eq(
                     'user_id', sub['user_id']
                 ).eq('playlist_id', sub['playlist_id']).execute()
                 
                 processed_ids = set(item['album_id'] for item in processed.data)
+                print(f"Found {len(processed_ids)} already processed albums")
                 
                 # Process new albums
                 for album in tracks_response['data']:
                     if album['id'] not in processed_ids:
-                        print(f"Processing new album: {album['name']}")
+                        print(f"\nProcessing new album: {album['name']} by {album['artist']}")
                         
                         # Look up in Discogs
                         lookup_response = lookup.byArtistAlbum(album['artist'], album['name'])
+                        print(f"Discogs lookup response: {lookup_response}")
+                        
                         if lookup_response['success'] and lookup_response['data']:
                             # Add to collection
                             add_response = records.add(lookup_response['data'])
+                            print(f"Add to collection response: {add_response}")
+                            
                             if add_response['success']:
                                 # Mark as processed
                                 client.table('spotify_processed_albums').insert({
@@ -729,9 +740,12 @@ def sync_subscribed_playlists():
                 client.table('spotify_playlist_subscriptions').update({
                     'last_checked_at': datetime.utcnow().isoformat()
                 }).eq('id', sub['id']).execute()
+                print(f"Updated last_checked_at for subscription {sub['id']}")
                 
             except Exception as e:
                 print(f"Error processing subscription: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 continue
         
         return {
@@ -740,6 +754,8 @@ def sync_subscribed_playlists():
         }
     except Exception as e:
         print(f"Error syncing subscribed playlists: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             'success': False,
             'error': 'Failed to sync subscribed playlists'
