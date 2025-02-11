@@ -1154,17 +1154,10 @@ def get_playlist_subscription():
         }), 500
 
 @app.route('/api/spotify/playlist/sync', methods=['POST'])
+@require_auth
 def sync_playlists():
-    """Manually trigger playlist sync (protected by secret key)"""
+    """Manually trigger playlist sync"""
     try:
-        # Verify secret key to prevent unauthorized access
-        secret = request.headers.get('X-Sync-Key')
-        if not secret or secret != os.getenv('SYNC_SECRET_KEY'):
-            return jsonify({
-                'success': False,
-                'error': 'Unauthorized'
-            }), 401
-            
         result = sync_subscribed_playlists()
         return jsonify(result)
     except Exception as e:
