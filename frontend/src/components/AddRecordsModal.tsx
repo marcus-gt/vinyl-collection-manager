@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider } from '@mantine/core';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify } from '../services/api';
 import type { VinylRecord } from '../types';
@@ -59,6 +59,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     last_checked_at: string;
   } | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [playlistAlbums, setPlaylistAlbums] = useState<Array<{
+    id: string;
+    name: string;
+    artist: string;
+    release_date: string;
+    total_tracks: number;
+    image_url: string | null;
+  }>>([]);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -623,6 +631,53 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  const handlePlaylistSelect = async (playlistId: string) => {
+    setSelectedPlaylist(playlistId);
+    setLoadingSpotify(true);
+    setSpotifyError(null);
+    try {
+      const response = await spotify.getPlaylistTracks(playlistId);
+      if (response.success && response.data) {
+        setPlaylistAlbums(response.data);
+      } else {
+        setSpotifyError(response.error || 'Failed to load playlist tracks');
+      }
+    } catch (err) {
+      setSpotifyError('Failed to load playlist tracks');
+    } finally {
+      setLoadingSpotify(false);
+    }
+  };
+
+  const handleAddSpotifyAlbum = async (album: {
+    name: string;
+    artist: string;
+    release_date: string;
+  }) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const response = await lookup.byArtistAlbum(album.artist, album.name);
+      if (response.success && response.data) {
+        const addResponse = await records.add(response.data);
+        if (addResponse.success) {
+          setSuccess('Added to collection!');
+          setRecordsChanged(true);
+        } else {
+          setError(addResponse.error || 'Failed to add to collection');
+        }
+      } else {
+        setError("Couldn't find record in Discogs");
+      }
+    } catch (err) {
+      setError('Failed to add album');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       opened={opened}
@@ -942,14 +997,63 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                               ? 'New albums added to this playlist will be automatically imported into your collection.'
                               : 'Select a playlist to automatically import new albums when they are added.'}
                           </Text>
+
+                          <Divider my="xl" label="Or Browse Playlists" labelPosition="center" />
+
+                          <Select
+                            label="Browse Playlist"
+                            placeholder="Choose a playlist to view albums"
+                            data={spotifyPlaylists.map(playlist => ({
+                              value: playlist.id,
+                              label: `${playlist.name} (${playlist.tracks} tracks)`
+                            }))}
+                            value={selectedPlaylist}
+                            onChange={(value) => value && handlePlaylistSelect(value)}
+                            searchable
+                            clearable
+                          />
+
+                          {playlistAlbums.length > 0 && (
+                            <Stack mt="md">
+                              <Text size="sm" fw={500}>Albums in Playlist</Text>
+                              <ScrollArea h={300}>
+                                {playlistAlbums.map(album => (
+                                  <Paper
+                                    key={album.id}
+                                    withBorder
+                                    p="xs"
+                                    mb="xs"
+                                  >
+                                    <Group justify="space-between">
+                                      <Box>
+                                        <Text size="sm" fw={500}>{album.name}</Text>
+                                        <Text size="xs" c="dimmed">{album.artist}</Text>
+                                        <Text size="xs" c="dimmed">
+                                          Released: {new Date(album.release_date).getFullYear()}
+                                        </Text>
+                                      </Box>
+                                      <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() => handleAddSpotifyAlbum(album)}
+                                        loading={loading}
+                                      >
+                                        Add
+                                      </Button>
+                                    </Group>
+                                  </Paper>
+                                ))}
+                              </ScrollArea>
+                            </Stack>
+                          )}
                         </>
                       )}
+                      {spotifyError && spotifyError !== 'Not authenticated with Spotify' && (
+                        <Alert color="red" title="Error" variant="light">
+                          {spotifyError}
+                        </Alert>
+                      )}
                     </>
-                  )}
-                  {spotifyError && spotifyError !== 'Not authenticated with Spotify' && (
-                    <Alert color="red" title="Error" variant="light">
-                      {spotifyError}
-                    </Alert>
                   )}
                 </Stack>
               </Tabs.Panel>
