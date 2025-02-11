@@ -48,7 +48,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   }>>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
-  const [spotifyError, setSpotifyError] = useState<string | null>(null);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
   const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState('');
@@ -99,7 +98,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setSpotifyPlaylists([]);
       setSelectedPlaylist(null);
       setLoadingSpotify(false);
-      setSpotifyError(null);
       setIsSpotifyAuthenticated(false);
       console.log('States reset complete');
     }
@@ -421,34 +419,27 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleSpotifyAuth = async () => {
     setIsLoadingSpotifyAuth(true);
-    setSpotifyError(null);
+    setError(null);
     try {
       console.log('Getting Spotify auth URL...');
       const response = await spotify.getAuthUrl();
-      console.log('Auth URL response:', response);
       
       if (!response.success) {
         console.error('Failed to get auth URL:', response.error);
-        setSpotifyError(response.error || 'Failed to get Spotify authorization URL');
+        setError(response.error || 'Failed to get Spotify authorization URL');
         return;
       }
       
       if (!response.data?.auth_url) {
         console.error('No auth URL in response:', response);
-        setSpotifyError('Invalid response from server');
+        setError('Invalid response from server');
         return;
       }
-      
-      // Store current location to return after auth
-      localStorage.setItem('spotify_auth_return_path', window.location.pathname);
-      console.log('Stored return path:', window.location.pathname);
-      
-      // Redirect to Spotify auth
-      console.log('Redirecting to Spotify auth URL:', response.data.auth_url);
+
       window.location.href = response.data.auth_url;
     } catch (err) {
       console.error('Failed to start Spotify authorization:', err);
-      setSpotifyError('Failed to start Spotify authorization');
+      setError('Failed to start Spotify authorization');
     } finally {
       setIsLoadingSpotifyAuth(false);
     }
@@ -456,7 +447,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const checkSpotifyAuth = async () => {
     setLoadingSpotify(true);
-    setSpotifyError(null);
+    setError(null);
     try {
       const response = await spotify.getPlaylists();
       setIsSpotifyAuthenticated(!response.needs_auth);
@@ -482,7 +473,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!spotifyUrl) return;
     
     setIsLoadingAlbumLookup(true);
-    setSpotifyError(null);
+    setError(null);
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
@@ -494,17 +485,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           setSpotifyUrl('');
           setError(null);
         } else {
-          setSpotifyError("Couldn't find record in Discogs");
+          setError("Couldn't find record in Discogs");
         }
       } else if (result.needs_auth) {
         setIsSpotifyAuthenticated(false);
-        setSpotifyError('Please connect to Spotify first');
       } else {
-        setSpotifyError(result.error || 'Failed to get album information');
+        setError(result.error || 'Failed to get album information');
       }
-    } catch (error) {
-      console.error('Error looking up Spotify URL:', error);
-      setSpotifyError('Failed to get album information');
+    } catch (err) {
+      setError('Failed to lookup album');
     } finally {
       setIsLoadingAlbumLookup(false);
     }
@@ -512,7 +501,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleSpotifyDisconnect = async () => {
     setLoadingSpotify(true);
-    setSpotifyError(null);
+    setError(null);
     try {
       const response = await spotify.disconnectSpotify();
       if (response.success) {
@@ -521,11 +510,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setSelectedPlaylist(null);
         setSpotifyUrl('');
       } else {
-        setSpotifyError(response.error || 'Failed to disconnect from Spotify');
+        setError(response.error || 'Failed to disconnect from Spotify');
       }
     } catch (err) {
       console.error('Failed to disconnect Spotify:', err);
-      setSpotifyError('Failed to disconnect from Spotify');
+      setError('Failed to disconnect from Spotify');
     } finally {
       setLoadingSpotify(false);
     }
@@ -635,16 +624,16 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handlePlaylistSelect = async (playlistId: string) => {
     setSelectedPlaylist(playlistId);
     setLoadingSpotify(true);
-    setSpotifyError(null);
+    setError(null);
     try {
       const response = await spotify.getPlaylistTracks(playlistId);
       if (response.success && response.data) {
         setPlaylistAlbums(response.data);
       } else {
-        setSpotifyError(response.error || 'Failed to load playlist tracks');
+        setError(response.error || 'Failed to load playlist tracks');
       }
     } catch (err) {
-      setSpotifyError('Failed to load playlist tracks');
+      setError('Failed to load playlist tracks');
     } finally {
       setLoadingSpotify(false);
     }
