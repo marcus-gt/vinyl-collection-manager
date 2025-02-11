@@ -68,6 +68,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   }>>([]);
   const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -713,6 +714,37 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  const handleSpotifyDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      const response = await spotify.disconnectSpotify();
+      if (response.success) {
+        setIsSpotifyAuthenticated(false);
+        setSelectedPlaylist(null);
+        setPlaylistAlbums([]);
+        notifications.show({
+          title: 'Success',
+          message: 'Spotify disconnected successfully',
+          color: 'green'
+        });
+      } else {
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to disconnect Spotify',
+          color: 'red'
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to disconnect Spotify',
+        color: 'red'
+      });
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   return (
     <>
       <Modal
@@ -1082,6 +1114,19 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                 : 'Select a playlist to automatically import new albums when they are added.'}
                             </Text>
                           </>
+                        )}
+
+                        {isSpotifyAuthenticated && (
+                          <Group justify="flex-end" mb="md">
+                            <Button
+                              variant="light"
+                              color="red"
+                              onClick={handleSpotifyDisconnect}
+                              loading={isDisconnecting}
+                            >
+                              Disconnect Spotify
+                            </Button>
+                          </Group>
                         )}
                       </>
                     )}
