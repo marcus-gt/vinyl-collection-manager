@@ -3,7 +3,7 @@ services:
     name: vinyl-collection-manager
     runtime: python
     buildCommand: pip install -r requirements.txt && cd frontend && npm install && npm run build
-    startCommand: python -m barcode_scanner.server
+    startCommand: gunicorn -c gunicorn.conf.py barcode_scanner.server:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
