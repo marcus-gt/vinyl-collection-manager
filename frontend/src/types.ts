@@ -106,7 +106,15 @@ export interface AddedAlbum {
   album: string;
 }
 
+export interface FailedLookup {
+  artist: string;
+  album: string;
+  error: string;
+}
+
 export interface SyncPlaylistsResponse {
   added_albums: AddedAlbum[];
   total_added: number;
+  failed_lookups: FailedLookup[];
+  total_failed: number;
 } 

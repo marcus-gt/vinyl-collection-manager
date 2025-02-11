@@ -681,6 +681,7 @@ def sync_subscribed_playlists():
     try:
         client = get_supabase_client()
         added_albums = []  # Track added albums
+        failed_lookups = []  # Track failed lookups
         
         # Get all subscriptions
         subscriptions = client.table('spotify_playlist_subscriptions').select('*').execute()
@@ -764,6 +765,11 @@ def sync_subscribed_playlists():
                                 print(f"Failed to add album: {album['name']}")
                         else:
                             print(f"Could not find album in Discogs: {album['name']}")
+                            failed_lookups.append({
+                                'artist': album['artist'],
+                                'album': album['name'],
+                                'error': lookup_response.get('error', 'Unknown error')
+                            })
                 
                 # Update last checked timestamp
                 client.table('spotify_playlist_subscriptions').update({
@@ -782,7 +788,9 @@ def sync_subscribed_playlists():
             'message': 'Successfully synced subscribed playlists',
             'data': {
                 'added_albums': added_albums,
-                'total_added': len(added_albums)
+                'total_added': len(added_albums),
+                'failed_lookups': failed_lookups,
+                'total_failed': len(failed_lookups)
             }
         }
     except Exception as e:

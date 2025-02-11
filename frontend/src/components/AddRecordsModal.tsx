@@ -67,6 +67,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     image_url: string | null;
   }>>([]);
   const [recentlyAddedAlbums, setRecentlyAddedAlbums] = useState<AddedAlbum[]>([]);
+  const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -645,6 +647,61 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  const handleSyncPlaylists = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await spotify.syncPlaylists();
+      if (response.success && response.data) {
+        if (response.data.total_added > 0) {
+          notifications.show({
+            title: 'Sync Complete',
+            message: `Added ${response.data.total_added} albums to your collection`,
+            color: 'green'
+          });
+          // Show modal with details
+          setModalContent({
+            title: `Added ${response.data.total_added} albums`,
+            content: (
+              <Stack>
+                {response.data.added_albums.map((album, index) => (
+                  <Text key={index} size="sm">
+                    {album.artist} - {album.album}
+                  </Text>
+                ))}
+                {response.data.failed_lookups && response.data.failed_lookups.length > 0 && (
+                  <>
+                    <Divider my="sm" label="Not Found in Discogs" labelPosition="center" />
+                    {response.data.failed_lookups.map((failed, index) => (
+                      <Text key={`failed-${index}`} size="sm" c="dimmed">
+                        {failed.artist} - {failed.album}
+                      </Text>
+                    ))}
+                  </>
+                )}
+              </Stack>
+            )
+          });
+          setShowModal(true);
+          setRecordsChanged(true);
+        } else {
+          notifications.show({
+            title: 'Sync Complete',
+            message: 'No new albums to add',
+            color: 'blue'
+          });
+        }
+      } else {
+        setError(response.error || 'Failed to sync playlists');
+      }
+    } catch (err) {
+      console.error('Error syncing playlists:', err);
+      setError('Failed to sync playlists');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Modal
       opened={opened}
@@ -974,52 +1031,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                     <Button
                                       variant="light"
                                       size="xs"
-                                      onClick={async () => {
-                                        setIsSubscribing(true);
-                                        setRecentlyAddedAlbums([]); // Clear previous results
-                                        try {
-                                          const response = await spotify.syncPlaylists();
-                                          if (response.success && response.data) {
-                                            const addedAlbums: AddedAlbum[] = response.data.added_albums;
-                                            const totalAdded = response.data.total_added;
-
-                                            // Store the added albums to display in the modal
-                                            setRecentlyAddedAlbums(addedAlbums);
-
-                                            // Show success notification
-                                            notifications.show({
-                                              title: 'Sync Complete',
-                                              message: totalAdded > 0 
-                                                ? `Added ${totalAdded} new album${totalAdded === 1 ? '' : 's'} to your collection`
-                                                : 'No new albums found to add',
-                                              color: 'green'
-                                            });
-
-                                            if (totalAdded > 0) {
-                                              // Set recordsChanged to true to trigger table refresh
-                                              setRecordsChanged(true);
-                                            }
-
-                                            // Refresh the subscription to get updated last_checked time
-                                            await loadSubscribedPlaylist();
-                                          } else {
-                                            notifications.show({
-                                              title: 'Error',
-                                              message: response.error || 'Failed to sync playlist',
-                                              color: 'red'
-                                            });
-                                          }
-                                        } catch (err) {
-                                          notifications.show({
-                                            title: 'Error',
-                                            message: 'Failed to sync playlist',
-                                            color: 'red'
-                                          });
-                                        } finally {
-                                          setIsSubscribing(false);
-                                        }
-                                      }}
-                                      loading={isSubscribing}
+                                      onClick={handleSyncPlaylists}
+                                      loading={loading}
                                     >
                                       Sync Now
                                     </Button>
