@@ -7,8 +7,8 @@ from flask import session, redirect, request, jsonify
 from functools import wraps
 from .db import get_supabase_client
 from datetime import datetime
-from . import lookup
-from . import records
+from .discogs_lookup import search_by_artist_album
+from .discogs_data import get_album_data_from_id
 
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -715,15 +715,30 @@ def sync_subscribed_playlists():
                         print(f"\nProcessing new album: {album['name']} by {album['artist']}")
                         
                         # Look up in Discogs
-                        lookup_response = lookup.byArtistAlbum(album['artist'], album['name'])
+                        lookup_response = search_by_artist_album(album['artist'], album['name'])
                         print(f"Discogs lookup response: {lookup_response}")
                         
                         if lookup_response['success'] and lookup_response['data']:
                             # Add to collection
-                            add_response = records.add(lookup_response['data'])
+                            add_response = client.table('vinyl_records').insert({
+                                'user_id': sub['user_id'],
+                                'artist': lookup_response['data']['artist'],
+                                'album': lookup_response['data']['album'],
+                                'year': lookup_response['data']['year'],
+                                'label': lookup_response['data']['label'],
+                                'genres': lookup_response['data']['genres'],
+                                'styles': lookup_response['data']['styles'],
+                                'musicians': lookup_response['data']['musicians'],
+                                'master_url': lookup_response['data']['master_url'],
+                                'current_release_url': lookup_response['data']['current_release_url'],
+                                'current_release_year': lookup_response['data']['current_release_year'],
+                                'created_at': datetime.utcnow().isoformat(),
+                                'updated_at': datetime.utcnow().isoformat()
+                            }).execute()
+                            
                             print(f"Add to collection response: {add_response}")
                             
-                            if add_response['success']:
+                            if add_response.data:
                                 # Mark as processed
                                 client.table('spotify_processed_albums').insert({
                                     'user_id': sub['user_id'],
