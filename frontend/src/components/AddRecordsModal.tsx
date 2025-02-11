@@ -499,27 +499,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handleSpotifyDisconnect = async () => {
-    setLoadingSpotify(true);
-    setError(null);
-    try {
-      const response = await spotify.disconnectSpotify();
-      if (response.success) {
-        setIsSpotifyAuthenticated(false);
-        setSpotifyPlaylists([]);
-        setSelectedPlaylist(null);
-        setSpotifyUrl('');
-      } else {
-        setError(response.error || 'Failed to disconnect from Spotify');
-      }
-    } catch (err) {
-      console.error('Failed to disconnect Spotify:', err);
-      setError('Failed to disconnect from Spotify');
-    } finally {
-      setLoadingSpotify(false);
-    }
-  };
-
   // Update the useEffect to handle Spotify auth callback
   useEffect(() => {
     // Check for Spotify callback code
