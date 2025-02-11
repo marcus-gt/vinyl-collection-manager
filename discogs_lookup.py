@@ -250,7 +250,7 @@ def extract_release_id(discogs_url: str) -> Optional[str]:
         return None
     except Exception as e:
         print(f"Error extracting ID: {str(e)}")
-        return None
+            return None
 
 def search_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
     """Search for a release using a Discogs URL (supports both release and master URLs)"""
@@ -414,7 +414,7 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
             'success': True,
             'data': formatted_data
         }
-            
+        
     except Exception as e:
         print(f"Error searching by artist/album: {str(e)}")
         import traceback

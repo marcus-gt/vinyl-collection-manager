@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta, datetime
 import requests
+from functools import wraps
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -155,6 +156,17 @@ if os.getenv('FLASK_ENV') == 'production':
         sys.exit(1)
 
 print("\nConfiguration validated successfully")
+
+def require_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({
+                'success': False,
+                'error': 'Not authenticated'
+            }), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.before_request
 def before_request():
