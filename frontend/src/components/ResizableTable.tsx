@@ -27,9 +27,15 @@ interface ColumnFilter {
   options?: string[];
 }
 
+// Extend ColumnDef to include our custom properties
+type ExtendedColumnDef<T> = ColumnDef<T> & {
+  filter?: ColumnFilter;
+  accessorKey?: string;
+};
+
 interface ResizableTableProps<T> {
   data: T[];
-  columns: (ColumnDef<T> & { filter?: ColumnFilter })[];
+  columns: ExtendedColumnDef<T>[];
   sortState?: SortingState;
   onSortChange?: OnChangeFn<SortingState>;
   tableId: string;
@@ -70,6 +76,11 @@ const arrayFilter: FilterFn<any> = (
   }
   return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
 };
+
+// Define custom filter functions with proper typing
+const filterFunctions = {
+  array: arrayFilter
+} as const;
 
 export function ResizableTable<T>({ 
   data, 
@@ -136,14 +147,12 @@ export function ResizableTable<T>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    filterFns: {
-      array: arrayFilter
-    },
+    filterFns: filterFunctions,
     defaultColumn: {
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      filterFn: 'array'
+      filterFn: arrayFilter
     }
   });
 
