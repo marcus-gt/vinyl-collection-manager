@@ -147,20 +147,50 @@ export function ResizableTable<T>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    filterFns: filterFunctions,
+    enableColumnFilters: true,
+    manualFiltering: false,
+    filterFns: {
+      text: (row, columnId, filterValue) => {
+        const value = row.getValue(columnId);
+        return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
+      },
+      select: (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        const value = row.getValue(columnId);
+        return String(value).toLowerCase() === String(filterValue).toLowerCase();
+      },
+      multi: (row, columnId, filterValue: string[]) => {
+        if (!filterValue?.length) return true;
+        const value = row.getValue(columnId);
+        if (Array.isArray(value)) {
+          return filterValue.some(filter => 
+            value.some(item => String(item).toLowerCase() === filter.toLowerCase())
+          );
+        }
+        return filterValue.some(filter => 
+          String(value).toLowerCase() === filter.toLowerCase()
+        );
+      }
+    },
     defaultColumn: {
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      filterFn: arrayFilter
+      enableColumnFilter: true
     }
   });
 
   const handleFilterChange = (columnId: string, value: string | string[]) => {
-    setColumnFilters(prev => ({
-      ...prev,
-      [columnId]: value
-    }));
+    const column = columns.find(col => String(col.accessorKey || col.id) === columnId);
+    if (!column?.filter) return;
+
+    table.setColumnFilters(prev => {
+      const existing = prev.filter(f => f.id !== columnId);
+      if (!value || (Array.isArray(value) && !value.length)) {
+        return existing;
+      }
+      return [...existing, { id: columnId, value }];
+    });
   };
 
   const renderFilterInput = (header: Header<T, unknown>) => {
@@ -170,14 +200,15 @@ export function ResizableTable<T>({
     
     if (!column?.filter) return null;
 
-    const currentValue = columnFilters[header.column.id];
+    const currentFilter = table.getState().columnFilters.find(f => f.id === header.column.id);
+    const currentValue = currentFilter?.value ?? '';
     
     switch (column.filter.type) {
       case 'select':
         return (
           <Select
             placeholder="Filter..."
-            value={currentValue as string || ''}
+            value={currentValue as string}
             onChange={(value) => handleFilterChange(header.column.id, value || '')}
             data={filterOptions[header.column.id] || []}
             clearable
@@ -209,7 +240,7 @@ export function ResizableTable<T>({
         return (
           <TextInput
             placeholder="Filter..."
-            value={currentValue as string || ''}
+            value={currentValue as string}
             onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
             size="xs"
             leftSection={<IconSearch size={14} />}
