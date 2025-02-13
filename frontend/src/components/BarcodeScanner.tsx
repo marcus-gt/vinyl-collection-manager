@@ -48,7 +48,17 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           videoConstraints: {
             facingMode: { exact: "environment" },
             width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 }
+            height: { min: 480, ideal: 720, max: 1080 },
+            focusMode: "continuous",
+            advanced: [{
+              zoom: 2.0,  // Slight zoom to help with focus
+              focusMode: "continuous",
+              autoFocus: true,
+              whiteBalanceMode: "continuous"
+            }]
+          },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
           }
         },
         (decodedText) => {
@@ -69,6 +79,24 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       setIsRunning(true);
       setIsPaused(false);
       console.log("Camera started with environment facing mode");
+
+      // Try to force focus after a short delay
+      setTimeout(async () => {
+        try {
+          const track = scannerRef.current?.getVideoElement()?.srcObject?.getVideoTracks()[0];
+          if (track?.getCapabilities?.()?.focusMode) {
+            await track.applyConstraints({
+              advanced: [{
+                focusMode: "continuous",
+                autoFocus: true
+              }]
+            });
+          }
+        } catch (focusErr) {
+          console.log("Failed to apply focus constraints:", focusErr);
+        }
+      }, 1000);
+
     } catch (err) {
       console.error("Failed to start camera:", err);
       try {
@@ -76,12 +104,20 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           cameraId,
           {
             fps: 10,
-            qrbox: { width: 250, height: 150 },
+            qrbox: qrboxSize,
             aspectRatio: 1.0,
             videoConstraints: {
               facingMode: "environment",
               width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 }
+              height: { min: 480, ideal: 720, max: 1080 },
+              focusMode: "continuous",
+              advanced: [{
+                focusMode: "continuous",
+                autoFocus: true
+              }]
+            },
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true
             }
           },
           (decodedText) => {
@@ -102,6 +138,24 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         setIsRunning(true);
         setIsPaused(false);
         console.log("Camera started with fallback mode");
+
+        // Try to force focus after a short delay in fallback mode
+        setTimeout(async () => {
+          try {
+            const track = scannerRef.current?.getVideoElement()?.srcObject?.getVideoTracks()[0];
+            if (track?.getCapabilities?.()?.focusMode) {
+              await track.applyConstraints({
+                advanced: [{
+                  focusMode: "continuous",
+                  autoFocus: true
+                }]
+              });
+            }
+          } catch (focusErr) {
+            console.log("Failed to apply focus constraints in fallback mode:", focusErr);
+          }
+        }, 1000);
+
       } catch (fallbackErr) {
         console.error("Failed to start camera with fallback:", fallbackErr);
         setError("Failed to start camera. Please try again.");
