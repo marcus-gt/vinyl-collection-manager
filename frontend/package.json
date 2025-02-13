@@ -12,6 +12,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^7.16.2",
+    "@mantine/dates": "^7.16.2",
     "@mantine/form": "^7.16.2",
     "@mantine/hooks": "^7.16.2",
     "@mantine/notifications": "^7.16.2",
@@ -20,6 +21,7 @@
     "@tanstack/react-table": "^8.11.3",
     "@zxing/library": "^0.21.3",
     "axios": "^1.7.9",
+    "dayjs": "^1.11.10",
     "html5-qrcode": "^2.3.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@types/dayjs": "^1.11.3",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
