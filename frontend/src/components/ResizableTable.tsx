@@ -48,51 +48,6 @@ interface ResizableTableProps<T extends RowData> {
   onPageChange: (page: number) => void;
 }
 
-// Type for filter function parameters
-interface FilterFnParams<T extends RowData> {
-  row: {
-    getValue: (columnId: string) => any;
-  };
-  columnId: string;
-  filterValue: string | string[];
-}
-
-// Custom filter function that handles arrays and different filter types
-const arrayFilter: FilterFn<any> = (
-  row: { getValue: (columnId: string) => any },
-  columnId: string,
-  filterValue: string | string[]
-) => {
-  const value = row.getValue(columnId);
-  if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
-  
-  // Handle array values (like genres, styles, musicians)
-  if (Array.isArray(value)) {
-    if (Array.isArray(filterValue)) {
-      // Multi-select: check if any selected values match
-      return filterValue.some(filter => 
-        value.some(item => String(item).toLowerCase().includes(filter.toLowerCase()))
-      );
-    }
-    return value.some(item => 
-      String(item).toLowerCase().includes(String(filterValue).toLowerCase())
-    );
-  }
-  
-  // Handle single values
-  if (Array.isArray(filterValue)) {
-    return filterValue.some(filter => 
-      String(value).toLowerCase().includes(filter.toLowerCase())
-    );
-  }
-  return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
-};
-
-// Define custom filter functions with proper typing
-const filterFunctions = {
-  array: arrayFilter
-} as const;
-
 export function ResizableTable<T extends RowData>({ 
   data, 
   columns, 
