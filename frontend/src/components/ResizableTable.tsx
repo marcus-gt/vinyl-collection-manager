@@ -125,38 +125,21 @@ export function ResizableTable<T extends RowData>({
     return columns.map(column => {
       const columnId = String(column.accessorKey || column.id);
       
-      // If column already has a filter defined, use it
-      if (column.filter) return column;
-
-      // Find first non-null value to determine type
-      const firstValue = data.find(row => row[columnId as keyof T])?.[columnId as keyof T];
-
-      let filterType: FilterType = 'text';
-      if (Array.isArray(firstValue)) {
-        filterType = 'multi';
-      } else if (typeof firstValue === 'string' || typeof firstValue === 'number') {
-        const uniqueValues = new Set(data.map(row => {
-          const value = row[columnId as keyof T];
-          return value != null ? String(value) : null;
-        }).filter(Boolean));
-        if (uniqueValues.size <= 50) {
-          filterType = 'select';
-        }
-      }
-
+      // Make all columns use text filters for now
       return {
         ...column,
         enableColumnFilter: true,
-        filter: { type: filterType },
+        filter: { type: 'text' as FilterType },
         filterFn: (row: Row<T>, columnId: string, value: any, _meta: any) => {
-          switch (filterType) {
-            case 'multi':
-              return multiFilter(row, columnId, value, _meta);
-            case 'select':
-              return selectFilter(row, columnId, value, _meta);
-            default:
-              return textFilter(row, columnId, value, _meta);
+          const cellValue = row.getValue(columnId);
+          if (Array.isArray(cellValue)) {
+            // For array values, check if any element includes the search text
+            return cellValue.some(item => 
+              String(item).toLowerCase().includes(String(value).toLowerCase())
+            );
           }
+          // For all other values, do a simple text search
+          return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
         }
       } as ExtendedColumnDef<T>;
     });
@@ -180,9 +163,7 @@ export function ResizableTable<T extends RowData>({
     enableColumnFilters: true,
     manualFiltering: false,
     filterFns: {
-      text: textFilter,
-      select: selectFilter,
-      multi: multiFilter
+      text: textFilter
     } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
@@ -215,67 +196,29 @@ export function ResizableTable<T extends RowData>({
 
     const currentFilter = table.getState().columnFilters.find((filter: { id: string; value: any }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
-    
-    const commonStyles = {
-      root: {
-        width: '100%'
-      },
-      input: {
-        minHeight: '28px',
-        '&::placeholder': {
-          color: 'var(--mantine-color-dark-2)'
-        }
-      }
-    };
 
-    const wrapperStyle = {
-      position: 'relative' as const,
-      zIndex: 10
-    };
-
-    switch (column.filter.type) {
-      case 'select':
-        return (
-          <div onClick={(e) => e.stopPropagation()} style={wrapperStyle}>
-            <Select
-              placeholder="Filter..."
-              value={currentValue as string}
-              onChange={(value) => handleFilterChange(header.column.id, value || '')}
-              data={filterOptions[header.column.id] || []}
-              clearable
-              size="xs"
-              styles={commonStyles}
-            />
-          </div>
-        );
-      case 'multi':
-        return (
-          <div onClick={(e) => e.stopPropagation()} style={wrapperStyle}>
-            <MultiSelect
-              placeholder="Filter..."
-              value={Array.isArray(currentValue) ? currentValue : []}
-              onChange={(value) => handleFilterChange(header.column.id, value)}
-              data={filterOptions[header.column.id] || []}
-              clearable
-              size="xs"
-              styles={commonStyles}
-            />
-          </div>
-        );
-      default:
-        return (
-          <div onClick={(e) => e.stopPropagation()} style={wrapperStyle}>
-            <TextInput
-              placeholder="Filter..."
-              value={currentValue as string}
-              onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
-              size="xs"
-              leftSection={<IconSearch size={14} />}
-              styles={commonStyles}
-            />
-          </div>
-        );
-    }
+    return (
+      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', zIndex: 10 }}>
+        <TextInput
+          placeholder="Filter..."
+          value={currentValue as string}
+          onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
+          size="xs"
+          leftSection={<IconSearch size={14} />}
+          styles={{
+            root: {
+              width: '100%'
+            },
+            input: {
+              minHeight: '28px',
+              '&::placeholder': {
+                color: 'var(--mantine-color-dark-2)'
+              }
+            }
+          }}
+        />
+      </div>
+    );
   };
 
   return (
