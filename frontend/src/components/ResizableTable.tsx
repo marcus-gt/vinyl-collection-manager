@@ -97,27 +97,34 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
-  const dateRangeFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: DateRangeValue): boolean => {
+  const dateRangeFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: DateRangeValue | null): boolean => {
+    // If no filter value or both dates are null, show all rows
     if (!value || (!value.start && !value.end)) return true;
 
     const cellValue = row.getValue(columnId);
-    if (!cellValue) return false;
+    // If no cell value, don't show the row
+    if (!cellValue || typeof cellValue !== 'string') return false;
 
     try {
       const rowDate = new Date(cellValue);
+      // If invalid date in row, don't show it
       if (isNaN(rowDate.getTime())) return false;
 
       // Set time to start of day for comparison
       rowDate.setHours(0, 0, 0, 0);
 
       if (value.start) {
-        const start = new Date(value.start);
+        // Only compare if we have a start date
+        const start = value.start;
+        if (!(start instanceof Date) || isNaN(start.getTime())) return false;
         start.setHours(0, 0, 0, 0);
         if (rowDate < start) return false;
       }
 
       if (value.end) {
-        const end = new Date(value.end);
+        // Only compare if we have an end date
+        const end = value.end;
+        if (!(end instanceof Date) || isNaN(end.getTime())) return false;
         end.setHours(23, 59, 59, 999);
         if (rowDate > end) return false;
       }
