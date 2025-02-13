@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Menu, Button, TextInput, Select, MultiSelect, Stack, Group, Text } from '@mantine/core';
+import { Menu, Button, TextInput, Select, MultiSelect, Stack, Text } from '@mantine/core';
 import { IconFilter, IconX } from '@tabler/icons-react';
 
 interface ColumnFilterProps {

@@ -108,13 +108,13 @@ export function ResizableTable<T>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     filterFns: {
-      smart: smartFilter
+      smart: smartFilter as FilterFn<T>
     },
     defaultColumn: {
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      filterFn: 'smart'
+      filterFn: smartFilter as FilterFn<T>
     }
   });
 
