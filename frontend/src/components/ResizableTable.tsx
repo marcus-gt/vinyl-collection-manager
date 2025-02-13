@@ -17,7 +17,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, MantineTheme } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
@@ -101,21 +101,19 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   // Get min and max dates from the data for the date range limits
   const getDateRangeLimits = useMemo(() => {
-    if (!data.length) return { minDate: null, maxDate: null };
+    if (!data.length) return { minDate: undefined, maxDate: undefined };
 
-    let min = new Date(data[0].created_at || 0);
-    let max = new Date(data[0].created_at || 0);
+    const dates = data
+      .map(row => row.created_at)
+      .filter((date): date is string => Boolean(date))
+      .map(date => new Date(date))
+      .filter(date => !isNaN(date.getTime()));
 
-    data.forEach(row => {
-      if (!row.created_at) return;
-      const rowDate = new Date(row.created_at);
-      if (rowDate < min) min = rowDate;
-      if (rowDate > max) max = rowDate;
-    });
+    if (dates.length === 0) return { minDate: undefined, maxDate: undefined };
 
     return {
-      minDate: min,
-      maxDate: max
+      minDate: new Date(Math.min(...dates.map(d => d.getTime()))),
+      maxDate: new Date(Math.max(...dates.map(d => d.getTime())))
     };
   }, [data]);
 
@@ -280,7 +278,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               clearable
               valueFormat="DD/MM/YYYY"
               allowSingleDateInRange={false}
-              styles={{
+              styles={(theme: MantineTheme) => ({
                 root: {
                   width: '100%',
                   position: 'relative',
@@ -293,22 +291,16 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   minHeight: '28px',
                   width: '100%',
                   '&::placeholder': {
-                    color: 'var(--mantine-color-dark-2)'
+                    color: theme.colors.dark[2]
                   },
                   '&:focus': {
                     zIndex: 101
                   }
                 },
-                calendarHeader: {
-                  maxWidth: '300px'
-                },
-                calendar: {
-                  maxWidth: '300px'
-                },
-                monthsList: {
+                dropdown: {
                   maxWidth: '300px'
                 }
-              }}
+              })}
             />
           </Box>
         ) : (
