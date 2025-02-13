@@ -18,10 +18,18 @@ import {
   FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
-import { DateInput, DatePickerInput } from '@mantine/dates';
+import { DatePickerInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
 import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import minMax from 'dayjs/plugin/minMax';
+
+// Initialize dayjs plugins
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(minMax);
 
 // Define filter types
 type FilterType = 'text' | 'dateRange';
@@ -41,7 +49,12 @@ interface DateRange {
   end: string;
 }
 
-interface ResizableTableProps<T extends RowData> {
+// Extend RowData to include created_at
+interface BaseRowData {
+  created_at?: string;
+}
+
+interface ResizableTableProps<T extends RowData & BaseRowData> {
   data: T[];
   columns: ExtendedColumnDef<T>[];
   sortState?: SortingState;
@@ -54,7 +67,7 @@ interface ResizableTableProps<T extends RowData> {
   onPageChange: (page: number) => void;
 }
 
-export function ResizableTable<T extends RowData>({ 
+export function ResizableTable<T extends RowData & BaseRowData>({ 
   data, 
   columns, 
   sortState, 
@@ -212,7 +225,7 @@ export function ResizableTable<T extends RowData>({
     const currentFilter = table.getState().columnFilters.find(
       (filter: { id: string; value: any }) => filter.id === columnId
     );
-    const currentValue = currentFilter?.value ?? '';
+    const currentValue = currentFilter?.value as string | DateRange;
     console.log('Current filter value:', { columnId, value: currentValue });
 
     // Find column configuration
@@ -235,7 +248,7 @@ export function ResizableTable<T extends RowData>({
           <DatePickerInput
             type="range"
             placeholder="Filter by date range..."
-            value={currentValue ? [
+            value={currentValue && typeof currentValue === 'object' ? [
               currentValue.start ? new Date(currentValue.start) : null,
               currentValue.end ? new Date(currentValue.end) : null
             ] : [null, null]}
