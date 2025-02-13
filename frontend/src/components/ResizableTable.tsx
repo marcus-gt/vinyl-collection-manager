@@ -142,26 +142,51 @@ export function ResizableTable<T extends RowData>({
     const currentValue = currentFilter?.value ?? '';
 
     return (
-      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative', zIndex: 10 }}>
+      <Box 
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        style={{ 
+          position: 'relative',
+          zIndex: 100,
+          width: '100%'
+        }}
+      >
         <TextInput
           placeholder="Filter..."
           value={currentValue as string}
           onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           size="xs"
           leftSection={<IconSearch size={14} />}
           styles={{
             root: {
+              width: '100%',
+              position: 'relative',
+              zIndex: 100
+            },
+            wrapper: {
               width: '100%'
             },
             input: {
               minHeight: '28px',
+              width: '100%',
               '&::placeholder': {
                 color: 'var(--mantine-color-dark-2)'
+              },
+              '&:focus': {
+                zIndex: 101
               }
             }
           }}
         />
-      </div>
+      </Box>
     );
   };
 
@@ -197,7 +222,7 @@ export function ResizableTable<T extends RowData>({
             height: 'auto',
             width: '100%',
             position: 'relative',
-            zIndex: 3
+            zIndex: 10
           },
           tbody: {
             width: '100%',
@@ -310,9 +335,7 @@ export function ResizableTable<T extends RowData>({
                       position: 'relative'
                     }}
                   >
-                    <div style={{ position: 'relative', zIndex: 2 }}>
-                      {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
-                    </div>
+                    {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
                   </Table.Th>
                 ))}
               </Table.Tr>
