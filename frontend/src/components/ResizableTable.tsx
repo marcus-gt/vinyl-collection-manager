@@ -141,7 +141,16 @@ export function ResizableTable<T extends RowData>({
       return {
         ...column,
         filter: { type: filterType },
-        filterFn: filterType
+        filterFn: (row: Row<T>, columnId: string, value: any) => {
+          switch (filterType) {
+            case 'multi':
+              return multiFilter(row, columnId, value);
+            case 'select':
+              return selectFilter(row, columnId, value);
+            default:
+              return textFilter(row, columnId, value);
+          }
+        }
       } as ExtendedColumnDef<T>;
     });
   }, [columns, data]);
