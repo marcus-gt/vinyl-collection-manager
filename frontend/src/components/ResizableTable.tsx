@@ -121,7 +121,27 @@ export function ResizableTable<T extends RowData>({
 
   const table = useReactTable({
     data,
-    columns,
+    columns: columns.map(column => ({
+      ...column,
+      filterFn: column.filter?.type || (() => {
+        // Automatically determine filter type based on first non-null value
+        const firstValue = data.find(row => row[column.accessorKey as keyof T])?.[column.accessorKey as keyof T];
+        if (Array.isArray(firstValue)) {
+          column.filter = { type: 'multi' };
+          return 'multi';
+        }
+        if (typeof firstValue === 'string' || typeof firstValue === 'number') {
+          const uniqueValues = new Set(data.map(row => row[column.accessorKey as keyof T]));
+          if (uniqueValues.size <= 50) { // Use select for columns with few unique values
+            column.filter = { type: 'select' };
+            return 'select';
+          }
+          column.filter = { type: 'text' };
+          return 'text';
+        }
+        return 'text';
+      })()
+    })),
     state: {
       sorting: sortState,
       columnSizing,
@@ -167,9 +187,6 @@ export function ResizableTable<T extends RowData>({
     );
     
     if (!column?.filter) return null;
-
-    // Set the filter type for the column
-    header.column.setFilterValue(column.filter.type);
 
     const currentFilter = table.getState().columnFilters.find((filter: { id: string }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
