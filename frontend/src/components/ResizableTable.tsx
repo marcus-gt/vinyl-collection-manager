@@ -119,29 +119,36 @@ export function ResizableTable<T extends RowData>({
     );
   };
 
+  // Determine filter types for columns
+  const columnsWithFilters = useMemo(() => {
+    return columns.map(column => {
+      if (column.filter) return column;
+
+      const columnId = String(column.accessorKey || column.id);
+      // Find first non-null value
+      const firstValue = data.find(row => row[columnId as keyof T])?.[columnId as keyof T];
+
+      let filterType: FilterType = 'text';
+      if (Array.isArray(firstValue)) {
+        filterType = 'multi';
+      } else if (typeof firstValue === 'string' || typeof firstValue === 'number') {
+        const uniqueValues = new Set(data.map(row => row[columnId as keyof T]));
+        if (uniqueValues.size <= 50) {
+          filterType = 'select';
+        }
+      }
+
+      return {
+        ...column,
+        filter: { type: filterType },
+        filterFn: filterType
+      } as ExtendedColumnDef<T>;
+    });
+  }, [columns, data]);
+
   const table = useReactTable({
     data,
-    columns: columns.map(column => ({
-      ...column,
-      filterFn: column.filter?.type || (() => {
-        // Automatically determine filter type based on first non-null value
-        const firstValue = data.find(row => row[column.accessorKey as keyof T])?.[column.accessorKey as keyof T];
-        if (Array.isArray(firstValue)) {
-          column.filter = { type: 'multi' };
-          return 'multi';
-        }
-        if (typeof firstValue === 'string' || typeof firstValue === 'number') {
-          const uniqueValues = new Set(data.map(row => row[column.accessorKey as keyof T]));
-          if (uniqueValues.size <= 50) { // Use select for columns with few unique values
-            column.filter = { type: 'select' };
-            return 'select';
-          }
-          column.filter = { type: 'text' };
-          return 'text';
-        }
-        return 'text';
-      })()
-    })),
+    columns: columnsWithFilters,
     state: {
       sorting: sortState,
       columnSizing,
