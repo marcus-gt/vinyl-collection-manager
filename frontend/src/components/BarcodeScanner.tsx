@@ -48,14 +48,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           videoConstraints: {
             facingMode: { exact: "environment" },
             width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 },
-            focusMode: "continuous",
-            advanced: [{
-              zoom: 2.0,  // Slight zoom to help with focus
-              focusMode: "continuous",
-              autoFocus: true,
-              whiteBalanceMode: "continuous"
-            }]
+            height: { min: 480, ideal: 720, max: 1080 }
           },
           experimentalFeatures: {
             useBarCodeDetectorIfSupported: true
@@ -83,14 +76,17 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       // Try to force focus after a short delay
       setTimeout(async () => {
         try {
-          const track = scannerRef.current?.getVideoElement()?.srcObject?.getVideoTracks()[0];
-          if (track?.getCapabilities?.()?.focusMode) {
-            await track.applyConstraints({
-              advanced: [{
-                focusMode: "continuous",
-                autoFocus: true
-              }]
-            });
+          const videoElement = document.getElementById('reader')?.querySelector('video');
+          if (videoElement) {
+            const stream = (videoElement as HTMLVideoElement).srcObject as MediaStream;
+            const track = stream?.getVideoTracks()[0];
+            if (track?.getCapabilities?.()?.focusMode) {
+              await track.applyConstraints({
+                advanced: [{
+                  focusMode: 'continuous'
+                }]
+              });
+            }
           }
         } catch (focusErr) {
           console.log("Failed to apply focus constraints:", focusErr);
@@ -109,12 +105,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
             videoConstraints: {
               facingMode: "environment",
               width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 },
-              focusMode: "continuous",
-              advanced: [{
-                focusMode: "continuous",
-                autoFocus: true
-              }]
+              height: { min: 480, ideal: 720, max: 1080 }
             },
             experimentalFeatures: {
               useBarCodeDetectorIfSupported: true
@@ -142,14 +133,17 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         // Try to force focus after a short delay in fallback mode
         setTimeout(async () => {
           try {
-            const track = scannerRef.current?.getVideoElement()?.srcObject?.getVideoTracks()[0];
-            if (track?.getCapabilities?.()?.focusMode) {
-              await track.applyConstraints({
-                advanced: [{
-                  focusMode: "continuous",
-                  autoFocus: true
-                }]
-              });
+            const videoElement = document.getElementById('reader')?.querySelector('video');
+            if (videoElement) {
+              const stream = (videoElement as HTMLVideoElement).srcObject as MediaStream;
+              const track = stream?.getVideoTracks()[0];
+              if (track?.getCapabilities?.()?.focusMode) {
+                await track.applyConstraints({
+                  advanced: [{
+                    focusMode: 'continuous'
+                  }]
+                });
+              }
             }
           } catch (focusErr) {
             console.log("Failed to apply focus constraints in fallback mode:", focusErr);
