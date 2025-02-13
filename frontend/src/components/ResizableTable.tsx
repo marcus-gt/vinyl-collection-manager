@@ -18,12 +18,13 @@ import {
   FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
+import { DateInput, DatePickerInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
+import dayjs from 'dayjs';
 
 // Define filter types
-type FilterType = 'text' | 'date';
+type FilterType = 'text' | 'dateRange';
 
 interface ColumnFilter {
   type: FilterType;
@@ -34,6 +35,11 @@ type ExtendedColumnDef<T> = ColumnDef<T> & {
   filter?: ColumnFilter;
   accessorKey?: string;
 };
+
+interface DateRange {
+  start: string;
+  end: string;
+}
 
 interface ResizableTableProps<T extends RowData> {
   data: T[];
@@ -80,27 +86,43 @@ export function ResizableTable<T extends RowData>({
     return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
-  const dateFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: string, _meta: any): boolean => {
+  const dateFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
     const cellValue = row.getValue(columnId);
-    if (!cellValue || !value) return true;
+    if (!cellValue || !value || !value.start || !value.end) return true;
     
     try {
       // Convert cell value to date at start of day
-      const cellDate = new Date(String(cellValue));
-      if (isNaN(cellDate.getTime())) return false;
-      cellDate.setHours(0, 0, 0, 0);
+      const cellDate = dayjs(String(cellValue)).startOf('day');
+      if (!cellDate.isValid()) return false;
       
-      // Convert filter value to date at start of day
-      const filterDate = new Date(value);
-      if (isNaN(filterDate.getTime())) return false;
-      filterDate.setHours(0, 0, 0, 0);
+      // Convert filter values to dates at start/end of day
+      const startDate = dayjs(value.start).startOf('day');
+      const endDate = dayjs(value.end).endOf('day');
       
-      return cellDate.getTime() === filterDate.getTime();
+      if (!startDate.isValid() || !endDate.isValid()) return false;
+      
+      // Check if cell date is within range (inclusive)
+      return cellDate.isSameOrAfter(startDate) && cellDate.isSameOrBefore(endDate);
     } catch (e) {
       console.error('Error comparing dates:', e);
       return false;
     }
   };
+
+  // Get min and max dates from the data for the date range limits
+  const getDateRangeLimits = useMemo(() => {
+    const dates = data
+      .map(row => row.created_at)
+      .filter(Boolean)
+      .map(date => dayjs(date));
+    
+    if (dates.length === 0) return { minDate: null, maxDate: null };
+    
+    return {
+      minDate: dayjs.min(dates).toDate(),
+      maxDate: dayjs.max(dates).toDate()
+    };
+  }, [data]);
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
@@ -109,14 +131,14 @@ export function ResizableTable<T extends RowData>({
       const columnId = String(column.accessorKey || column.id);
       console.log('Adding filter to column:', columnId);
       
-      // Use date filter for the "added" column
+      // Use date range filter for the "added" column
       if (columnId === 'created_at') {
         return {
           ...column,
           id: columnId,
           enableColumnFilter: true,
           filterFn: dateFilter,
-          filter: { type: 'date' as const }
+          filter: { type: 'dateRange' as const }
         };
       }
       
@@ -161,13 +183,13 @@ export function ResizableTable<T extends RowData>({
     }
   });
 
-  const handleFilterChange = (columnId: string, value: string | string[]) => {
+  const handleFilterChange = (columnId: string, value: string | DateRange) => {
     console.log('Filter change:', { columnId, value });
     
     setColumnFilters((prev: ColumnFiltersState) => {
       console.log('Previous filters:', prev);
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
-      if (!value || (Array.isArray(value) && !value.length)) {
+      if (!value || (typeof value === 'string' && !value.length)) {
         console.log('Clearing filter for column:', columnId);
         return existing;
       }
@@ -209,14 +231,23 @@ export function ResizableTable<T extends RowData>({
           width: '100%'
         }}
       >
-        {column.filter.type === 'date' ? (
-          <DateInput
-            placeholder="Filter by date..."
-            value={currentValue ? new Date(String(currentValue)) : null}
-            onChange={(date: Date | null) => {
-              console.log('Date filter change:', date);
-              handleFilterChange(columnId, date ? date.toISOString() : '');
+        {column.filter.type === 'dateRange' ? (
+          <DatePickerInput
+            type="range"
+            placeholder="Filter by date range..."
+            value={currentValue ? [
+              currentValue.start ? new Date(currentValue.start) : null,
+              currentValue.end ? new Date(currentValue.end) : null
+            ] : [null, null]}
+            onChange={(dates: [Date | null, Date | null]) => {
+              console.log('Date range filter change:', dates);
+              handleFilterChange(columnId, dates?.[0] && dates?.[1] ? {
+                start: dates[0].toISOString(),
+                end: dates[1].toISOString()
+              } : '');
             }}
+            minDate={getDateRangeLimits.minDate}
+            maxDate={getDateRangeLimits.maxDate}
             size="xs"
             leftSection={<IconCalendar size={14} />}
             clearable
