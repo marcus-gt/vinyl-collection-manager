@@ -13,7 +13,8 @@ import {
   Row,
   Cell,
   OnChangeFn,
-  FilterFn
+  RowData,
+  ColumnFiltersState
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, Select, MultiSelect } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
@@ -33,7 +34,7 @@ type ExtendedColumnDef<T> = ColumnDef<T> & {
   accessorKey?: string;
 };
 
-interface ResizableTableProps<T> {
+interface ResizableTableProps<T extends RowData> {
   data: T[];
   columns: ExtendedColumnDef<T>[];
   sortState?: SortingState;
@@ -44,6 +45,15 @@ interface ResizableTableProps<T> {
   recordsPerPage: number;
   page: number;
   onPageChange: (page: number) => void;
+}
+
+// Type for filter function parameters
+interface FilterFnParams<T extends RowData> {
+  row: {
+    getValue: (columnId: string) => any;
+  };
+  columnId: string;
+  filterValue: string | string[];
 }
 
 // Custom filter function that handles arrays and different filter types
@@ -82,7 +92,7 @@ const filterFunctions = {
   array: arrayFilter
 } as const;
 
-export function ResizableTable<T>({ 
+export function ResizableTable<T extends RowData>({ 
   data, 
   columns, 
   sortState, 
@@ -100,7 +110,6 @@ export function ResizableTable<T>({
   });
 
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
-  const [columnFilters, setColumnFilters] = useState<Record<string, string | string[]>>({});
 
   // Generate unique filter options for select filters
   const filterOptions = useMemo(() => {
@@ -114,7 +123,7 @@ export function ResizableTable<T>({
         data.forEach(row => {
           const value = row[columnId as keyof T];
           if (Array.isArray(value)) {
-            value.forEach(v => options[columnId].add(String(v)));
+            value.forEach((v: unknown) => options[columnId].add(String(v)));
           } else if (value) {
             options[columnId].add(String(value));
           }
@@ -135,11 +144,7 @@ export function ResizableTable<T>({
     columns,
     state: {
       sorting: sortState,
-      columnSizing,
-      columnFilters: Object.entries(columnFilters).map(([id, value]) => ({
-        id,
-        value: value || ''
-      }))
+      columnSizing
     },
     columnResizeMode,
     onSortingChange: onSortChange,
@@ -150,17 +155,17 @@ export function ResizableTable<T>({
     enableColumnFilters: true,
     manualFiltering: false,
     filterFns: {
-      text: (row, columnId, filterValue) => {
+      text: ({ row, columnId, filterValue }: FilterFnParams<T>) => {
         const value = row.getValue(columnId);
         return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
       },
-      select: (row, columnId, filterValue) => {
+      select: ({ row, columnId, filterValue }: FilterFnParams<T>) => {
         if (!filterValue) return true;
         const value = row.getValue(columnId);
         return String(value).toLowerCase() === String(filterValue).toLowerCase();
       },
-      multi: (row, columnId, filterValue: string[]) => {
-        if (!filterValue?.length) return true;
+      multi: ({ row, columnId, filterValue }: FilterFnParams<T>) => {
+        if (!Array.isArray(filterValue) || !filterValue.length) return true;
         const value = row.getValue(columnId);
         if (Array.isArray(value)) {
           return filterValue.some(filter => 
@@ -184,8 +189,8 @@ export function ResizableTable<T>({
     const column = columns.find(col => String(col.accessorKey || col.id) === columnId);
     if (!column?.filter) return;
 
-    table.setColumnFilters(prev => {
-      const existing = prev.filter(f => f.id !== columnId);
+    table.setColumnFilters((prev: ColumnFiltersState) => {
+      const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (!value || (Array.isArray(value) && !value.length)) {
         return existing;
       }
@@ -200,7 +205,7 @@ export function ResizableTable<T>({
     
     if (!column?.filter) return null;
 
-    const currentFilter = table.getState().columnFilters.find(f => f.id === header.column.id);
+    const currentFilter = table.getState().columnFilters.find((filter: { id: string }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
     
     switch (column.filter.type) {
