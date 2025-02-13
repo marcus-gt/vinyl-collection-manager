@@ -17,7 +17,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, MantineTheme } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
