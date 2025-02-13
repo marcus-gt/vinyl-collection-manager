@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Box, Text, Button, Loader, Select } from '@mantine/core';
 
+// Extend the Html5QrcodeCameraScanConfig type to include experimental features
+interface ExtendedHtml5QrcodeCameraScanConfig {
+  fps: number;
+  qrbox: { width: number; height: number };
+  aspectRatio: number;
+  videoConstraints: MediaTrackConstraints;
+  experimentalFeatures?: {
+    useBarCodeDetectorIfSupported?: boolean;
+  };
+}
+
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
   isScanning: boolean;
@@ -39,21 +50,23 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
     };
 
     try {
+      const config: ExtendedHtml5QrcodeCameraScanConfig = {
+        fps: 10,
+        qrbox: qrboxSize,
+        aspectRatio: 1.0,
+        videoConstraints: {
+          facingMode: { exact: "environment" },
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 }
+        },
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
+      };
+
       await scannerRef.current.start(
         cameraId,
-        {
-          fps: 10,
-          qrbox: qrboxSize,
-          aspectRatio: 1.0,
-          videoConstraints: {
-            facingMode: { exact: "environment" },
-            width: { min: 640, ideal: 1280, max: 1920 },
-            height: { min: 480, ideal: 720, max: 1080 }
-          },
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          }
-        },
+        config as any, // Type cast to avoid TS error with experimental features
         (decodedText) => {
           console.log("Barcode detected:", decodedText);
           onScan(decodedText);
@@ -80,12 +93,17 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           if (videoElement) {
             const stream = (videoElement as HTMLVideoElement).srcObject as MediaStream;
             const track = stream?.getVideoTracks()[0];
-            if (track?.getCapabilities?.()?.focusMode) {
-              await track.applyConstraints({
-                advanced: [{
-                  focusMode: 'continuous'
-                }]
-              });
+            if (track) {
+              try {
+                await track.applyConstraints({
+                  advanced: [{
+                    // @ts-ignore - focusMode is supported in modern browsers
+                    focusMode: 'continuous'
+                  }]
+                });
+              } catch (err) {
+                console.log("Focus mode not supported:", err);
+              }
             }
           }
         } catch (focusErr) {
@@ -96,21 +114,23 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
     } catch (err) {
       console.error("Failed to start camera:", err);
       try {
+        const fallbackConfig: ExtendedHtml5QrcodeCameraScanConfig = {
+          fps: 10,
+          qrbox: qrboxSize,
+          aspectRatio: 1.0,
+          videoConstraints: {
+            facingMode: "environment",
+            width: { min: 640, ideal: 1280, max: 1920 },
+            height: { min: 480, ideal: 720, max: 1080 }
+          },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        };
+
         await scannerRef.current.start(
           cameraId,
-          {
-            fps: 10,
-            qrbox: qrboxSize,
-            aspectRatio: 1.0,
-            videoConstraints: {
-              facingMode: "environment",
-              width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 }
-            },
-            experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true
-            }
-          },
+          fallbackConfig as any,
           (decodedText) => {
             console.log("Barcode detected:", decodedText);
             onScan(decodedText);
@@ -137,12 +157,17 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
             if (videoElement) {
               const stream = (videoElement as HTMLVideoElement).srcObject as MediaStream;
               const track = stream?.getVideoTracks()[0];
-              if (track?.getCapabilities?.()?.focusMode) {
-                await track.applyConstraints({
-                  advanced: [{
-                    focusMode: 'continuous'
-                  }]
-                });
+              if (track) {
+                try {
+                  await track.applyConstraints({
+                    advanced: [{
+                      // @ts-ignore - focusMode is supported in modern browsers
+                      focusMode: 'continuous'
+                    }]
+                  });
+                } catch (err) {
+                  console.log("Focus mode not supported in fallback mode:", err);
+                }
               }
             }
           } catch (focusErr) {
