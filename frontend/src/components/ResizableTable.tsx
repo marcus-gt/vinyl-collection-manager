@@ -25,7 +25,6 @@ import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import minMax from 'dayjs/plugin/minMax';
-import type { DateValue } from '@mantine/dates';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
