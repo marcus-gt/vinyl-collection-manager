@@ -100,41 +100,46 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   const dateRangeFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: DateRangeValue): boolean => {
     const cellValue = row.getValue(columnId);
-    if (!cellValue) return true;
+    if (!cellValue || typeof cellValue !== 'string') return true;
 
-    const rowDate = new Date(cellValue);
-    if (isNaN(rowDate.getTime())) return false;
+    try {
+      const rowDate = new Date(cellValue);
+      if (isNaN(rowDate.getTime())) return false;
 
-    const { start, end } = value;
-    if (!start && !end) return true;
+      const { start, end } = value;
+      if (!start && !end) return true;
 
-    rowDate.setHours(0, 0, 0, 0);
+      rowDate.setHours(0, 0, 0, 0);
 
-    if (start && end) {
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      return rowDate >= startDate && rowDate <= endDate;
+      if (start && end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        return rowDate >= startDate && rowDate <= endDate;
+      }
+
+      if (start) {
+        const startDate = new Date(start);
+        startDate.setHours(0, 0, 0, 0);
+        return rowDate >= startDate;
+      }
+
+      if (end) {
+        const endDate = new Date(end);
+        endDate.setHours(23, 59, 59, 999);
+        return rowDate <= endDate;
+      }
+
+      return true;
+    } catch (e) {
+      console.error('Error comparing dates:', e);
+      return true;
     }
-
-    if (start) {
-      const startDate = new Date(start);
-      startDate.setHours(0, 0, 0, 0);
-      return rowDate >= startDate;
-    }
-
-    if (end) {
-      const endDate = new Date(end);
-      endDate.setHours(23, 59, 59, 999);
-      return rowDate <= endDate;
-    }
-
-    return true;
   };
 
   // Get min and max dates from the data
-  const getDateRangeLimits = useMemo(() => {
+  const dateRangeLimits = useMemo(() => {
     const dates = data
       .map(row => row.created_at)
       .filter((date): date is string => Boolean(date))
@@ -237,6 +242,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           leftSection={<IconCalendar size={14} />}
           clearable
           valueFormat="DD/MM/YYYY"
+          minDate={dateRangeLimits.minDate}
+          maxDate={dateRangeLimits.maxDate}
           styles={{
             root: { flex: 1 },
             input: {
@@ -262,6 +269,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           leftSection={<IconCalendar size={14} />}
           clearable
           valueFormat="DD/MM/YYYY"
+          minDate={dateRangeLimits.minDate}
+          maxDate={dateRangeLimits.maxDate}
           styles={{
             root: { flex: 1 },
             input: {
@@ -287,7 +296,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
 
     const currentFilter = table.getState().columnFilters.find(
-      filter => filter.id === header.column.id
+      (filter: { id: string; value: unknown }) => filter.id === header.column.id
     );
 
     return (
