@@ -15,8 +15,7 @@ import {
   OnChangeFn,
   RowData,
   ColumnFiltersState,
-  FilterFn,
-  FilterFnOption
+  FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, Select, MultiSelect } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
