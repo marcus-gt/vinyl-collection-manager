@@ -84,15 +84,22 @@ export function ResizableTable<T extends RowData>({
     const cellValue = row.getValue(columnId);
     if (!cellValue || !value) return true;
     
-    // Convert cell value to date at start of day
-    const cellDate = new Date(cellValue);
-    cellDate.setHours(0, 0, 0, 0);
-    
-    // Convert filter value to date at start of day
-    const filterDate = new Date(value);
-    filterDate.setHours(0, 0, 0, 0);
-    
-    return cellDate.getTime() === filterDate.getTime();
+    try {
+      // Convert cell value to date at start of day
+      const cellDate = new Date(String(cellValue));
+      if (isNaN(cellDate.getTime())) return false;
+      cellDate.setHours(0, 0, 0, 0);
+      
+      // Convert filter value to date at start of day
+      const filterDate = new Date(value);
+      if (isNaN(filterDate.getTime())) return false;
+      filterDate.setHours(0, 0, 0, 0);
+      
+      return cellDate.getTime() === filterDate.getTime();
+    } catch (e) {
+      console.error('Error comparing dates:', e);
+      return false;
+    }
   };
 
   // Determine filter types for columns
@@ -205,7 +212,7 @@ export function ResizableTable<T extends RowData>({
         {column.filter.type === 'date' ? (
           <DateInput
             placeholder="Filter by date..."
-            value={currentValue ? new Date(currentValue) : null}
+            value={currentValue ? new Date(String(currentValue)) : null}
             onChange={(date: Date | null) => {
               console.log('Date filter change:', date);
               handleFilterChange(columnId, date ? date.toISOString() : '');
@@ -213,6 +220,7 @@ export function ResizableTable<T extends RowData>({
             size="xs"
             leftSection={<IconCalendar size={14} />}
             clearable
+            valueFormat="YYYY-MM-DD"
             styles={{
               root: {
                 width: '100%',
