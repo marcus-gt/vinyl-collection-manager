@@ -81,12 +81,19 @@ export function ResizableTable<T extends RowData>({
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
-    return columns.map(column => ({
-      ...column,
-      enableColumnFilter: true,
-      filter: { type: 'text' },
-      filterFn: textFilter
-    } as ExtendedColumnDef<T>));
+    return columns.map(column => {
+      // Get the column ID consistently
+      const columnId = String(column.accessorKey || column.id);
+      console.log('Adding filter to column:', columnId);
+      
+      return {
+        ...column,
+        id: columnId, // Ensure column has an id
+        enableColumnFilter: true,
+        filterFn: textFilter,
+        filter: { type: 'text' as const }
+      };
+    });
   }, [columns]);
 
   const table = useReactTable({
@@ -120,12 +127,7 @@ export function ResizableTable<T extends RowData>({
 
   const handleFilterChange = (columnId: string, value: string | string[]) => {
     console.log('Filter change:', { columnId, value });
-    const column = columns.find(col => String(col.accessorKey || col.id) === columnId);
-    if (!column?.filter) {
-      console.log('No filter found for column:', columnId);
-      return;
-    }
-
+    
     setColumnFilters((prev: ColumnFiltersState) => {
       console.log('Previous filters:', prev);
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
@@ -140,19 +142,20 @@ export function ResizableTable<T extends RowData>({
   };
 
   const renderFilterInput = (header: Header<T, unknown>) => {
-    console.log('Rendering filter input for header:', header.id);
-    const column = columnsWithFilters.find(col => 
-      String(col.accessorKey || col.id) === header.column.id
-    );
-    
-    if (!column?.filter) {
-      console.log('No filter configuration found for column:', header.id);
+    const columnId = header.column.id;
+    console.log('Rendering filter input for header:', columnId);
+
+    // Check if filtering is enabled for this column
+    if (!header.column.getCanFilter()) {
+      console.log('Filtering disabled for column:', columnId);
       return null;
     }
 
-    const currentFilter = table.getState().columnFilters.find((filter: { id: string; value: any }) => filter.id === header.column.id);
+    const currentFilter = table.getState().columnFilters.find(
+      (filter: { id: string; value: any }) => filter.id === columnId
+    );
     const currentValue = currentFilter?.value ?? '';
-    console.log('Current filter value:', { columnId: header.id, value: currentValue });
+    console.log('Current filter value:', { columnId, value: currentValue });
 
     return (
       <Box 
@@ -171,7 +174,7 @@ export function ResizableTable<T extends RowData>({
           value={currentValue as string}
           onChange={(e) => {
             console.log('Filter input change:', e.target.value);
-            handleFilterChange(header.column.id, e.target.value);
+            handleFilterChange(columnId, e.target.value);
           }}
           onClick={(e) => {
             console.log('Filter input clicked');
