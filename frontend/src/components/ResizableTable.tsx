@@ -18,11 +18,12 @@ import {
   FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
-import { IconSearch } from '@tabler/icons-react';
+import { IconSearch, IconCalendar } from '@tabler/icons-react';
 
-// Define filter types - for now we only use text
-type FilterType = 'text';
+// Define filter types
+type FilterType = 'text' | 'date';
 
 interface ColumnFilter {
   type: FilterType;
@@ -79,6 +80,21 @@ export function ResizableTable<T extends RowData>({
     return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
+  const dateFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: string, _meta: any): boolean => {
+    const cellValue = row.getValue(columnId);
+    if (!cellValue || !value) return true;
+    
+    // Convert cell value to date at start of day
+    const cellDate = new Date(cellValue);
+    cellDate.setHours(0, 0, 0, 0);
+    
+    // Convert filter value to date at start of day
+    const filterDate = new Date(value);
+    filterDate.setHours(0, 0, 0, 0);
+    
+    return cellDate.getTime() === filterDate.getTime();
+  };
+
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
     return columns.map(column => {
@@ -86,9 +102,21 @@ export function ResizableTable<T extends RowData>({
       const columnId = String(column.accessorKey || column.id);
       console.log('Adding filter to column:', columnId);
       
+      // Use date filter for the "added" column
+      if (columnId === 'created_at') {
+        return {
+          ...column,
+          id: columnId,
+          enableColumnFilter: true,
+          filterFn: dateFilter,
+          filter: { type: 'date' as const }
+        };
+      }
+      
+      // Default text filter for other columns
       return {
         ...column,
-        id: columnId, // Ensure column has an id
+        id: columnId,
         enableColumnFilter: true,
         filterFn: textFilter,
         filter: { type: 'text' as const }
@@ -114,7 +142,8 @@ export function ResizableTable<T extends RowData>({
     enableColumnFilters: true,
     manualFiltering: false,
     filterFns: {
-      text: textFilter
+      text: textFilter,
+      date: dateFilter
     } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
@@ -157,6 +186,10 @@ export function ResizableTable<T extends RowData>({
     const currentValue = currentFilter?.value ?? '';
     console.log('Current filter value:', { columnId, value: currentValue });
 
+    // Find column configuration
+    const column = columnsWithFilters.find(col => col.id === columnId);
+    if (!column?.filter) return null;
+
     return (
       <Box 
         onClick={(e) => {
@@ -169,40 +202,74 @@ export function ResizableTable<T extends RowData>({
           width: '100%'
         }}
       >
-        <TextInput
-          placeholder="Filter..."
-          value={currentValue as string}
-          onChange={(e) => {
-            console.log('Filter input change:', e.target.value);
-            handleFilterChange(columnId, e.target.value);
-          }}
-          onClick={(e) => {
-            console.log('Filter input clicked');
-            e.stopPropagation();
-          }}
-          size="xs"
-          leftSection={<IconSearch size={14} />}
-          styles={{
-            root: {
-              width: '100%',
-              position: 'relative',
-              zIndex: 100
-            },
-            wrapper: {
-              width: '100%'
-            },
-            input: {
-              minHeight: '28px',
-              width: '100%',
-              '&::placeholder': {
-                color: 'var(--mantine-color-dark-2)'
+        {column.filter.type === 'date' ? (
+          <DateInput
+            placeholder="Filter by date..."
+            value={currentValue ? new Date(currentValue) : null}
+            onChange={(date: Date | null) => {
+              console.log('Date filter change:', date);
+              handleFilterChange(columnId, date ? date.toISOString() : '');
+            }}
+            size="xs"
+            leftSection={<IconCalendar size={14} />}
+            clearable
+            styles={{
+              root: {
+                width: '100%',
+                position: 'relative',
+                zIndex: 100
               },
-              '&:focus': {
-                zIndex: 101
+              wrapper: {
+                width: '100%'
+              },
+              input: {
+                minHeight: '28px',
+                width: '100%',
+                '&::placeholder': {
+                  color: 'var(--mantine-color-dark-2)'
+                },
+                '&:focus': {
+                  zIndex: 101
+                }
               }
-            }
-          }}
-        />
+            }}
+          />
+        ) : (
+          <TextInput
+            placeholder="Filter..."
+            value={currentValue as string}
+            onChange={(e) => {
+              console.log('Filter input change:', e.target.value);
+              handleFilterChange(columnId, e.target.value);
+            }}
+            onClick={(e) => {
+              console.log('Filter input clicked');
+              e.stopPropagation();
+            }}
+            size="xs"
+            leftSection={<IconSearch size={14} />}
+            styles={{
+              root: {
+                width: '100%',
+                position: 'relative',
+                zIndex: 100
+              },
+              wrapper: {
+                width: '100%'
+              },
+              input: {
+                minHeight: '28px',
+                width: '100%',
+                '&::placeholder': {
+                  color: 'var(--mantine-color-dark-2)'
+                },
+                '&:focus': {
+                  zIndex: 101
+                }
+              }
+            }}
+          />
+        )}
       </Box>
     );
   };
