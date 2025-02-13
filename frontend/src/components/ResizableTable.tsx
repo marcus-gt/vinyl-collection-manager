@@ -17,16 +17,15 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, Select, MultiSelect } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch } from '@tabler/icons-react';
 
-// Define filter types
-type FilterType = 'text' | 'select' | 'multi';
+// Define filter types - for now we only use text
+type FilterType = 'text';
 
 interface ColumnFilter {
   type: FilterType;
-  options?: string[];
 }
 
 // Extend ColumnDef to include our custom properties
@@ -68,82 +67,27 @@ export function ResizableTable<T extends RowData>({
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  // Generate unique filter options for select filters
-  const filterOptions = useMemo(() => {
-    const options: Record<string, Set<string>> = {};
-    
-    columns.forEach(column => {
-      if (column.filter?.type === 'select' || column.filter?.type === 'multi') {
-        const columnId = String(column.accessorKey || column.id);
-        options[columnId] = new Set<string>();
-        
-        data.forEach(row => {
-          const value = row[columnId as keyof T];
-          if (Array.isArray(value)) {
-            value.forEach((v: unknown) => options[columnId].add(String(v)));
-          } else if (value) {
-            options[columnId].add(String(value));
-          }
-        });
-      }
-    });
-    
-    return Object.fromEntries(
-      Object.entries(options).map(([key, set]) => [
-        key,
-        Array.from(set).sort().map(value => ({ value, label: value }))
-      ])
-    );
-  }, [data, columns]);
-
   const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
     const cellValue = row.getValue(columnId);
-    return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
-  };
-
-  const selectFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
-    if (!value) return true;
-    const cellValue = row.getValue(columnId);
-    return String(cellValue).toLowerCase() === String(value).toLowerCase();
-  };
-
-  const multiFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
-    if (!Array.isArray(value) || !value.length) return true;
-    const cellValue = row.getValue(columnId);
     if (Array.isArray(cellValue)) {
-      return value.some(filter => 
-        cellValue.some(item => String(item).toLowerCase() === filter.toLowerCase())
+      // For array values, check if any element includes the search text
+      return cellValue.some(item => 
+        String(item).toLowerCase().includes(String(value).toLowerCase())
       );
     }
-    return value.some(filter => 
-      String(cellValue).toLowerCase() === filter.toLowerCase()
-    );
+    // For all other values, do a simple text search
+    return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
-    return columns.map(column => {
-      const columnId = String(column.accessorKey || column.id);
-      
-      // Make all columns use text filters for now
-      return {
-        ...column,
-        enableColumnFilter: true,
-        filter: { type: 'text' as FilterType },
-        filterFn: (row: Row<T>, columnId: string, value: any, _meta: any) => {
-          const cellValue = row.getValue(columnId);
-          if (Array.isArray(cellValue)) {
-            // For array values, check if any element includes the search text
-            return cellValue.some(item => 
-              String(item).toLowerCase().includes(String(value).toLowerCase())
-            );
-          }
-          // For all other values, do a simple text search
-          return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
-        }
-      } as ExtendedColumnDef<T>;
-    });
-  }, [columns, data]);
+    return columns.map(column => ({
+      ...column,
+      enableColumnFilter: true,
+      filter: { type: 'text' },
+      filterFn: textFilter
+    } as ExtendedColumnDef<T>));
+  }, [columns]);
 
   const table = useReactTable({
     data,
