@@ -66,6 +66,7 @@ export function ResizableTable<T extends RowData>({
   });
 
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   // Generate unique filter options for select filters
   const filterOptions = useMemo(() => {
@@ -161,11 +162,12 @@ export function ResizableTable<T extends RowData>({
     state: {
       sorting: sortState,
       columnSizing,
-      columnFilters: []
+      columnFilters
     },
     columnResizeMode,
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -180,7 +182,8 @@ export function ResizableTable<T extends RowData>({
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      enableColumnFilter: true
+      enableColumnFilter: true,
+      enableSorting: true
     }
   });
 
@@ -188,7 +191,7 @@ export function ResizableTable<T extends RowData>({
     const column = columns.find(col => String(col.accessorKey || col.id) === columnId);
     if (!column?.filter) return;
 
-    table.setColumnFilters((prev: ColumnFiltersState) => {
+    setColumnFilters((prev: ColumnFiltersState) => {
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (!value || (Array.isArray(value) && !value.length)) {
         return existing;
