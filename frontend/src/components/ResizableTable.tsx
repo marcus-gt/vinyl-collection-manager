@@ -124,7 +124,8 @@ export function ResizableTable<T extends RowData>({
     columns,
     state: {
       sorting: sortState,
-      columnSizing
+      columnSizing,
+      columnFilters: []  // Initialize empty column filters
     },
     columnResizeMode,
     onSortingChange: onSortChange,
@@ -143,7 +144,8 @@ export function ResizableTable<T extends RowData>({
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      enableColumnFilter: true
+      enableColumnFilter: true,
+      filterFn: 'text'  // Default filter type
     }
   });
 
@@ -166,6 +168,9 @@ export function ResizableTable<T extends RowData>({
     );
     
     if (!column?.filter) return null;
+
+    // Set the filter type for the column
+    header.column.setFilterValue(column.filter.type);
 
     const currentFilter = table.getState().columnFilters.find((filter: { id: string }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
