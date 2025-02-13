@@ -129,11 +129,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       .filter(Boolean)
       .map(date => dayjs(date));
     
-    if (dates.length === 0) return { minDate: null, maxDate: null };
+    if (dates.length === 0) return { minDate: undefined, maxDate: undefined };
+    
+    const minDate = dayjs.min(dates);
+    const maxDate = dayjs.max(dates);
     
     return {
-      minDate: dayjs.min(dates).toDate(),
-      maxDate: dayjs.max(dates).toDate()
+      minDate: minDate.isValid() ? minDate.toDate() : undefined,
+      maxDate: maxDate.isValid() ? maxDate.toDate() : undefined
     };
   }, [data]);
 
@@ -249,9 +252,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             type="range"
             placeholder="Filter by date range..."
             value={currentValue && typeof currentValue === 'object' ? [
-              currentValue.start ? new Date(currentValue.start) : null,
-              currentValue.end ? new Date(currentValue.end) : null
-            ] : [null, null]}
+              currentValue.start ? new Date(currentValue.start) : undefined,
+              currentValue.end ? new Date(currentValue.end) : undefined
+            ] : [undefined, undefined]}
             onChange={(dates: [Date | null, Date | null]) => {
               console.log('Date range filter change:', dates);
               handleFilterChange(columnId, dates?.[0] && dates?.[1] ? {
@@ -265,6 +268,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             leftSection={<IconCalendar size={14} />}
             clearable
             valueFormat="YYYY-MM-DD"
+            allowSingleDateInRange={false}
             styles={{
               root: {
                 width: '100%',
