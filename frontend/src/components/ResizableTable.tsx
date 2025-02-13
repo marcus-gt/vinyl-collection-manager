@@ -17,7 +17,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, MantineTheme, useMantineTheme } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
@@ -79,6 +79,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   page,
   onPageChange
 }: ResizableTableProps<T>) {
+  const theme = useMantineTheme();
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
     key: `table-sizing-${tableId}`,
     defaultValue: {}
@@ -98,44 +99,34 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     return String(cellValue).toLowerCase().includes(value.toLowerCase());
   };
 
-  const dateRangeFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: DateRangeValue): boolean => {
-    const cellValue = row.getValue(columnId);
-    if (!cellValue || typeof cellValue !== 'string') return true;
-
-    try {
-      const rowDate = new Date(cellValue);
-      if (isNaN(rowDate.getTime())) return false;
-
-      const { start, end } = value;
-      if (!start && !end) return true;
-
-      rowDate.setHours(0, 0, 0, 0);
-
-      if (start && end) {
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        startDate.setHours(0, 0, 0, 0);
-        endDate.setHours(23, 59, 59, 999);
-        return rowDate >= startDate && rowDate <= endDate;
-      }
-
-      if (start) {
-        const startDate = new Date(start);
-        startDate.setHours(0, 0, 0, 0);
-        return rowDate >= startDate;
-      }
-
-      if (end) {
-        const endDate = new Date(end);
-        endDate.setHours(23, 59, 59, 999);
-        return rowDate <= endDate;
-      }
-
-      return true;
-    } catch (e) {
-      console.error('Error comparing dates:', e);
+  const dateRangeFilter: FilterFn<any> = (
+    row: Row<any>,
+    columnId: string,
+    filterValue: [Date | null, Date | null]
+  ): boolean => {
+    // If no filter value is set, show all rows
+    if (!filterValue || (!filterValue[0] && !filterValue[1])) {
       return true;
     }
+
+    const cellValue = row.getValue(columnId);
+    // If cell has no value, don't show it when filtering
+    if (!cellValue) {
+      return false;
+    }
+
+    const cellDate = new Date(cellValue as string | number | Date);
+    const [start, end] = filterValue;
+
+    if (start && end) {
+      return cellDate >= start && cellDate <= end;
+    } else if (start) {
+      return cellDate >= start;
+    } else if (end) {
+      return cellDate <= end;
+    }
+
+    return true;
   };
 
   // Get min and max dates from the data
@@ -251,6 +242,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               '&::placeholder': {
                 color: 'var(--mantine-color-dark-2)'
               }
+            },
+            calendarHeader: {
+              maxWidth: '250px'
+            },
+            calendarHeaderControl: {
+              width: '24px',
+              height: '24px',
+              '& svg': {
+                width: '14px',
+                height: '14px'
+              }
             }
           }}
         />
@@ -277,6 +279,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               minHeight: '28px',
               '&::placeholder': {
                 color: 'var(--mantine-color-dark-2)'
+              }
+            },
+            calendarHeader: {
+              maxWidth: '250px'
+            },
+            calendarHeaderControl: {
+              width: '24px',
+              height: '24px',
+              '& svg': {
+                width: '14px',
+                height: '14px'
               }
             }
           }}
@@ -313,7 +326,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           input: {
             minHeight: '28px',
             '&::placeholder': {
-              color: 'var(--mantine-color-dark-2)'
+              color: theme.colors.dark[2]
             }
           }
         }}
