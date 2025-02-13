@@ -119,37 +119,46 @@ export function ResizableTable<T extends RowData>({
   });
 
   const handleFilterChange = (columnId: string, value: string | string[]) => {
+    console.log('Filter change:', { columnId, value });
     const column = columns.find(col => String(col.accessorKey || col.id) === columnId);
-    if (!column?.filter) return;
+    if (!column?.filter) {
+      console.log('No filter found for column:', columnId);
+      return;
+    }
 
     setColumnFilters((prev: ColumnFiltersState) => {
+      console.log('Previous filters:', prev);
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (!value || (Array.isArray(value) && !value.length)) {
+        console.log('Clearing filter for column:', columnId);
         return existing;
       }
-      return [...existing, { id: columnId, value }];
+      const newFilters = [...existing, { id: columnId, value }];
+      console.log('New filters:', newFilters);
+      return newFilters;
     });
   };
 
   const renderFilterInput = (header: Header<T, unknown>) => {
+    console.log('Rendering filter input for header:', header.id);
     const column = columnsWithFilters.find(col => 
       String(col.accessorKey || col.id) === header.column.id
     );
     
-    if (!column?.filter) return null;
+    if (!column?.filter) {
+      console.log('No filter configuration found for column:', header.id);
+      return null;
+    }
 
     const currentFilter = table.getState().columnFilters.find((filter: { id: string; value: any }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
+    console.log('Current filter value:', { columnId: header.id, value: currentValue });
 
     return (
       <Box 
         onClick={(e) => {
+          console.log('Filter box clicked');
           e.stopPropagation();
-          e.preventDefault();
-        }}
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
         }}
         style={{ 
           position: 'relative',
@@ -160,9 +169,14 @@ export function ResizableTable<T extends RowData>({
         <TextInput
           placeholder="Filter..."
           value={currentValue as string}
-          onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            console.log('Filter input change:', e.target.value);
+            handleFilterChange(header.column.id, e.target.value);
+          }}
+          onClick={(e) => {
+            console.log('Filter input clicked');
+            e.stopPropagation();
+          }}
           size="xs"
           leftSection={<IconSearch size={14} />}
           styles={{
