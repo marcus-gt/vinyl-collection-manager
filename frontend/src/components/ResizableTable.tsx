@@ -14,7 +14,8 @@ import {
   Cell,
   OnChangeFn,
   RowData,
-  ColumnFiltersState
+  ColumnFiltersState,
+  FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, Select, MultiSelect } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
@@ -139,6 +140,30 @@ export function ResizableTable<T extends RowData>({
     );
   }, [data, columns]);
 
+  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
+    const cellValue = row.getValue(columnId);
+    return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
+  };
+
+  const selectFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
+    if (!value) return true;
+    const cellValue = row.getValue(columnId);
+    return String(cellValue).toLowerCase() === String(value).toLowerCase();
+  };
+
+  const multiFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
+    if (!Array.isArray(value) || !value.length) return true;
+    const cellValue = row.getValue(columnId);
+    if (Array.isArray(cellValue)) {
+      return value.some(filter => 
+        cellValue.some(item => String(item).toLowerCase() === filter.toLowerCase())
+      );
+    }
+    return value.some(filter => 
+      String(cellValue).toLowerCase() === filter.toLowerCase()
+    );
+  };
+
   const table = useReactTable({
     data,
     columns,
@@ -155,27 +180,9 @@ export function ResizableTable<T extends RowData>({
     enableColumnFilters: true,
     manualFiltering: false,
     filterFns: {
-      text: ({ row, columnId, filterValue }: FilterFnParams<T>) => {
-        const value = row.getValue(columnId);
-        return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
-      },
-      select: ({ row, columnId, filterValue }: FilterFnParams<T>) => {
-        if (!filterValue) return true;
-        const value = row.getValue(columnId);
-        return String(value).toLowerCase() === String(filterValue).toLowerCase();
-      },
-      multi: ({ row, columnId, filterValue }: FilterFnParams<T>) => {
-        if (!Array.isArray(filterValue) || !filterValue.length) return true;
-        const value = row.getValue(columnId);
-        if (Array.isArray(value)) {
-          return filterValue.some(filter => 
-            value.some(item => String(item).toLowerCase() === filter.toLowerCase())
-          );
-        }
-        return filterValue.some(filter => 
-          String(value).toLowerCase() === filter.toLowerCase()
-        );
-      }
+      text: textFilter,
+      select: selectFilter,
+      multi: multiFilter
     },
     defaultColumn: {
       minSize: 50,
