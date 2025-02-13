@@ -123,17 +123,22 @@ export function ResizableTable<T extends RowData>({
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
     return columns.map(column => {
+      const columnId = String(column.accessorKey || column.id);
+      
+      // If column already has a filter defined, use it
       if (column.filter) return column;
 
-      const columnId = String(column.accessorKey || column.id);
-      // Find first non-null value
+      // Find first non-null value to determine type
       const firstValue = data.find(row => row[columnId as keyof T])?.[columnId as keyof T];
 
       let filterType: FilterType = 'text';
       if (Array.isArray(firstValue)) {
         filterType = 'multi';
       } else if (typeof firstValue === 'string' || typeof firstValue === 'number') {
-        const uniqueValues = new Set(data.map(row => row[columnId as keyof T]));
+        const uniqueValues = new Set(data.map(row => {
+          const value = row[columnId as keyof T];
+          return value != null ? String(value) : null;
+        }).filter(Boolean));
         if (uniqueValues.size <= 50) {
           filterType = 'select';
         }
@@ -141,6 +146,7 @@ export function ResizableTable<T extends RowData>({
 
       return {
         ...column,
+        enableColumnFilter: true,
         filter: { type: filterType },
         filterFn: (row: Row<T>, columnId: string, value: any, _meta: any) => {
           switch (filterType) {
@@ -201,13 +207,13 @@ export function ResizableTable<T extends RowData>({
   };
 
   const renderFilterInput = (header: Header<T, unknown>) => {
-    const column = columns.find(col => 
+    const column = columnsWithFilters.find(col => 
       String(col.accessorKey || col.id) === header.column.id
     );
     
     if (!column?.filter) return null;
 
-    const currentFilter = table.getState().columnFilters.find((filter: { id: string }) => filter.id === header.column.id);
+    const currentFilter = table.getState().columnFilters.find((filter: { id: string; value: any }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
     
     switch (column.filter.type) {
