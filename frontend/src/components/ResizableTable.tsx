@@ -15,7 +15,8 @@ import {
   OnChangeFn,
   RowData,
   ColumnFiltersState,
-  FilterFn
+  FilterFn,
+  FilterFnOption
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, Select, MultiSelect } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
@@ -125,7 +126,7 @@ export function ResizableTable<T extends RowData>({
     state: {
       sorting: sortState,
       columnSizing,
-      columnFilters: []  // Initialize empty column filters
+      columnFilters: []
     },
     columnResizeMode,
     onSortingChange: onSortChange,
@@ -139,13 +140,12 @@ export function ResizableTable<T extends RowData>({
       text: textFilter,
       select: selectFilter,
       multi: multiFilter
-    },
+    } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      enableColumnFilter: true,
-      filterFn: 'text'  // Default filter type
+      enableColumnFilter: true
     }
   });
 
