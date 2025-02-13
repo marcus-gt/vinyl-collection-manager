@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -299,20 +299,17 @@ export function ResizableTable<T extends RowData>({
           },
           thead: {
             height: 'auto',
-            width: '100%'
+            width: '100%',
+            position: 'relative',
+            zIndex: 2  // Ensure filters are above table content
           },
           tbody: {
             width: '100%',
-            '& tr': {
-              height: '32px',
-              width: '100%'
-            }
+            position: 'relative',
+            zIndex: 1
           },
           tr: {
-            height: '32px',
-            '&:hover': {
-              height: '32px'
-            }
+            height: '32px'
           },
           td: {
             height: '32px',
@@ -321,15 +318,6 @@ export function ResizableTable<T extends RowData>({
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
-            },
-            '& > div': {
-              height: '32px',
-              maxHeight: '32px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center'
             }
           },
           th: {
@@ -337,14 +325,17 @@ export function ResizableTable<T extends RowData>({
             borderRight: '1px solid var(--mantine-color-dark-4)',
             '&:last-child': {
               borderRight: 'none'
+            },
+            '& > div': {
+              position: 'relative'
             }
           }
         }}
       >
         <Table.Thead>
           {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
-            <>
-              <Table.Tr key={`${headerGroup.id}-headers`}>
+            <React.Fragment key={headerGroup.id}>
+              <Table.Tr>
                 {headerGroup.headers.map((header: Header<T, unknown>) => (
                   <Table.Th
                     key={header.id}
@@ -357,14 +348,13 @@ export function ResizableTable<T extends RowData>({
                   >
                     {header.isPlaceholder ? null : (
                       <div
-                        {...{
-                          style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: header.column.getCanSort() ? 'pointer' : 'default'
-                          },
-                          onClick: header.column.getToggleSortingHandler()
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                          position: 'relative'
                         }}
+                        onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(
                           header.column.columnDef.header,
@@ -396,7 +386,8 @@ export function ResizableTable<T extends RowData>({
                           userSelect: 'none',
                           touchAction: 'none',
                           opacity: header.column.getIsResizing() ? 1 : 0,
-                          transition: 'opacity 0.2s'
+                          transition: 'opacity 0.2s',
+                          zIndex: 3
                         }}
                         onMouseEnter={(e) => {
                           (e.target as HTMLElement).style.opacity = '1';
@@ -413,50 +404,44 @@ export function ResizableTable<T extends RowData>({
                   </Table.Th>
                 ))}
               </Table.Tr>
-              <Table.Tr key={`${headerGroup.id}-filters`}>
+              <Table.Tr>
                 {headerGroup.headers.map((header: Header<T, unknown>) => (
                   <Table.Th
                     key={`${header.id}-filter`}
                     colSpan={header.colSpan}
                     style={{
                       width: header.getSize(),
-                      padding: '4px 8px'
+                      padding: '4px 8px',
+                      position: 'relative'
                     }}
                   >
-                    {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
+                    <div style={{ position: 'relative', zIndex: 2 }}>
+                      {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
+                    </div>
                   </Table.Th>
                 ))}
               </Table.Tr>
-            </>
+            </React.Fragment>
           ))}
         </Table.Thead>
         <Table.Tbody>
           {table.getRowModel().rows.map((row: Row<T>) => (
-            <Table.Tr key={row.id} style={{ height: '32px', maxHeight: '32px' }}>
+            <Table.Tr key={row.id}>
               {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
                 <Table.Td
                   key={cell.id}
                   style={{
                     width: cell.column.getSize(),
                     maxWidth: cell.column.getSize(),
-                    height: '32px',
-                    maxHeight: '32px',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{ 
-                    height: '32px', 
-                    maxHeight: '32px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    pointerEvents: 'none'
+                    whiteSpace: 'nowrap'
                   }}>
-                    <div style={{ pointerEvents: 'auto' }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </div>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </div>
                 </Table.Td>
               ))}
