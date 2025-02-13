@@ -99,50 +99,46 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
+  // Get min and max dates from the data for the date range limits
+  const getDateRangeLimits = useMemo(() => {
+    if (!data.length) return { minDate: null, maxDate: null };
+
+    let min = new Date(data[0].created_at || 0);
+    let max = new Date(data[0].created_at || 0);
+
+    data.forEach(row => {
+      if (!row.created_at) return;
+      const rowDate = new Date(row.created_at);
+      if (rowDate < min) min = rowDate;
+      if (rowDate > max) max = rowDate;
+    });
+
+    return {
+      minDate: min,
+      maxDate: max
+    };
+  }, [data]);
+
   const dateFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
     const cellValue = row.getValue(columnId);
     if (!cellValue || !value || !value.start || !value.end) return true;
     
     try {
-      // Convert cell value to date at start of day
-      const cellDate = dayjs(String(cellValue)).startOf('day');
-      if (!cellDate.isValid()) return false;
+      const cellDate = new Date(cellValue);
+      const startDate = new Date(value.start);
+      const endDate = new Date(value.end);
       
-      // Convert filter values to dates at start/end of day
-      const startDate = dayjs(value.start).startOf('day');
-      const endDate = dayjs(value.end).endOf('day');
-      
-      if (!startDate.isValid() || !endDate.isValid()) return false;
-      
-      // Check if cell date is within range (inclusive)
-      return cellDate.isSameOrAfter(startDate) && cellDate.isSameOrBefore(endDate);
+      // Set time to start/end of day for proper comparison
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
+      cellDate.setHours(0, 0, 0, 0);
+
+      return cellDate >= startDate && cellDate <= endDate;
     } catch (e) {
       console.error('Error comparing dates:', e);
       return false;
     }
   };
-
-  // Get min and max dates from the data for the date range limits
-  const getDateRangeLimits = useMemo(() => {
-    const dates = data
-      .map(row => row.created_at)
-      .filter(Boolean)
-      .map(date => dayjs(date));
-    
-    if (dates.length === 0) return { minDate: null, maxDate: null };
-    
-    const minDate = dayjs.min(dates);
-    const maxDate = dayjs.max(dates);
-    
-    if (!minDate || !maxDate || !minDate.isValid() || !maxDate.isValid()) {
-      return { minDate: null, maxDate: null };
-    }
-    
-    return {
-      minDate: minDate.toDate(),
-      maxDate: maxDate.toDate()
-    };
-  }, [data]);
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
@@ -252,48 +248,69 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         }}
       >
         {column.filter.type === 'dateRange' ? (
-          <DatePickerInput
-            type="range"
-            placeholder="Filter by date range..."
-            value={currentValue && typeof currentValue === 'object' ? [
-              currentValue.start ? new Date(currentValue.start) : null,
-              currentValue.end ? new Date(currentValue.end) : null
-            ] : [null, null]}
-            onChange={(dates: [Date | null, Date | null]) => {
-              console.log('Date range filter change:', dates);
-              handleFilterChange(columnId, dates?.[0] && dates?.[1] ? {
-                start: dates[0].toISOString(),
-                end: dates[1].toISOString()
-              } : '');
-            }}
-            minDate={getDateRangeLimits.minDate || undefined}
-            maxDate={getDateRangeLimits.maxDate || undefined}
-            size="xs"
-            leftSection={<IconCalendar size={14} />}
-            clearable
-            valueFormat="YYYY-MM-DD"
-            allowSingleDateInRange={false}
-            styles={{
-              root: {
-                width: '100%',
-                position: 'relative',
-                zIndex: 100
-              },
-              wrapper: {
-                width: '100%'
-              },
-              input: {
-                minHeight: '28px',
-                width: '100%',
-                '&::placeholder': {
-                  color: 'var(--mantine-color-dark-2)'
-                },
-                '&:focus': {
-                  zIndex: 101
+          <Box>
+            <DatePickerInput
+              type="range"
+              placeholder="Filter by date range..."
+              value={currentValue && typeof currentValue === 'object' ? [
+                currentValue.start ? new Date(currentValue.start) : null,
+                currentValue.end ? new Date(currentValue.end) : null
+              ] : [null, null]}
+              onChange={(dates: [Date | null, Date | null]) => {
+                console.log('Date range filter change:', dates);
+                if (dates[0] && dates[1]) {
+                  // Set time to start/end of day for proper range
+                  const start = new Date(dates[0]);
+                  const end = new Date(dates[1]);
+                  start.setHours(0, 0, 0, 0);
+                  end.setHours(23, 59, 59, 999);
+                  
+                  handleFilterChange(columnId, {
+                    start: start.toISOString(),
+                    end: end.toISOString()
+                  });
+                } else {
+                  handleFilterChange(columnId, '');
                 }
-              }
-            }}
-          />
+              }}
+              minDate={getDateRangeLimits.minDate}
+              maxDate={getDateRangeLimits.maxDate}
+              size="xs"
+              leftSection={<IconCalendar size={14} />}
+              clearable
+              valueFormat="DD/MM/YYYY"
+              allowSingleDateInRange={false}
+              styles={{
+                root: {
+                  width: '100%',
+                  position: 'relative',
+                  zIndex: 100
+                },
+                wrapper: {
+                  width: '100%'
+                },
+                input: {
+                  minHeight: '28px',
+                  width: '100%',
+                  '&::placeholder': {
+                    color: 'var(--mantine-color-dark-2)'
+                  },
+                  '&:focus': {
+                    zIndex: 101
+                  }
+                },
+                calendarHeader: {
+                  maxWidth: '300px'
+                },
+                calendar: {
+                  maxWidth: '300px'
+                },
+                monthsList: {
+                  maxWidth: '300px'
+                }
+              }}
+            />
+          </Box>
         ) : (
           <TextInput
             placeholder="Filter..."
