@@ -216,56 +216,64 @@ export function ResizableTable<T extends RowData>({
     const currentFilter = table.getState().columnFilters.find((filter: { id: string; value: any }) => filter.id === header.column.id);
     const currentValue = currentFilter?.value ?? '';
     
+    const commonStyles = {
+      root: {
+        width: '100%'
+      },
+      input: {
+        minHeight: '28px',
+        '&::placeholder': {
+          color: 'var(--mantine-color-dark-2)'
+        }
+      }
+    };
+
+    const wrapperStyle = {
+      position: 'relative' as const,
+      zIndex: 10
+    };
+
     switch (column.filter.type) {
       case 'select':
         return (
-          <Select
-            placeholder="Filter..."
-            value={currentValue as string}
-            onChange={(value) => handleFilterChange(header.column.id, value || '')}
-            data={filterOptions[header.column.id] || []}
-            clearable
-            size="xs"
-            styles={{
-              input: {
-                minHeight: '28px'
-              }
-            }}
-          />
+          <div onClick={(e) => e.stopPropagation()} style={wrapperStyle}>
+            <Select
+              placeholder="Filter..."
+              value={currentValue as string}
+              onChange={(value) => handleFilterChange(header.column.id, value || '')}
+              data={filterOptions[header.column.id] || []}
+              clearable
+              size="xs"
+              styles={commonStyles}
+            />
+          </div>
         );
       case 'multi':
         return (
-          <MultiSelect
-            placeholder="Filter..."
-            value={Array.isArray(currentValue) ? currentValue : []}
-            onChange={(value) => handleFilterChange(header.column.id, value)}
-            data={filterOptions[header.column.id] || []}
-            clearable
-            size="xs"
-            styles={{
-              input: {
-                minHeight: '28px'
-              }
-            }}
-          />
+          <div onClick={(e) => e.stopPropagation()} style={wrapperStyle}>
+            <MultiSelect
+              placeholder="Filter..."
+              value={Array.isArray(currentValue) ? currentValue : []}
+              onChange={(value) => handleFilterChange(header.column.id, value)}
+              data={filterOptions[header.column.id] || []}
+              clearable
+              size="xs"
+              styles={commonStyles}
+            />
+          </div>
         );
       default:
         return (
-          <TextInput
-            placeholder="Filter..."
-            value={currentValue as string}
-            onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
-            size="xs"
-            leftSection={<IconSearch size={14} />}
-            styles={{
-              input: {
-                minHeight: '28px',
-                '&::placeholder': {
-                  color: 'var(--mantine-color-dark-2)'
-                }
-              }
-            }}
-          />
+          <div onClick={(e) => e.stopPropagation()} style={wrapperStyle}>
+            <TextInput
+              placeholder="Filter..."
+              value={currentValue as string}
+              onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
+              size="xs"
+              leftSection={<IconSearch size={14} />}
+              styles={commonStyles}
+            />
+          </div>
         );
     }
   };
@@ -289,7 +297,8 @@ export function ResizableTable<T extends RowData>({
           minWidth: Math.max(table.getCenterTotalSize(), 1200),
           borderCollapse: 'separate',
           borderSpacing: 0,
-          lineHeight: '32px'
+          lineHeight: '32px',
+          position: 'relative'
         }}
         styles={{
           table: {
@@ -301,7 +310,7 @@ export function ResizableTable<T extends RowData>({
             height: 'auto',
             width: '100%',
             position: 'relative',
-            zIndex: 2  // Ensure filters are above table content
+            zIndex: 3
           },
           tbody: {
             width: '100%',
@@ -309,7 +318,8 @@ export function ResizableTable<T extends RowData>({
             zIndex: 1
           },
           tr: {
-            height: '32px'
+            height: '32px',
+            position: 'relative'
           },
           td: {
             height: '32px',
@@ -323,11 +333,9 @@ export function ResizableTable<T extends RowData>({
           th: {
             padding: '8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
+            position: 'relative',
             '&:last-child': {
               borderRight: 'none'
-            },
-            '& > div': {
-              position: 'relative'
             }
           }
         }}
