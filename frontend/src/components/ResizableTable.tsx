@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -15,13 +15,21 @@ import {
   OnChangeFn,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, Stack } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, Select, MultiSelect } from '@mantine/core';
 import { useLocalStorage } from '@mantine/hooks';
-import { ColumnFilter } from './ColumnFilter';
+import { IconSearch } from '@tabler/icons-react';
+
+// Define filter types
+type FilterType = 'text' | 'select' | 'multi';
+
+interface ColumnFilter {
+  type: FilterType;
+  options?: string[];
+}
 
 interface ResizableTableProps<T> {
   data: T[];
-  columns: Array<ColumnDef<T> & { filterType?: 'text' | 'number' | 'array' | 'single-select' | 'multi-select' | 'date' }>;
+  columns: (ColumnDef<T> & { filter?: ColumnFilter })[];
   sortState?: SortingState;
   onSortChange?: OnChangeFn<SortingState>;
   tableId: string;
@@ -32,42 +40,35 @@ interface ResizableTableProps<T> {
   onPageChange: (page: number) => void;
 }
 
-// Custom filter function that handles arrays and different types
-const smartFilter: FilterFn<any> = (
+// Custom filter function that handles arrays and different filter types
+const arrayFilter: FilterFn<any> = (
   row: { getValue: (columnId: string) => any },
   columnId: string,
-  filterValue: string
+  filterValue: string | string[]
 ) => {
   const value = row.getValue(columnId);
-  if (!filterValue) return true;
+  if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
   
-  // Handle array values (like genres, musicians)
+  // Handle array values (like genres, styles, musicians)
   if (Array.isArray(value)) {
-    // For multi-select filters, check if any selected value is in the array
-    const filterValues = filterValue.split(',');
-    return filterValues.some(filterVal => 
-      value.some(item => 
-        String(item).toLowerCase().includes(filterVal.toLowerCase())
-      )
+    if (Array.isArray(filterValue)) {
+      // Multi-select: check if any selected values match
+      return filterValue.some(filter => 
+        value.some(item => String(item).toLowerCase().includes(filter.toLowerCase()))
+      );
+    }
+    return value.some(item => 
+      String(item).toLowerCase().includes(String(filterValue).toLowerCase())
     );
   }
   
-  // Handle null/undefined values
-  if (value == null) return false;
-  
-  // Handle numbers
-  if (typeof value === 'number') {
-    const numFilter = Number(filterValue);
-    return !isNaN(numFilter) && value === numFilter;
+  // Handle single values
+  if (Array.isArray(filterValue)) {
+    return filterValue.some(filter => 
+      String(value).toLowerCase().includes(filter.toLowerCase())
+    );
   }
-  
-  // Handle dates
-  if (value instanceof Date) {
-    return value.toISOString().includes(filterValue);
-  }
-  
-  // Default string comparison
-  return String(value).toLowerCase().includes(filterValue.toLowerCase());
+  return String(value).toLowerCase().includes(String(filterValue).toLowerCase());
 };
 
 export function ResizableTable<T>({ 
@@ -88,7 +89,35 @@ export function ResizableTable<T>({
   });
 
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [columnFilters, setColumnFilters] = useState<Record<string, string | string[]>>({});
+
+  // Generate unique filter options for select filters
+  const filterOptions = useMemo(() => {
+    const options: Record<string, Set<string>> = {};
+    
+    columns.forEach(column => {
+      if (column.filter?.type === 'select' || column.filter?.type === 'multi') {
+        const columnId = String(column.accessorKey || column.id);
+        options[columnId] = new Set<string>();
+        
+        data.forEach(row => {
+          const value = row[columnId as keyof T];
+          if (Array.isArray(value)) {
+            value.forEach(v => options[columnId].add(String(v)));
+          } else if (value) {
+            options[columnId].add(String(value));
+          }
+        });
+      }
+    });
+    
+    return Object.fromEntries(
+      Object.entries(options).map(([key, set]) => [
+        key,
+        Array.from(set).sort().map(value => ({ value, label: value }))
+      ])
+    );
+  }, [data, columns]);
 
   const table = useReactTable({
     data,
@@ -108,21 +137,84 @@ export function ResizableTable<T>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     filterFns: {
-      smart: smartFilter as FilterFn<T>
+      array: arrayFilter
     },
     defaultColumn: {
       minSize: 50,
       size: 150,
       maxSize: 1000,
-      filterFn: smartFilter as FilterFn<T>
+      filterFn: 'array'
     }
   });
 
-  const handleFilterChange = (columnId: string, value: string | null) => {
+  const handleFilterChange = (columnId: string, value: string | string[]) => {
     setColumnFilters(prev => ({
       ...prev,
-      [columnId]: value || ''
+      [columnId]: value
     }));
+  };
+
+  const renderFilterInput = (header: Header<T, unknown>) => {
+    const column = columns.find(col => 
+      String(col.accessorKey || col.id) === header.column.id
+    );
+    
+    if (!column?.filter) return null;
+
+    const currentValue = columnFilters[header.column.id];
+    
+    switch (column.filter.type) {
+      case 'select':
+        return (
+          <Select
+            placeholder="Filter..."
+            value={currentValue as string || ''}
+            onChange={(value) => handleFilterChange(header.column.id, value || '')}
+            data={filterOptions[header.column.id] || []}
+            clearable
+            size="xs"
+            styles={{
+              input: {
+                minHeight: '28px'
+              }
+            }}
+          />
+        );
+      case 'multi':
+        return (
+          <MultiSelect
+            placeholder="Filter..."
+            value={Array.isArray(currentValue) ? currentValue : []}
+            onChange={(value) => handleFilterChange(header.column.id, value)}
+            data={filterOptions[header.column.id] || []}
+            clearable
+            size="xs"
+            styles={{
+              input: {
+                minHeight: '28px'
+              }
+            }}
+          />
+        );
+      default:
+        return (
+          <TextInput
+            placeholder="Filter..."
+            value={currentValue as string || ''}
+            onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
+            size="xs"
+            leftSection={<IconSearch size={14} />}
+            styles={{
+              input: {
+                minHeight: '28px',
+                '&::placeholder': {
+                  color: 'var(--mantine-color-dark-2)'
+                }
+              }
+            }}
+          />
+        );
+    }
   };
 
   return (
@@ -211,38 +303,29 @@ export function ResizableTable<T>({
                     }}
                   >
                     {header.isPlaceholder ? null : (
-                      <Stack gap={4}>
-                        <div
-                          style={{
+                      <div
+                        {...{
+                          style: {
                             display: 'flex',
                             alignItems: 'center',
                             cursor: header.column.getCanSort() ? 'pointer' : 'default'
-                          }}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          {header.column.getCanSort() && (
-                            <Text ml="xs" c="dimmed">
-                              {{
-                                asc: '↑',
-                                desc: '↓'
-                              }[header.column.getIsSorted() as string] ?? ''}
-                            </Text>
-                          )}
-                        </div>
-                        {!header.isPlaceholder && header.column.getCanFilter() && (
-                          <ColumnFilter
-                            columnId={header.column.id}
-                            columnType={(header.column.columnDef as any).filterType || 'text'}
-                            value={columnFilters[header.column.id] || null}
-                            onChange={(value) => handleFilterChange(header.column.id, value)}
-                            data={data}
-                          />
+                          },
+                          onClick: header.column.getToggleSortingHandler()
+                        }}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
                         )}
-                      </Stack>
+                        {header.column.getCanSort() && (
+                          <Text ml="xs" c="dimmed">
+                            {{
+                              asc: '↑',
+                              desc: '↓'
+                            }[header.column.getIsSorted() as string] ?? ''}
+                          </Text>
+                        )}
+                      </div>
                     )}
                     {header.column.getCanResize() && (
                       <div
@@ -274,6 +357,20 @@ export function ResizableTable<T>({
                         }}
                       />
                     )}
+                  </Table.Th>
+                ))}
+              </Table.Tr>
+              <Table.Tr key={`${headerGroup.id}-filters`}>
+                {headerGroup.headers.map((header: Header<T, unknown>) => (
+                  <Table.Th
+                    key={`${header.id}-filter`}
+                    colSpan={header.colSpan}
+                    style={{
+                      width: header.getSize(),
+                      padding: '4px 8px'
+                    }}
+                  >
+                    {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
                   </Table.Th>
                 ))}
               </Table.Tr>
