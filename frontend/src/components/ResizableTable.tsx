@@ -25,6 +25,7 @@ import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import minMax from 'dayjs/plugin/minMax';
+import type { DateValue } from '@mantine/dates';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -129,14 +130,18 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       .filter(Boolean)
       .map(date => dayjs(date));
     
-    if (dates.length === 0) return { minDate: undefined, maxDate: undefined };
+    if (dates.length === 0) return { minDate: null, maxDate: null };
     
     const minDate = dayjs.min(dates);
     const maxDate = dayjs.max(dates);
     
+    if (!minDate || !maxDate || !minDate.isValid() || !maxDate.isValid()) {
+      return { minDate: null, maxDate: null };
+    }
+    
     return {
-      minDate: minDate.isValid() ? minDate.toDate() : undefined,
-      maxDate: maxDate.isValid() ? maxDate.toDate() : undefined
+      minDate: minDate.toDate(),
+      maxDate: maxDate.toDate()
     };
   }, [data]);
 
@@ -252,9 +257,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             type="range"
             placeholder="Filter by date range..."
             value={currentValue && typeof currentValue === 'object' ? [
-              currentValue.start ? new Date(currentValue.start) : undefined,
-              currentValue.end ? new Date(currentValue.end) : undefined
-            ] : [undefined, undefined]}
+              currentValue.start ? new Date(currentValue.start) : null,
+              currentValue.end ? new Date(currentValue.end) : null
+            ] : [null, null]}
             onChange={(dates: [Date | null, Date | null]) => {
               console.log('Date range filter change:', dates);
               handleFilterChange(columnId, dates?.[0] && dates?.[1] ? {
@@ -262,8 +267,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 end: dates[1].toISOString()
               } : '');
             }}
-            minDate={getDateRangeLimits.minDate}
-            maxDate={getDateRangeLimits.maxDate}
+            minDate={getDateRangeLimits.minDate || undefined}
+            maxDate={getDateRangeLimits.maxDate || undefined}
             size="xs"
             leftSection={<IconCalendar size={14} />}
             clearable
