@@ -119,12 +119,20 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   const dateFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
     const cellValue = row.getValue(columnId);
-    if (!cellValue || !value || !value.start || !value.end) return true;
+    if (!cellValue || !value || typeof value !== 'object' || !value.start || !value.end) return true;
     
     try {
-      const cellDate = new Date(cellValue);
+      // Ensure we have valid date strings before creating Date objects
+      if (typeof value.start !== 'string' || typeof value.end !== 'string') return true;
+      
+      const cellDate = new Date(String(cellValue));
       const startDate = new Date(value.start);
       const endDate = new Date(value.end);
+      
+      // Validate all dates are valid
+      if (isNaN(cellDate.getTime()) || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return true;
+      }
       
       // Set time to start/end of day for proper comparison
       startDate.setHours(0, 0, 0, 0);
@@ -134,7 +142,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       return cellDate >= startDate && cellDate <= endDate;
     } catch (e) {
       console.error('Error comparing dates:', e);
-      return false;
+      return true; // Return true on error to avoid filtering out rows
     }
   };
 
