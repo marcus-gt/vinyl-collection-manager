@@ -38,16 +38,16 @@ interface ColumnFilter {
   type: FilterType;
 }
 
+interface DateRangeValue {
+  start: Date | null;
+  end: Date | null;
+}
+
 // Extend ColumnDef to include our custom properties
 type ExtendedColumnDef<T> = ColumnDef<T> & {
   filter?: ColumnFilter;
   accessorKey?: string;
 };
-
-interface DateRange {
-  start: string;
-  end: string;
-}
 
 // Extend RowData to include created_at
 interface BaseRowData {
@@ -87,29 +87,57 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
+  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
     const cellValue = row.getValue(columnId);
     if (Array.isArray(cellValue)) {
-      // For array values, check if any element includes the search text
       return cellValue.some(item => 
         String(item).toLowerCase().includes(String(value).toLowerCase())
       );
     }
-    // For all other values, do a simple text search
     return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
-  // Get min and max dates from the data for the date range limits
-  const getDateRangeLimits = useMemo(() => {
-    if (!data.length) return { minDate: undefined, maxDate: undefined };
+  const dateRangeFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: DateRangeValue): boolean => {
+    if (!value || (!value.start && !value.end)) return true;
 
+    const cellValue = row.getValue(columnId);
+    if (!cellValue) return false;
+
+    try {
+      const rowDate = new Date(cellValue);
+      if (isNaN(rowDate.getTime())) return false;
+
+      // Set time to start of day for comparison
+      rowDate.setHours(0, 0, 0, 0);
+
+      if (value.start) {
+        const start = new Date(value.start);
+        start.setHours(0, 0, 0, 0);
+        if (rowDate < start) return false;
+      }
+
+      if (value.end) {
+        const end = new Date(value.end);
+        end.setHours(23, 59, 59, 999);
+        if (rowDate > end) return false;
+      }
+
+      return true;
+    } catch (e) {
+      console.error('Error comparing dates:', e);
+      return false;
+    }
+  };
+
+  // Get min and max dates from the data
+  const getDateRangeLimits = useMemo(() => {
     const dates = data
       .map(row => row.created_at)
       .filter((date): date is string => Boolean(date))
       .map(date => new Date(date))
       .filter(date => !isNaN(date.getTime()));
 
-    if (dates.length === 0) return { minDate: undefined, maxDate: undefined };
+    if (!dates.length) return { minDate: undefined, maxDate: undefined };
 
     return {
       minDate: new Date(Math.min(...dates.map(d => d.getTime()))),
@@ -117,54 +145,21 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     };
   }, [data]);
 
-  const dateFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, _meta: any): boolean => {
-    const cellValue = row.getValue(columnId);
-    if (!cellValue || !value || typeof value !== 'object' || !value.start || !value.end) return true;
-    
-    try {
-      // Ensure we have valid date strings before creating Date objects
-      if (typeof value.start !== 'string' || typeof value.end !== 'string') return true;
-      
-      const cellDate = new Date(String(cellValue));
-      const startDate = new Date(value.start);
-      const endDate = new Date(value.end);
-      
-      // Validate all dates are valid
-      if (isNaN(cellDate.getTime()) || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        return true;
-      }
-      
-      // Set time to start/end of day for proper comparison
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(23, 59, 59, 999);
-      cellDate.setHours(0, 0, 0, 0);
-
-      return cellDate >= startDate && cellDate <= endDate;
-    } catch (e) {
-      console.error('Error comparing dates:', e);
-      return true; // Return true on error to avoid filtering out rows
-    }
-  };
-
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
     return columns.map(column => {
-      // Get the column ID consistently
       const columnId = String(column.accessorKey || column.id);
-      console.log('Adding filter to column:', columnId);
       
-      // Use date range filter for the "added" column
       if (columnId === 'created_at') {
         return {
           ...column,
           id: columnId,
           enableColumnFilter: true,
-          filterFn: dateFilter,
+          filterFn: dateRangeFilter,
           filter: { type: 'dateRange' as const }
         };
       }
       
-      // Default text filter for other columns
       return {
         ...column,
         id: columnId,
@@ -194,7 +189,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     manualFiltering: false,
     filterFns: {
       text: textFilter,
-      date: dateFilter
+      dateRange: dateRangeFilter
     } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
@@ -205,127 +200,56 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   });
 
-  const handleFilterChange = (columnId: string, value: string | DateRange) => {
-    console.log('Filter change:', { columnId, value });
-    
+  const handleFilterChange = (columnId: string, value: any) => {
     setColumnFilters((prev: ColumnFiltersState) => {
-      console.log('Previous filters:', prev);
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
-      if (!value || (typeof value === 'string' && !value.length)) {
-        console.log('Clearing filter for column:', columnId);
+      if (value == null || (typeof value === 'string' && !value)) {
         return existing;
       }
-      const newFilters = [...existing, { id: columnId, value }];
-      console.log('New filters:', newFilters);
-      return newFilters;
+      return [...existing, { id: columnId, value }];
     });
   };
 
   const renderFilterInput = (header: Header<T, unknown>) => {
-    const columnId = header.column.id;
-    console.log('Rendering filter input for header:', columnId);
+    if (!header.column.getCanFilter()) return null;
 
-    // Check if filtering is enabled for this column
-    if (!header.column.getCanFilter()) {
-      console.log('Filtering disabled for column:', columnId);
-      return null;
-    }
-
-    const currentFilter = table.getState().columnFilters.find(
-      (filter: { id: string; value: any }) => filter.id === columnId
-    );
-    const currentValue = currentFilter?.value as string | DateRange;
-    console.log('Current filter value:', { columnId, value: currentValue });
-
-    // Find column configuration
-    const column = columnsWithFilters.find(col => col.id === columnId);
+    const column = columnsWithFilters.find(col => col.id === header.column.id);
     if (!column?.filter) return null;
 
-    return (
-      <Box 
-        onClick={(e) => {
-          console.log('Filter box clicked');
-          e.stopPropagation();
-        }}
-        style={{ 
-          position: 'relative',
-          zIndex: 100,
-          width: '100%'
-        }}
-      >
-        {column.filter.type === 'dateRange' ? (
-          <Box>
-            <DatePickerInput
-              type="range"
-              placeholder="Filter by date range..."
-              value={currentValue && typeof currentValue === 'object' ? [
-                currentValue.start ? new Date(currentValue.start) : null,
-                currentValue.end ? new Date(currentValue.end) : null
-              ] : [null, null]}
-              onChange={(dates: [Date | null, Date | null]) => {
-                console.log('Date range filter change:', dates);
-                if (dates[0] && dates[1]) {
-                  // Set time to start/end of day for proper range
-                  const start = new Date(dates[0]);
-                  const end = new Date(dates[1]);
-                  start.setHours(0, 0, 0, 0);
-                  end.setHours(23, 59, 59, 999);
-                  
-                  handleFilterChange(columnId, {
-                    start: start.toISOString(),
-                    end: end.toISOString()
-                  });
-                } else {
-                  handleFilterChange(columnId, '');
-                }
-              }}
-              minDate={getDateRangeLimits.minDate}
-              maxDate={getDateRangeLimits.maxDate}
-              size="xs"
-              leftSection={<IconCalendar size={14} />}
-              clearable
-              valueFormat="DD/MM/YYYY"
-              allowSingleDateInRange={false}
-              styles={(theme: MantineTheme) => ({
-                root: {
-                  width: '100%',
-                  position: 'relative',
-                  zIndex: 100
-                },
-                wrapper: {
-                  width: '100%'
-                },
-                input: {
-                  minHeight: '28px',
-                  width: '100%',
-                  '&::placeholder': {
-                    color: theme.colors.dark[2]
-                  },
-                  '&:focus': {
-                    zIndex: 101
-                  }
-                },
-                dropdown: {
-                  maxWidth: '300px'
-                }
-              })}
-            />
-          </Box>
-        ) : (
-          <TextInput
-            placeholder="Filter..."
-            value={currentValue as string}
-            onChange={(e) => {
-              console.log('Filter input change:', e.target.value);
-              handleFilterChange(columnId, e.target.value);
+    const currentFilter = table.getState().columnFilters.find(
+      (filter: { id: string; value: unknown }) => filter.id === header.column.id
+    );
+
+    if (column.filter.type === 'dateRange') {
+      const dateRangeValue = (currentFilter?.value as DateRangeValue) || {
+        start: null,
+        end: null
+      };
+
+      return (
+        <Box>
+          <DatePickerInput
+            type="range"
+            placeholder="Filter by date range..."
+            value={[dateRangeValue.start, dateRangeValue.end]}
+            onChange={(dates: [Date | null, Date | null]) => {
+              if (!dates[0] && !dates[1]) {
+                handleFilterChange(header.column.id, undefined);
+              } else {
+                handleFilterChange(header.column.id, {
+                  start: dates[0],
+                  end: dates[1]
+                });
+              }
             }}
-            onClick={(e) => {
-              console.log('Filter input clicked');
-              e.stopPropagation();
-            }}
+            minDate={getDateRangeLimits.minDate}
+            maxDate={getDateRangeLimits.maxDate}
             size="xs"
-            leftSection={<IconSearch size={14} />}
-            styles={{
+            leftSection={<IconCalendar size={14} />}
+            clearable
+            valueFormat="DD/MM/YYYY"
+            allowSingleDateInRange={false}
+            styles={(theme: MantineTheme) => ({
               root: {
                 width: '100%',
                 position: 'relative',
@@ -338,16 +262,49 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 minHeight: '28px',
                 width: '100%',
                 '&::placeholder': {
-                  color: 'var(--mantine-color-dark-2)'
+                  color: theme.colors.dark[2]
                 },
                 '&:focus': {
                   zIndex: 101
                 }
+              },
+              dropdown: {
+                maxWidth: '300px'
               }
-            }}
+            })}
           />
-        )}
-      </Box>
+        </Box>
+      );
+    }
+
+    return (
+      <TextInput
+        placeholder="Filter..."
+        value={(currentFilter?.value as string) || ''}
+        onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
+        size="xs"
+        leftSection={<IconSearch size={14} />}
+        styles={{
+          root: {
+            width: '100%',
+            position: 'relative',
+            zIndex: 100
+          },
+          wrapper: {
+            width: '100%'
+          },
+          input: {
+            minHeight: '28px',
+            width: '100%',
+            '&::placeholder': {
+              color: 'var(--mantine-color-dark-2)'
+            },
+            '&:focus': {
+              zIndex: 101
+            }
+          }
+        }}
+      />
     );
   };
 
