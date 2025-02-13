@@ -95,18 +95,18 @@ export function ResizableTable<T extends RowData>({
     );
   }, [data, columns]);
 
-  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
+  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, addMeta: any): boolean => {
     const cellValue = row.getValue(columnId);
     return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
-  const selectFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
+  const selectFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, addMeta: any): boolean => {
     if (!value) return true;
     const cellValue = row.getValue(columnId);
     return String(cellValue).toLowerCase() === String(value).toLowerCase();
   };
 
-  const multiFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
+  const multiFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any, addMeta: any): boolean => {
     if (!Array.isArray(value) || !value.length) return true;
     const cellValue = row.getValue(columnId);
     if (Array.isArray(cellValue)) {
@@ -141,14 +141,14 @@ export function ResizableTable<T extends RowData>({
       return {
         ...column,
         filter: { type: filterType },
-        filterFn: (row: Row<T>, columnId: string, value: any) => {
+        filterFn: (row: Row<T>, columnId: string, value: any, addMeta: any) => {
           switch (filterType) {
             case 'multi':
-              return multiFilter(row, columnId, value);
+              return multiFilter(row, columnId, value, addMeta);
             case 'select':
-              return selectFilter(row, columnId, value);
+              return selectFilter(row, columnId, value, addMeta);
             default:
-              return textFilter(row, columnId, value);
+              return textFilter(row, columnId, value, addMeta);
           }
         }
       } as ExtendedColumnDef<T>;
