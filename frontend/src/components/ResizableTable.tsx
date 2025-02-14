@@ -109,16 +109,35 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnId: string,
     value: string[]
   ): boolean => {
+    console.log(`Filtering row for ${columnId}:`, {
+      value,
+      cellValue: row.getValue(columnId),
+      rowData: row.original
+    });
+    
     if (!value || value.length === 0) return true;
     const cellValue = row.getValue(columnId);
     if (!cellValue) return false;
     
     // Handle array values
     if (Array.isArray(cellValue)) {
-      return value.some(filterValue => cellValue.includes(filterValue));
+      const result = value.some(filterValue => cellValue.includes(filterValue));
+      console.log(`Array value filter result:`, {
+        filterValues: value,
+        cellValues: cellValue,
+        result
+      });
+      return result;
     }
+    
     // Handle single values
-    return value.includes(String(cellValue));
+    const result = value.includes(String(cellValue));
+    console.log(`Single value filter result:`, {
+      filterValues: value,
+      cellValue,
+      result
+    });
+    return result;
   };
 
   const numberFilter: FilterFn<T> = (
@@ -240,9 +259,20 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       // Get all unique values for select types
       let options: string[] = [];
       if (filterType === 'single-select' || filterType === 'multi-select') {
+        console.log(`Collecting options for column ${columnId}:`, {
+          type: filterType,
+          meta: column.meta
+        });
+        
         const uniqueValues = new Set<string>();
         data.forEach(row => {
           const value = row[columnId as keyof T];
+          console.log(`Processing row value for ${columnId}:`, {
+            value,
+            type: typeof value,
+            isArray: Array.isArray(value)
+          });
+          
           if (Array.isArray(value)) {
             // For array values, add each item
             value.forEach((v: unknown) => uniqueValues.add(String(v)));
@@ -255,9 +285,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             }
           }
         });
+        
         options = Array.from(uniqueValues)
           .filter(Boolean) // Remove empty strings
           .sort((a, b) => a.localeCompare(b)); // Sort alphabetically
+          
+        console.log(`Collected options for ${columnId}:`, options);
       }
 
       return {
@@ -492,11 +525,20 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           label: opt
         }));
         
+        console.log(`Rendering multi-select for ${header.column.id}:`, {
+          options: multiSelectOptions,
+          currentValue: currentFilter?.value,
+          columnFilter: column.filter
+        });
+        
         return (
           <MultiSelect
             placeholder="Select options..."
             value={(currentFilter?.value as string[]) || []}
-            onChange={(value) => handleFilterChange(header.column.id, value)}
+            onChange={(value) => {
+              console.log(`Multi-select value changed for ${header.column.id}:`, value);
+              handleFilterChange(header.column.id, value);
+            }}
             data={multiSelectOptions}
             clearable
             searchable
