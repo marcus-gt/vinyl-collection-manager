@@ -921,12 +921,16 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           ))}
         </Table.Tbody>
       </Table>
-      {totalFilteredRecords > recordsPerPage && (
+      {filteredRows.length > recordsPerPage && (
         <Group justify="center" mt="md">
           <Pagination
             value={page}
-            onChange={onPageChange}
-            total={Math.ceil(totalFilteredRecords / recordsPerPage)}
+            onChange={(newPage) => {
+              onPageChange(newPage);
+              // Scroll to top when changing pages
+              window.scrollTo(0, 0);
+            }}
+            total={Math.ceil(filteredRows.length / recordsPerPage)}
             siblings={0}
             boundaries={0}
             withEdges
