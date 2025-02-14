@@ -8,6 +8,7 @@ import { BarcodeScanner } from '../components/BarcodeScanner';
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
+  const [spotifyUrl, setSpotifyUrl] = useState('');
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
   const [loading, setLoading] = useState(false);
@@ -183,6 +184,49 @@ export function Scanner() {
     }
   };
 
+  const handleSpotifyLookup = async () => {
+    if (!spotifyUrl.trim()) {
+      setError('Please enter a Spotify URL');
+      return;
+    }
+
+    // Validate URL format
+    if (!spotifyUrl.includes('spotify.com/album/') && !spotifyUrl.includes('open.spotify.com/album/')) {
+      setError('Invalid Spotify URL. Please use a Spotify album URL (e.g., https://open.spotify.com/album/123456 or https://spotify.com/album/123456)');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    
+    try {
+      const response = await lookup.bySpotifyUrl(spotifyUrl, abortControllerRef.current.signal);
+      if (response.success && response.data) {
+        setRecord(response.data);
+        setError(null);
+      } else {
+        setError(response.error || 'Failed to find record');
+        setRecord(null);
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // Request was cancelled, already handled
+        return;
+      }
+      setError('Failed to lookup Spotify album');
+      setRecord(null);
+    } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
+      setLoading(false);
+    }
+  };
+
   const handleArtistAlbumLookup = async () => {
     if (!artist.trim() || !album.trim()) {
       setError('Please enter both artist and album name');
@@ -319,12 +363,14 @@ export function Scanner() {
         timestamp: new Date().toISOString()
       });
 
-      // Determine the source based on the context
-      let source: 'barcode' | 'discogs_url' | 'manual';
+      // Determine the source based on how the record was found
+      let source: 'barcode' | 'discogs_url' | 'spotify' | 'manual';
       if (barcode) {
         source = 'barcode';
       } else if (discogsUrl) {
         source = 'discogs_url';
+      } else if (spotifyUrl) {
+        source = 'spotify';
       } else {
         source = 'manual';
       }
@@ -356,6 +402,8 @@ export function Scanner() {
         // Reset for next scan
         setRecord(null);
         setBarcode('');
+        setDiscogsUrl('');
+        setSpotifyUrl('');
         // Reset scanner state to allow new scan
         setScannerKey(prev => prev + 1);
       } else {
@@ -377,6 +425,8 @@ export function Scanner() {
   const handleClear = () => {
     setRecord(null);
     setBarcode('');
+    setDiscogsUrl('');
+    setSpotifyUrl('');
     setError(null);
     setSuccess(null);
     // Reset scanner state to allow new scan
@@ -412,6 +462,15 @@ export function Scanner() {
                   }}
                 >
                   URL
+                </Tabs.Tab>
+                <Tabs.Tab 
+                  value="spotify" 
+                  style={{ 
+                    minWidth: 0,
+                    padding: '8px 12px'
+                  }}
+                >
+                  Spotify
                 </Tabs.Tab>
                 <Tabs.Tab 
                   value="search" 
@@ -509,6 +568,26 @@ export function Scanner() {
                     disabled={!discogsUrl.trim()}
                   >
                     Look up Release
+                  </Button>
+                </Stack>
+              </Tabs.Panel>
+
+              <Tabs.Panel value="spotify" pt="xs">
+                <Stack>
+                  <TextInput
+                    label="Spotify Album URL"
+                    placeholder="https://open.spotify.com/album/123456"
+                    value={spotifyUrl}
+                    onChange={(e) => setSpotifyUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSpotifyLookup()}
+                    disabled={loading}
+                  />
+                  <Button 
+                    onClick={handleSpotifyLookup}
+                    loading={loading}
+                    disabled={!spotifyUrl.trim()}
+                  >
+                    Look up Album
                   </Button>
                 </Stack>
               </Tabs.Panel>

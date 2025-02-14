@@ -207,6 +207,20 @@ export const lookup = {
     };
   },
 
+  bySpotifyUrl: async (url: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
+    // URL encode the Spotify URL
+    const encodedUrl = encodeURIComponent(url);
+    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
+      `/api/lookup/spotify-url?url=${encodedUrl}`,
+      { signal }
+    );
+    return {
+      success: response.data.success,
+      data: response.data.data,
+      error: response.data.error
+    };
+  },
+
   byArtistAlbum: async (artist: string, album: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
     // URL encode the parameters
     const encodedArtist = encodeURIComponent(artist);
