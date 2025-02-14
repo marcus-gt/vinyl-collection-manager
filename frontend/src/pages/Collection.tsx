@@ -1096,7 +1096,7 @@ function Collection() {
         ) : (
           <Stack>
             <Box style={{ height: 'calc(100vh - 200px)' }}>
-              <ResizableTable<VinylRecord>
+              <ResizableTable
                 data={paginatedRecords}
                 columns={tableColumns}
                 sortState={sortState}
@@ -1107,6 +1107,7 @@ function Collection() {
                 recordsPerPage={PAGE_SIZE}
                 page={page}
                 onPageChange={setPage}
+                customColumns={customColumns}
               />
             </Box>
 

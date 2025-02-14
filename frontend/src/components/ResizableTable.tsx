@@ -81,6 +81,7 @@ interface ResizableTableProps<T extends RowData & BaseRowData> {
   recordsPerPage: number;
   page: number;
   onPageChange: (page: number) => void;
+  customColumns?: CustomColumnData[];
 }
 
 export function ResizableTable<T extends RowData & BaseRowData>({ 
@@ -93,7 +94,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   totalRecords,
   recordsPerPage,
   page,
-  onPageChange
+  onPageChange,
+  customColumns = []
 }: ResizableTableProps<T>) {
   const theme = useMantineTheme();
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -233,6 +235,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
     console.log('Initial columns:', JSON.stringify(columns, null, 2));
+    console.log('Available custom columns:', customColumns);
+    
     return columns.map(column => {
       const columnId = String(column.accessorKey || column.id);
 
@@ -277,16 +281,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         // For custom columns, use the type and options from meta
         filterType = column.meta.type as FilterType;
         
-        console.log('Column metadata:', {
-          originalType: column.meta.type,
-          resolvedFilterType: filterType,
-          hasCustomColumn: !!column.meta.customColumn,
-          hasDirectOptions: Array.isArray(column.meta.options),
-          metaContent: JSON.stringify(column.meta, null, 2)
-        });
-        
         // Get options from the meta object
         if (column.meta.customColumn?.options) {
+          // If we have the full custom column data, use it
           options = [...column.meta.customColumn.options];
           console.log('Using options from customColumn:', {
             source: 'customColumn',
@@ -294,6 +291,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             customColumn: column.meta.customColumn
           });
         } else if (Array.isArray(column.meta.options)) {
+          // Fallback to direct options if available
           options = [...column.meta.options];
           console.log('Using options from direct meta:', {
             source: 'meta.options',
@@ -301,12 +299,33 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             metaOptions: column.meta.options
           });
         } else {
-          console.log('No valid options found:', {
-            metaType: typeof column.meta.options,
-            metaOptions: column.meta.options,
-            fullMeta: column.meta
-          });
+          // Try to find the custom column data from the API response
+          const customColumn = customColumns.find((col: CustomColumnData) => col.id === customColumnId);
+          if (customColumn) {
+            options = [...(customColumn.options || [])];
+            // Update the meta to include the full custom column data
+            column.meta.customColumn = customColumn;
+            console.log('Found options from API data:', {
+              source: 'api',
+              options,
+              customColumn
+            });
+          } else {
+            console.log('No valid options found:', {
+              metaType: typeof column.meta.options,
+              metaOptions: column.meta.options,
+              fullMeta: column.meta
+            });
+          }
         }
+
+        console.log('Column metadata:', {
+          originalType: column.meta.type,
+          resolvedFilterType: filterType,
+          hasCustomColumn: !!column.meta.customColumn,
+          hasDirectOptions: Array.isArray(column.meta.options),
+          metaContent: JSON.stringify(column.meta, null, 2)
+        });
       }
 
       const result = {
@@ -343,7 +362,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
       return result;
     });
-  }, [columns]);
+  }, [columns, customColumns]);
 
   const table = useReactTable({
     data,
