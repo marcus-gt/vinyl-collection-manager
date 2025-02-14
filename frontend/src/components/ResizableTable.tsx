@@ -135,7 +135,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     // Convert cell value to array if it's a comma-separated string
     const cellValues = Array.isArray(cellValue) 
       ? cellValue 
-      : cellValue.split(',').map(v => v.trim()).filter(Boolean);
+      : typeof cellValue === 'string'
+        ? cellValue.split(',').map((v: string) => v.trim()).filter(Boolean)
+        : [String(cellValue)];
 
     console.log('Processed values:', {
       filterValues: value,
