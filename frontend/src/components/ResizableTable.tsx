@@ -264,18 +264,23 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         filterType = column.meta.type as FilterType;
         
         // Get options from the meta object
-        if (column.meta.options) {
+        if (Array.isArray(column.meta.options)) {
           options = [...column.meta.options];
-        } else if (column.meta.column?.options) {
-          // Try to get options from the nested column object if present
-          options = [...column.meta.column.options];
+          console.log(`Found options in meta for ${customColumnId}:`, {
+            options,
+            metaOptions: column.meta.options
+          });
+        } else {
+          console.log(`No valid options found in meta for ${customColumnId}:`, {
+            metaType: typeof column.meta.options,
+            metaOptions: column.meta.options
+          });
         }
 
         console.log(`Setting options for custom column ${customColumnId}:`, {
           type: filterType,
           options,
-          meta: column.meta,
-          fullColumn: column
+          meta: column.meta
         });
       }
 
@@ -292,7 +297,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           type: filterType,
           options: options
         },
-        // Ensure meta is properly passed through
+        // Ensure meta is properly passed through with the correct type
         meta: {
           ...column.meta,
           type: filterType,
