@@ -4,22 +4,22 @@ export interface User {
 }
 
 export interface VinylRecord {
-  id: string;
+  id?: string;
+  user_id?: string;
   artist: string;
   album: string;
-  year: string;
+  year?: number;
   barcode?: string;
-  label?: string;
-  genres?: string;
-  styles?: string;
-  notes?: string;
-  musicians?: string;
+  genres?: string[];
+  styles?: string[];
+  musicians?: string[];
   master_url?: string;
-  release_url?: string;
-  release_year?: string;
-  added_at: string;
+  current_release_url?: string;
+  current_release_year?: number;
+  label?: string;
+  notes?: string;
+  created_at?: string;
   updated_at?: string;
-  user_id: string;
   added_from: 'barcode' | 'discogs_url' | 'spotify' | 'manual';
   customValues?: {
     [columnId: string]: string;

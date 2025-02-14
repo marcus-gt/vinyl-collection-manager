@@ -522,13 +522,13 @@ function Collection() {
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const value = row.original.added_from;
-                const displayMap = {
+                const displayMap: Record<VinylRecord['added_from'], string> = {
                   barcode: 'Barcode',
                   discogs_url: 'Discogs URL',
                   spotify: 'Spotify',
                   manual: 'Manual'
                 };
-                return <Text size="sm">{displayMap[value] || value}</Text>;
+                return <Text size="sm">{displayMap[value]}</Text>;
               }
             },
             { 

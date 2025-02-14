@@ -409,7 +409,6 @@ export function Scanner() {
           await loadRecentRecords();
           // Reset for next scan
           setRecord(null);
-          setSpotifyUrl('');
         } else {
           setError(addResponse.error || 'Failed to add to collection');
         }
