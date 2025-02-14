@@ -145,7 +145,13 @@ export const records = {
   },
 
   add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
+    console.log('API: Adding record to collection:', {
+      record,
+      added_from: record.added_from,
+      recordType: typeof record.added_from
+    });
     const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
+    console.log('API: Add record response:', response.data);
     return response.data;
   },
 

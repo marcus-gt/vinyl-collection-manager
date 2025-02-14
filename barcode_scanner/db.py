@@ -125,6 +125,11 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
         # Get authenticated client
         client = get_supabase_client()
         
+        # Ensure added_from is one of the valid values
+        added_from = record_data.get('added_from')
+        if added_from not in ['barcode', 'discogs_url', 'spotify', 'manual', '']:
+            added_from = ''  # Default to empty if invalid value
+        
         # Map fields from API response to database schema
         record_to_insert = {
             'user_id': user_id,
@@ -141,7 +146,7 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'current_release_url': record_data.get('current_release_url'),
             'current_release_year': record_data.get('current_release_year'),
             'barcode': record_data.get('barcode'),
-            'added_from': record_data.get('added_from', '')  # Default to empty string if not specified
+            'added_from': added_from
         }
         
         print("\nPrepared record data:")

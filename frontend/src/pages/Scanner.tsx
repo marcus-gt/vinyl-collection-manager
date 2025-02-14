@@ -316,7 +316,7 @@ export function Scanner() {
         current_release_year: undefined
       };
 
-      console.log('Submitting record:', recordData);
+      console.log('Submitting manual record:', recordData);
       const response = await records.add(recordData);
       if (response.success) {
         setSuccess('Added to collection!');
