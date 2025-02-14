@@ -288,13 +288,6 @@ function Collection() {
     return records;
   }, [userRecords, searchQuery, sortState]);
 
-  // Get paginated records
-  const paginatedRecords = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return filteredRecords.slice(start, end);
-  }, [filteredRecords, page]);
-
   const handleDownloadCSV = () => {
     // Define standard headers
     const standardHeaders = [
