@@ -15,7 +15,8 @@ import {
   OnChangeFn,
   RowData,
   ColumnFiltersState,
-  FilterFn
+  FilterFn,
+  Updater
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, useMantineTheme, MultiSelect, Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
@@ -387,8 +388,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnResizeMode,
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
-    onColumnFiltersChange: (filters: ColumnFiltersState) => {
-      setColumnFilters(filters);
+    onColumnFiltersChange: (updater: Updater<ColumnFiltersState>) => {
+      // Handle both function updater and direct value
+      const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+      setColumnFilters(newFilters);
       // Reset to first page when filters change
       if (onPageChange) {
         onPageChange(1);
