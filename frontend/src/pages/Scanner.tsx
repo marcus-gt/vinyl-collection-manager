@@ -389,27 +389,9 @@ export function Scanner() {
     
     try {
       console.log('=== Starting Add to Collection ===');
-      console.log('Current activeTab:', activeTab);
+      console.log('Current record:', record);
 
-      // Determine the source based on the active tab
-      const source = (() => {
-        switch (activeTab) {
-          case 'barcode': 
-            console.log('Using source: barcode');
-            return 'barcode';
-          case 'discogs': 
-            console.log('Using source: discogs_url');
-            return 'discogs_url';
-          case 'spotify': 
-            console.log('Using source: spotify');
-            return 'spotify';
-          case 'search':
-          default: 
-            console.log('Using source: manual');
-            return 'manual';
-        }
-      })() as 'barcode' | 'discogs_url' | 'spotify' | 'manual';
-
+      // Use the added_from value from the record if it exists
       const recordData = {
         artist: record.artist,
         album: record.album,
@@ -422,15 +404,13 @@ export function Scanner() {
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         label: record.label || '',
-        added_from: source
+        added_from: record.added_from
       };
 
       console.log('Final record data:', {
         ...recordData,
         added_from_value: recordData.added_from,
-        added_from_type: typeof recordData.added_from,
-        source_value: source,
-        source_type: typeof source
+        added_from_type: typeof recordData.added_from
       });
       
       const response = await records.add(recordData);
