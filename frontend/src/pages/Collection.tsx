@@ -237,57 +237,6 @@ function Collection() {
     }
   };
 
-  // Filter and sort records based on search query and sort status
-  const filteredRecords = useMemo(() => {
-    let records = [...userRecords];
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      records = records.filter(record => 
-        record.artist?.toLowerCase().includes(query) ||
-        record.album?.toLowerCase().includes(query) ||
-        record.label?.toLowerCase().includes(query) ||
-        record.genres?.some(genre => genre.toLowerCase().includes(query)) ||
-        record.styles?.some(style => style.toLowerCase().includes(query))
-      );
-    }
-
-    // Apply sorting
-    if (sortState?.length > 0) {
-      const { id, desc } = sortState[0];
-      records.sort((a, b) => {
-        let aValue = a[id as keyof VinylRecord];
-        let bValue = b[id as keyof VinylRecord];
-
-        // Handle array fields
-        if (Array.isArray(aValue)) aValue = aValue.join(', ');
-        if (Array.isArray(bValue)) bValue = bValue.join(', ');
-
-        // Handle undefined/null values
-        if (aValue == null) aValue = '';
-        if (bValue == null) bValue = '';
-
-        // Convert to strings for comparison
-        const aString = String(aValue).toLowerCase();
-        const bString = String(bValue).toLowerCase();
-
-        // Special handling for numeric fields
-        if (id === 'year' || id === 'current_release_year') {
-          const aNum = Number(aValue) || 0;
-          const bNum = Number(bValue) || 0;
-          return desc ? bNum - aNum : aNum - bNum;
-        }
-
-        return desc 
-          ? aString.localeCompare(bString)
-          : bString.localeCompare(aString);
-      });
-    }
-
-    return records;
-  }, [userRecords, searchQuery, sortState]);
-
   const handleDownloadCSV = () => {
     // Define standard headers
     const standardHeaders = [
