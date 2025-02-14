@@ -359,13 +359,24 @@ export function Scanner() {
     setSuccess(null);
     
     try {
+      console.log('=== Starting Add to Collection ===');
+      console.log('Current activeTab:', activeTab);
+
       // Determine the source based on the active tab
       const source = (() => {
         switch (activeTab) {
-          case 'barcode': return 'barcode' as const;
-          case 'discogs': return 'discogs_url' as const;
-          case 'spotify': return 'spotify' as const;
-          default: return 'manual' as const;
+          case 'barcode': 
+            console.log('Source determined as: barcode');
+            return 'barcode' as const;
+          case 'discogs': 
+            console.log('Source determined as: discogs_url');
+            return 'discogs_url' as const;
+          case 'spotify': 
+            console.log('Source determined as: spotify');
+            return 'spotify' as const;
+          default: 
+            console.log('Source defaulting to: manual');
+            return 'manual' as const;
         }
       })();
 
@@ -391,9 +402,11 @@ export function Scanner() {
         added_from: source
       };
 
-      console.log('Prepared record data:', {
+      console.log('Final record data being sent:', {
         ...recordData,
+        added_from_value: recordData.added_from,
         added_from_type: typeof recordData.added_from,
+        source_value: source,
         source_type: typeof source
       });
       
@@ -450,7 +463,11 @@ export function Scanner() {
           <Stack>
             <Tabs 
               value={activeTab}
-              onChange={(value: string | null) => setActiveTab(value || 'barcode')}
+              onChange={(value: string | null) => {
+                console.log('Tab changed:', { from: activeTab, to: value });
+                setActiveTab(value || 'barcode');
+                console.log('activeTab state updated to:', value || 'barcode');
+              }}
             >
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
                 <Tabs.Tab 

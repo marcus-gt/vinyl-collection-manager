@@ -145,12 +145,26 @@ export const records = {
   },
 
   add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
-    console.log('API: Adding record to collection:', {
+    console.log('API: Starting add record request:', {
       record,
       added_from: record.added_from,
-      recordType: typeof record.added_from
+      recordType: typeof record.added_from,
+      recordKeys: Object.keys(record)
     });
-    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
+
+    // Create a copy of the record to ensure added_from is included
+    const recordToSend = {
+      ...record,
+      added_from: record.added_from
+    };
+
+    console.log('API: Sending record data:', {
+      recordToSend,
+      added_from: recordToSend.added_from,
+      recordType: typeof recordToSend.added_from
+    });
+
+    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', recordToSend);
     console.log('API: Add record response:', response.data);
     return response.data;
   },
