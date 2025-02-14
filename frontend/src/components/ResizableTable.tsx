@@ -134,24 +134,27 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     
     // Convert cell value to array if it's a comma-separated string
     const cellValues = Array.isArray(cellValue) 
-      ? cellValue 
+      ? cellValue.map(v => v.trim())
       : typeof cellValue === 'string'
         ? cellValue.split(',').map((v: string) => v.trim()).filter(Boolean)
-        : [String(cellValue)];
+        : [String(cellValue).trim()];
+
+    // Trim the filter values as well
+    const trimmedFilterValues = value.map(v => v.trim());
 
     console.log('Processed values:', {
-      filterValues: value,
+      filterValues: trimmedFilterValues,
       cellValues,
       cellValueType: typeof cellValue
     });
 
     // Check if ALL filter values are present in the cell values
-    const result = value.every(filterValue => 
+    const result = trimmedFilterValues.every(filterValue => 
       cellValues.includes(filterValue)
     );
 
     console.log(`Filter result for ${columnId}:`, {
-      filterValues: value,
+      filterValues: trimmedFilterValues,
       cellValues,
       result,
       explanation: result 
