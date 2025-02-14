@@ -145,15 +145,18 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       cellValueType: typeof cellValue
     });
 
-    // Check if any of the filter values match any of the cell values
-    const result = value.some(filterValue => 
+    // Check if ALL filter values are present in the cell values
+    const result = value.every(filterValue => 
       cellValues.includes(filterValue)
     );
 
     console.log(`Filter result for ${columnId}:`, {
       filterValues: value,
       cellValues,
-      result
+      result,
+      explanation: result 
+        ? 'Row matches because it contains all selected options'
+        : 'Row filtered out because it is missing some selected options'
     });
     
     return result;
