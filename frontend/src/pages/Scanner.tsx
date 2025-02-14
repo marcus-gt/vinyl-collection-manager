@@ -84,7 +84,12 @@ export function Scanner() {
     try {
       const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Add the source to the record data
+        const recordWithSource = {
+          ...response.data,
+          added_from: 'barcode' as const
+        };
+        setRecord(recordWithSource);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -121,7 +126,12 @@ export function Scanner() {
     try {
       const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Add the source to the record data
+        const recordWithSource = {
+          ...response.data,
+          added_from: 'barcode' as const
+        };
+        setRecord(recordWithSource);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -164,7 +174,12 @@ export function Scanner() {
     try {
       const response = await lookup.byDiscogsUrl(discogsUrl, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Add the source to the record data
+        const recordWithSource = {
+          ...response.data,
+          added_from: 'discogs_url' as const
+        };
+        setRecord(recordWithSource);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -207,7 +222,12 @@ export function Scanner() {
     try {
       const response = await lookup.bySpotifyUrl(spotifyUrl, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Add the source to the record data
+        const recordWithSource = {
+          ...response.data,
+          added_from: 'spotify' as const
+        };
+        setRecord(recordWithSource);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -244,7 +264,12 @@ export function Scanner() {
     try {
       const response = await lookup.byArtistAlbum(artist, album, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Add the source to the record data
+        const recordWithSource = {
+          ...response.data,
+          added_from: 'manual' as const
+        };
+        setRecord(recordWithSource);
         setError(null);
       } else {
         setError("Couldn't find record");
