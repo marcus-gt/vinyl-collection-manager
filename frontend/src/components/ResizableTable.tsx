@@ -256,41 +256,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         }
       }
 
-      // Get all unique values for select types
+      // For select types, use the predefined options from column metadata
       let options: string[] = [];
-      if (filterType === 'single-select' || filterType === 'multi-select') {
-        console.log(`Collecting options for column ${columnId}:`, {
-          type: filterType,
-          meta: column.meta
-        });
-        
-        const uniqueValues = new Set<string>();
-        data.forEach(row => {
-          const value = row[columnId as keyof T];
-          console.log(`Processing row value for ${columnId}:`, {
-            value,
-            type: typeof value,
-            isArray: Array.isArray(value)
-          });
-          
-          if (Array.isArray(value)) {
-            // For array values, add each item
-            value.forEach((v: unknown) => uniqueValues.add(String(v)));
-          } else if (value !== undefined && value !== null) {
-            // For string values that might be comma-separated
-            if (typeof value === 'string' && value.includes(',')) {
-              value.split(',').forEach((v: string) => uniqueValues.add(v.trim()));
-            } else {
-              uniqueValues.add(String(value));
-            }
-          }
-        });
-        
-        options = Array.from(uniqueValues)
-          .filter(Boolean) // Remove empty strings
-          .sort((a, b) => a.localeCompare(b)); // Sort alphabetically
-          
-        console.log(`Collected options for ${columnId}:`, options);
+      if ((filterType === 'single-select' || filterType === 'multi-select') && column.meta?.options) {
+        options = column.meta.options;
       }
 
       return {
@@ -304,11 +273,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   textFilter,
         filter: {
           type: filterType,
-          options: options.length > 0 ? options : undefined
+          options: options
         }
       };
     });
-  }, [columns, data]);
+  }, [columns]);
 
   const table = useReactTable({
     data,
