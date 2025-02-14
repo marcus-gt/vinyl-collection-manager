@@ -44,6 +44,16 @@ interface DateRangeValue {
   end: Date | null;
 }
 
+interface CustomColumnData {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
+  options?: string[];
+  option_colors?: Record<string, string>;
+  defaultValue?: string;
+  applyToAll?: boolean;
+}
+
 // Extend ColumnDef to include our custom properties
 type ExtendedColumnDef<T> = ColumnDef<T> & {
   filter?: ColumnFilter;
@@ -51,6 +61,7 @@ type ExtendedColumnDef<T> = ColumnDef<T> & {
   meta?: {
     type?: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
     options?: string[];
+    customColumn?: CustomColumnData;
   };
 };
 
@@ -264,7 +275,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         filterType = column.meta.type as FilterType;
         
         // Get options from the meta object
-        if (Array.isArray(column.meta.options)) {
+        if (column.meta.customColumn) {
+          // If we have the full custom column data, use it
+          options = [...(column.meta.customColumn.options || [])];
+          console.log(`Found options in customColumn for ${customColumnId}:`, {
+            options,
+            customColumn: column.meta.customColumn
+          });
+        } else if (Array.isArray(column.meta.options)) {
+          // Fallback to direct options if available
           options = [...column.meta.options];
           console.log(`Found options in meta for ${customColumnId}:`, {
             options,
@@ -273,7 +292,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         } else {
           console.log(`No valid options found in meta for ${customColumnId}:`, {
             metaType: typeof column.meta.options,
-            metaOptions: column.meta.options
+            metaOptions: column.meta.options,
+            fullMeta: column.meta
           });
         }
 
@@ -301,7 +321,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         meta: {
           ...column.meta,
           type: filterType,
-          options: options
+          options: options,
+          customColumn: column.meta?.customColumn // Preserve custom column data
         }
       };
 
@@ -310,7 +331,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         filterType,
         options,
         meta: result.meta,
-        filter: result.filter
+        filter: result.filter,
+        fullResult: result
       });
       return result;
     });
