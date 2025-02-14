@@ -256,12 +256,20 @@ export function Scanner() {
         genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
         styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
         musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
-        added_from: 'manual' as const
+        added_from: 'manual' as const,
+        // Ensure required fields have default values
+        year: manualRecord.year || undefined,
+        label: manualRecord.label || '',
+        barcode: undefined,
+        master_url: undefined,
+        current_release_url: undefined,
+        current_release_year: undefined
       };
 
       // Remove the text fields before submitting
       const { genresText, stylesText, musiciansText, ...submitData } = recordToSubmit;
 
+      console.log('Submitting record:', submitData);
       const response = await records.add(submitData);
       if (response.success) {
         setSuccess('Added to collection!');
@@ -288,6 +296,7 @@ export function Scanner() {
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
+      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -312,13 +321,13 @@ export function Scanner() {
         album: record.album,
         year: record.year,
         current_release_year: record.current_release_year,
-        barcode: record.barcode,
+        barcode: record.barcode || undefined,
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url,
-        current_release_url: record.current_release_url,
-        label: record.label,
+        master_url: record.master_url || undefined,
+        current_release_url: record.current_release_url || undefined,
+        label: record.label || '',
         added_from: barcode ? ('barcode' as const) : ('discogs_url' as const)
       };
 
@@ -339,30 +348,6 @@ export function Scanner() {
       } else {
         console.error('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
-        // Add retry logic
-        if (response.error?.includes('security policy')) {
-          console.log('Detected security policy error, retrying in 1 second...');
-          setTimeout(async () => {
-            try {
-              console.log('Retrying add to collection...');
-              const retryResponse = await records.add(recordData);
-              if (retryResponse.success) {
-                setSuccess('Added to collection!');
-                await loadRecentRecords();
-                setRecord(null);
-                setBarcode('');
-                setScannerKey(prev => prev + 1);
-                setError(null);
-              } else {
-                console.error('Retry failed:', retryResponse.error);
-                setError('Failed to add to collection after retry');
-              }
-            } catch (retryErr) {
-              console.error('Retry error:', retryErr);
-              setError('Failed to add to collection after retry');
-            }
-          }, 1000);
-        }
       }
     } catch (err) {
       console.error('Error adding to collection:', {
