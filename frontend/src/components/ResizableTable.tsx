@@ -77,7 +77,6 @@ interface ResizableTableProps<T extends RowData & BaseRowData> {
   onSortChange?: OnChangeFn<SortingState>;
   tableId: string;
   loading?: boolean;
-  totalRecords: number;
   recordsPerPage: number;
   page: number;
   onPageChange: (page: number) => void;
@@ -91,7 +90,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   onSortChange,
   tableId,
   loading = false,
-  totalRecords,
   recordsPerPage,
   page,
   onPageChange,
