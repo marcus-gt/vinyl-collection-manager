@@ -250,12 +250,18 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      // Convert text fields to arrays
-      const recordToSubmit = {
-        ...manualRecord,
-        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
-        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
+      if (!manualRecord.artist || !manualRecord.album) {
+        setError('Artist and album are required');
+        return;
+      }
+
+      // Convert text fields to arrays and prepare record data
+      const recordData = {
+        artist: manualRecord.artist.trim(),  // Required field
+        album: manualRecord.album.trim(),    // Required field
+        genres: (manualRecord.genresText || '').split(',').map(g => g.trim()).filter(Boolean),
+        styles: (manualRecord.stylesText || '').split(',').map(s => s.trim()).filter(Boolean),
+        musicians: (manualRecord.musiciansText || '').split(',').map(m => m.trim()).filter(Boolean),
         added_from: 'manual' as const,
         // Ensure required fields have default values
         year: manualRecord.year || undefined,
@@ -266,11 +272,8 @@ export function Scanner() {
         current_release_year: undefined
       };
 
-      // Remove the text fields before submitting
-      const { genresText, stylesText, musiciansText, ...submitData } = recordToSubmit;
-
-      console.log('Submitting record:', submitData);
-      const response = await records.add(submitData);
+      console.log('Submitting record:', recordData);
+      const response = await records.add(recordData);
       if (response.success) {
         setSuccess('Added to collection!');
         // Refresh recent records
