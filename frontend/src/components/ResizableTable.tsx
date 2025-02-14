@@ -410,15 +410,16 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
     switch (column.filter.type) {
       case 'number':
+        const numberValue = (currentFilter?.value || {}) as { min?: number; max?: number };
         return (
           <Group gap="xs">
             <TextInput
               placeholder="Min"
               type="number"
-              value={currentFilter?.value?.min || ''}
+              value={numberValue.min ?? ''}
               onChange={(e) => {
                 const min = e.target.value ? Number(e.target.value) : undefined;
-                const max = currentFilter?.value?.max;
+                const max = numberValue.max;
                 handleFilterChange(header.column.id, { min, max });
               }}
               size="xs"
@@ -435,10 +436,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             <TextInput
               placeholder="Max"
               type="number"
-              value={currentFilter?.value?.max || ''}
+              value={numberValue.max ?? ''}
               onChange={(e) => {
                 const max = e.target.value ? Number(e.target.value) : undefined;
-                const min = currentFilter?.value?.min;
+                const min = numberValue.min;
                 handleFilterChange(header.column.id, { min, max });
               }}
               size="xs"
