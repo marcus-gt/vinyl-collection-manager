@@ -251,7 +251,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       console.log(`Custom column details for ${columnId}:`, {
         isCustomColumn,
         customColumnId,
-        meta: column.meta
+        meta: column.meta,
+        fullColumn: column
       });
 
       // Determine filter type based on column metadata
@@ -261,14 +262,21 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       if (isCustomColumn && customColumnId && column.meta) {
         // For custom columns, use the type and options from meta
         filterType = column.meta.type as FilterType;
+        
+        // Get options from the meta object
         if (column.meta.options) {
-          options = [...column.meta.options]; // Make a copy to avoid mutations
-          console.log(`Setting options for custom column ${customColumnId}:`, {
-            type: filterType,
-            options,
-            meta: column.meta
-          });
+          options = [...column.meta.options];
+        } else if (column.meta.column?.options) {
+          // Try to get options from the nested column object if present
+          options = [...column.meta.column.options];
         }
+
+        console.log(`Setting options for custom column ${customColumnId}:`, {
+          type: filterType,
+          options,
+          meta: column.meta,
+          fullColumn: column
+        });
       }
 
       const result = {
@@ -283,10 +291,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         filter: {
           type: filterType,
           options: options
+        },
+        // Ensure meta is properly passed through
+        meta: {
+          ...column.meta,
+          type: filterType,
+          options: options
         }
       };
 
-      console.log(`Column ${columnId} result:`, result);
+      console.log(`Column ${columnId} result:`, {
+        id: result.id,
+        filterType,
+        options,
+        meta: result.meta,
+        filter: result.filter
+      });
       return result;
     });
   }, [columns]);
