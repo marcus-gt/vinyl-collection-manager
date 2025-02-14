@@ -1101,16 +1101,11 @@ function Collection() {
                 columns={tableColumns}
                 sortState={sortState}
                 onSortChange={setSortState}
-                tableId="vinyl-collection"
+                tableId="collection-table"
                 loading={loading}
-                totalRecords={filteredRecords.length}  // Use filtered length for total
                 recordsPerPage={PAGE_SIZE}
                 page={page}
-                onPageChange={(newPage) => {
-                  setPage(newPage);
-                  // Scroll to top when changing pages
-                  window.scrollTo(0, 0);
-                }}
+                onPageChange={setPage}
                 customColumns={customColumns}
               />
             </Box>
