@@ -319,7 +319,7 @@ export function Scanner() {
         master_url: record.master_url,
         current_release_url: record.current_release_url,
         label: record.label,
-        added_from: barcode ? 'barcode' : 'discogs_url'
+        added_from: barcode ? ('barcode' as const) : ('discogs_url' as const)
       };
 
       console.log('Prepared record data:', recordData);
@@ -383,43 +383,6 @@ export function Scanner() {
     setSuccess(null);
     // Reset scanner state to allow new scan
     setScannerKey(prev => prev + 1);
-  };
-
-  const handleAddSpotifyAlbum = async (album: {
-    name: string;
-    artist: string;
-    release_date: string;
-  }) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    try {
-      const response = await lookup.byArtistAlbum(album.artist, album.name);
-      if (response.success && response.data) {
-        const recordData = {
-          ...response.data,
-          added_from: 'spotify' as const
-        };
-        
-        const addResponse = await records.add(recordData);
-        if (addResponse.success) {
-          setSuccess('Added to collection!');
-          // Refresh recent records
-          await loadRecentRecords();
-          // Reset for next scan
-          setRecord(null);
-        } else {
-          setError(addResponse.error || 'Failed to add to collection');
-        }
-      } else {
-        setError(response.error || 'Failed to find record');
-      }
-    } catch (err) {
-      setError('Failed to add to collection');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (

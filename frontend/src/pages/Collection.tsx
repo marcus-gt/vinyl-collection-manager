@@ -521,8 +521,8 @@ function Collection() {
               minSize: 100,
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
-                const value = row.original.added_from;
-                const displayMap: Record<VinylRecord['added_from'], string> = {
+                const value = row.original.added_from || 'manual';
+                const displayMap: Record<NonNullable<VinylRecord['added_from']>, string> = {
                   barcode: 'Barcode',
                   discogs_url: 'Discogs URL',
                   spotify: 'Spotify',
