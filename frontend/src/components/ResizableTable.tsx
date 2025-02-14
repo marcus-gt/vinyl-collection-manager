@@ -232,14 +232,16 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
-    console.log('Initial columns:', columns);
+    console.log('Initial columns:', JSON.stringify(columns, null, 2));
     return columns.map(column => {
       const columnId = String(column.accessorKey || column.id);
 
-      console.log(`Processing column ${columnId}:`, {
-        meta: column.meta,
+      console.log(`\n=== Processing column ${columnId} ===`);
+      console.log('Raw column data:', {
+        meta: JSON.stringify(column.meta, null, 2),
         accessorKey: column.accessorKey,
-        id: column.id
+        id: column.id,
+        fullColumn: JSON.stringify(column, null, 2)
       });
       
       // Special case for created_at
@@ -251,7 +253,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           filterFn: dateRangeFilter,
           filter: { type: 'dateRange' as const }
         };
-        console.log(`Column ${columnId} result:`, result);
         return result;
       }
         
@@ -259,11 +260,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       const isCustomColumn = columnId.startsWith('customValues.');
       const customColumnId = isCustomColumn ? columnId.split('.')[1] : null;
 
-      console.log(`Custom column details for ${columnId}:`, {
+      console.log('Custom column check:', {
         isCustomColumn,
         customColumnId,
-        meta: column.meta,
-        fullColumn: column
+        hasMetadata: !!column.meta,
+        metaType: column.meta?.type,
+        metaOptions: column.meta?.options,
+        customColumnData: column.meta?.customColumn
       });
 
       // Determine filter type based on column metadata
@@ -274,34 +277,36 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         // For custom columns, use the type and options from meta
         filterType = column.meta.type as FilterType;
         
+        console.log('Column metadata:', {
+          originalType: column.meta.type,
+          resolvedFilterType: filterType,
+          hasCustomColumn: !!column.meta.customColumn,
+          hasDirectOptions: Array.isArray(column.meta.options),
+          metaContent: JSON.stringify(column.meta, null, 2)
+        });
+        
         // Get options from the meta object
-        if (column.meta.customColumn) {
-          // If we have the full custom column data, use it
-          options = [...(column.meta.customColumn.options || [])];
-          console.log(`Found options in customColumn for ${customColumnId}:`, {
+        if (column.meta.customColumn?.options) {
+          options = [...column.meta.customColumn.options];
+          console.log('Using options from customColumn:', {
+            source: 'customColumn',
             options,
             customColumn: column.meta.customColumn
           });
         } else if (Array.isArray(column.meta.options)) {
-          // Fallback to direct options if available
           options = [...column.meta.options];
-          console.log(`Found options in meta for ${customColumnId}:`, {
+          console.log('Using options from direct meta:', {
+            source: 'meta.options',
             options,
             metaOptions: column.meta.options
           });
         } else {
-          console.log(`No valid options found in meta for ${customColumnId}:`, {
+          console.log('No valid options found:', {
             metaType: typeof column.meta.options,
             metaOptions: column.meta.options,
             fullMeta: column.meta
           });
         }
-
-        console.log(`Setting options for custom column ${customColumnId}:`, {
-          type: filterType,
-          options,
-          meta: column.meta
-        });
       }
 
       const result = {
@@ -317,23 +322,25 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           type: filterType,
           options: options
         },
-        // Ensure meta is properly passed through with the correct type
         meta: {
           ...column.meta,
           type: filterType,
           options: options,
-          customColumn: column.meta?.customColumn // Preserve custom column data
+          customColumn: column.meta?.customColumn
         }
       };
 
-      console.log(`Column ${columnId} result:`, {
+      console.log('Final column configuration:', {
         id: result.id,
         filterType,
+        optionsLength: options.length,
         options,
-        meta: result.meta,
-        filter: result.filter,
-        fullResult: result
+        metaType: result.meta.type,
+        metaOptions: result.meta.options,
+        filterOptions: result.filter.options,
+        hasCustomColumn: !!result.meta.customColumn
       });
+
       return result;
     });
   }, [columns]);
