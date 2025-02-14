@@ -127,8 +127,13 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
         
         # Ensure added_from is one of the valid values
         added_from = record_data.get('added_from')
+        print(f"Received added_from value: {added_from}")
+        
         if added_from not in ['barcode', 'discogs_url', 'spotify', 'manual', '']:
-            added_from = ''  # Default to empty if invalid value
+            print(f"Invalid added_from value: {added_from}, defaulting to empty string")
+            added_from = ''
+        else:
+            print(f"Using added_from value: {added_from}")
         
         # Map fields from API response to database schema
         record_to_insert = {

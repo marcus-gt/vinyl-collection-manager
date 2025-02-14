@@ -359,17 +359,22 @@ export function Scanner() {
     setSuccess(null);
     
     try {
+      // Determine the source based on the active tab
+      const source = (() => {
+        switch (activeTab) {
+          case 'barcode': return 'barcode' as const;
+          case 'discogs': return 'discogs_url' as const;
+          case 'spotify': return 'spotify' as const;
+          default: return 'manual' as const;
+        }
+      })();
+
       console.log('Starting add to collection...', {
         recordData: record,
         activeTab,
+        source,
         timestamp: new Date().toISOString()
       });
-
-      // Determine the source based on the active tab
-      const source: 'barcode' | 'discogs_url' | 'spotify' | 'manual' = activeTab === 'barcode' ? 'barcode' :
-        activeTab === 'discogs' ? 'discogs_url' :
-        activeTab === 'spotify' ? 'spotify' :
-        'manual';
 
       const recordData = {
         artist: record.artist,
@@ -386,7 +391,11 @@ export function Scanner() {
         added_from: source
       };
 
-      console.log('Prepared record data:', recordData);
+      console.log('Prepared record data:', {
+        ...recordData,
+        added_from_type: typeof recordData.added_from,
+        source_type: typeof source
+      });
       
       const response = await records.add(recordData);
       console.log('Add record response:', response);
