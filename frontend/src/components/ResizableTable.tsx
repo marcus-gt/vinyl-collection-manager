@@ -17,7 +17,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, useMantineTheme, MultiSelect } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, useMantineTheme, MultiSelect, Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
@@ -32,7 +32,7 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(minMax);
 
 // Define filter types
-type FilterType = 'text' | 'dateRange' | 'multi-select';
+type FilterType = 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean' | 'dateRange';
 
 interface ColumnFilter {
   type: FilterType;
@@ -48,6 +48,10 @@ interface DateRangeValue {
 type ExtendedColumnDef<T> = ColumnDef<T> & {
   filter?: ColumnFilter;
   accessorKey?: string;
+  meta?: {
+    type?: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
+    options?: string[];
+  };
 };
 
 // Extend RowData to include created_at
@@ -162,10 +166,30 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         };
       }
 
-      // Check if this is a custom column
-      const isCustomColumn = columnId.startsWith('custom_');
-      if (isCustomColumn) {
-        // Get all unique values from the data for this column
+      // Determine filter type based on column metadata
+      let filterType: FilterType = 'text'; // Default to text
+      if (column.meta?.type) {
+        switch (column.meta.type) {
+          case 'number':
+            filterType = 'number';
+            break;
+          case 'single-select':
+            filterType = 'single-select';
+            break;
+          case 'multi-select':
+            filterType = 'multi-select';
+            break;
+          case 'boolean':
+            filterType = 'boolean';
+            break;
+          default:
+            filterType = 'text';
+        }
+      }
+
+      // Get all unique values for select types
+      let options: string[] = [];
+      if (filterType === 'single-select' || filterType === 'multi-select') {
         const uniqueValues = new Set<string>();
         data.forEach(row => {
           const value = row[columnId as keyof T];
@@ -175,26 +199,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             uniqueValues.add(String(value));
           }
         });
-
-        return {
-          ...column,
-          id: columnId,
-          enableColumnFilter: true,
-          filterFn: multiSelectFilter,
-          filter: {
-            type: 'multi-select' as const,
-            options: Array.from(uniqueValues).sort()
-          }
-        };
+        options = Array.from(uniqueValues).sort();
       }
-      
-      // Default text filter for other columns
+
       return {
         ...column,
         id: columnId,
         enableColumnFilter: true,
-        filterFn: textFilter,
-        filter: { type: 'text' as const }
+        filterFn: filterType === 'multi-select' ? multiSelectFilter :
+                  filterType === 'single-select' ? singleSelectFilter :
+                  filterType === 'number' ? numberFilter :
+                  filterType === 'boolean' ? booleanFilter :
+                  textFilter,
+        filter: {
+          type: filterType,
+          options: options.length > 0 ? options : undefined
+        }
       };
     });
   }, [columns, data]);
@@ -214,6 +234,39 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
     // Handle single values
     return value.includes(String(cellValue));
+  };
+
+  const numberFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: { min?: number; max?: number }
+  ): boolean => {
+    if (!value || (!value.min && !value.max)) return true;
+    const cellValue = Number(row.getValue(columnId));
+    if (isNaN(cellValue)) return false;
+    if (value.min && cellValue < value.min) return false;
+    if (value.max && cellValue > value.max) return false;
+    return true;
+  };
+
+  const singleSelectFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: string
+  ): boolean => {
+    if (!value) return true;
+    const cellValue = row.getValue(columnId);
+    return String(cellValue) === value;
+  };
+
+  const booleanFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: boolean | null
+  ): boolean => {
+    if (value === null) return true;
+    const cellValue = row.getValue(columnId);
+    return Boolean(cellValue) === value;
   };
 
   const table = useReactTable({
@@ -356,6 +409,74 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     );
 
     switch (column.filter.type) {
+      case 'number':
+        return (
+          <Group gap="xs">
+            <TextInput
+              placeholder="Min"
+              type="number"
+              value={currentFilter?.value?.min || ''}
+              onChange={(e) => {
+                const min = e.target.value ? Number(e.target.value) : undefined;
+                const max = currentFilter?.value?.max;
+                handleFilterChange(header.column.id, { min, max });
+              }}
+              size="xs"
+              styles={{
+                root: { flex: 1 },
+                input: {
+                  minHeight: '28px',
+                  '&::placeholder': {
+                    color: theme.colors.dark[2]
+                  }
+                }
+              }}
+            />
+            <TextInput
+              placeholder="Max"
+              type="number"
+              value={currentFilter?.value?.max || ''}
+              onChange={(e) => {
+                const max = e.target.value ? Number(e.target.value) : undefined;
+                const min = currentFilter?.value?.min;
+                handleFilterChange(header.column.id, { min, max });
+              }}
+              size="xs"
+              styles={{
+                root: { flex: 1 },
+                input: {
+                  minHeight: '28px',
+                  '&::placeholder': {
+                    color: theme.colors.dark[2]
+                  }
+                }
+              }}
+            />
+          </Group>
+        );
+
+      case 'single-select':
+        return (
+          <Select
+            placeholder="Select..."
+            value={(currentFilter?.value as string) || null}
+            onChange={(value) => handleFilterChange(header.column.id, value)}
+            data={column.filter.options?.map((opt: string) => ({ value: opt, label: opt })) || []}
+            clearable
+            searchable
+            size="xs"
+            styles={{
+              root: { width: '100%' },
+              input: {
+                minHeight: '28px',
+                '&::placeholder': {
+                  color: theme.colors.dark[2]
+                }
+              }
+            }}
+          />
+        );
+
       case 'multi-select':
         return (
           <MultiSelect
@@ -365,6 +486,36 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             data={column.filter.options?.map((opt: string) => ({ value: opt, label: opt })) || []}
             clearable
             searchable
+            size="xs"
+            styles={{
+              root: { width: '100%' },
+              input: {
+                minHeight: '28px',
+                '&::placeholder': {
+                  color: theme.colors.dark[2]
+                }
+              }
+            }}
+          />
+        );
+
+      case 'boolean':
+        return (
+          <Select
+            placeholder="Select..."
+            value={currentFilter?.value === null ? null : String(currentFilter?.value)}
+            onChange={(value) => {
+              if (value === null) {
+                handleFilterChange(header.column.id, null);
+              } else {
+                handleFilterChange(header.column.id, value === 'true');
+              }
+            }}
+            data={[
+              { value: 'true', label: 'Yes' },
+              { value: 'false', label: 'No' }
+            ]}
+            clearable
             size="xs"
             styles={{
               root: { width: '100%' },
