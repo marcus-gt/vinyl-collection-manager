@@ -17,7 +17,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, useMantineTheme } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, Pagination, TextInput, useMantineTheme, MultiSelect } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
@@ -32,10 +32,11 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(minMax);
 
 // Define filter types
-type FilterType = 'text' | 'dateRange';
+type FilterType = 'text' | 'dateRange' | 'multi-select';
 
 interface ColumnFilter {
   type: FilterType;
+  options?: string[];
 }
 
 interface DateRangeValue {
@@ -150,6 +151,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     return columns.map(column => {
       const columnId = String(column.accessorKey || column.id);
       
+      // Special case for created_at
       if (columnId === 'created_at') {
         return {
           ...column,
@@ -159,7 +161,34 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           filter: { type: 'dateRange' as const }
         };
       }
+
+      // Check if this is a custom column
+      const isCustomColumn = columnId.startsWith('custom_');
+      if (isCustomColumn) {
+        // Get all unique values from the data for this column
+        const uniqueValues = new Set<string>();
+        data.forEach(row => {
+          const value = row[columnId as keyof T];
+          if (Array.isArray(value)) {
+            value.forEach((v: unknown) => uniqueValues.add(String(v)));
+          } else if (value !== undefined && value !== null) {
+            uniqueValues.add(String(value));
+          }
+        });
+
+        return {
+          ...column,
+          id: columnId,
+          enableColumnFilter: true,
+          filterFn: multiSelectFilter,
+          filter: {
+            type: 'multi-select' as const,
+            options: Array.from(uniqueValues).sort()
+          }
+        };
+      }
       
+      // Default text filter for other columns
       return {
         ...column,
         id: columnId,
@@ -168,7 +197,24 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         filter: { type: 'text' as const }
       };
     });
-  }, [columns]);
+  }, [columns, data]);
+
+  const multiSelectFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: string[]
+  ): boolean => {
+    if (!value || value.length === 0) return true;
+    const cellValue = row.getValue(columnId);
+    if (!cellValue) return false;
+    
+    // Handle array values
+    if (Array.isArray(cellValue)) {
+      return value.some(filterValue => cellValue.includes(filterValue));
+    }
+    // Handle single values
+    return value.includes(String(cellValue));
+  };
 
   const table = useReactTable({
     data,
@@ -189,7 +235,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     manualFiltering: false,
     filterFns: {
       text: textFilter,
-      dateRange: dateRangeFilter
+      dateRange: dateRangeFilter,
+      'multi-select': multiSelectFilter
     } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
@@ -304,34 +351,57 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     const column = columnsWithFilters.find(col => col.id === header.column.id);
     if (!column?.filter) return null;
 
-    if (column.filter.type === 'dateRange') {
-      return renderDateRangeFilter(header);
-    }
-
     const currentFilter = table.getState().columnFilters.find(
       (filter: { id: string; value: unknown }) => filter.id === header.column.id
     );
 
-    return (
-      <TextInput
-        placeholder="Filter..."
-        value={(currentFilter?.value as string) || ''}
-        onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
-        size="xs"
-        leftSection={<IconSearch size={14} />}
-        styles={{
-          root: {
-            width: '100%'
-          },
-          input: {
-            minHeight: '28px',
-            '&::placeholder': {
-              color: theme.colors.dark[2]
-            }
-          }
-        }}
-      />
-    );
+    switch (column.filter.type) {
+      case 'multi-select':
+        return (
+          <MultiSelect
+            placeholder="Select options..."
+            value={(currentFilter?.value as string[]) || []}
+            onChange={(value) => handleFilterChange(header.column.id, value)}
+            data={column.filter.options?.map((opt: string) => ({ value: opt, label: opt })) || []}
+            clearable
+            searchable
+            size="xs"
+            styles={{
+              root: { width: '100%' },
+              input: {
+                minHeight: '28px',
+                '&::placeholder': {
+                  color: theme.colors.dark[2]
+                }
+              }
+            }}
+          />
+        );
+
+      case 'dateRange':
+        return renderDateRangeFilter(header);
+
+      case 'text':
+      default:
+        return (
+          <TextInput
+            placeholder="Filter..."
+            value={(currentFilter?.value as string) || ''}
+            onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
+            size="xs"
+            leftSection={<IconSearch size={14} />}
+            styles={{
+              root: { width: '100%' },
+              input: {
+                minHeight: '28px',
+                '&::placeholder': {
+                  color: theme.colors.dark[2]
+                }
+              }
+            }}
+          />
+        );
+    }
   };
 
   return (
