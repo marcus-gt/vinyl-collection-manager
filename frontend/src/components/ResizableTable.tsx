@@ -235,31 +235,25 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         };
       }
 
+      // For custom columns, the columnId starts with 'customValues.' followed by the column ID
+      const isCustomColumn = columnId.startsWith('customValues.');
+      const customColumnId = isCustomColumn ? columnId.split('.')[1] : null;
+
       // Determine filter type based on column metadata
       let filterType: FilterType = 'text'; // Default to text
-      if (column.meta?.type) {
-        switch (column.meta.type) {
-          case 'number':
-            filterType = 'number';
-            break;
-          case 'single-select':
-            filterType = 'single-select';
-            break;
-          case 'multi-select':
-            filterType = 'multi-select';
-            break;
-          case 'boolean':
-            filterType = 'boolean';
-            break;
-          default:
-            filterType = 'text';
-        }
-      }
-
-      // For select types, use the predefined options from column metadata
       let options: string[] = [];
-      if ((filterType === 'single-select' || filterType === 'multi-select') && column.meta?.options) {
-        options = column.meta.options;
+
+      if (isCustomColumn && column.meta) {
+        // For custom columns, use the type and options from meta
+        filterType = column.meta.type as FilterType;
+        if (column.meta.options) {
+          options = column.meta.options;
+          console.log(`Setting options for custom column ${columnId}:`, {
+            type: filterType,
+            options,
+            meta: column.meta
+          });
+        }
       }
 
       return {
@@ -497,7 +491,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         console.log(`Rendering multi-select for ${header.column.id}:`, {
           options: multiSelectOptions,
           currentValue: currentFilter?.value,
-          columnFilter: column.filter
+          columnFilter: column.filter,
+          columnMeta: column.meta
         });
         
         return (
