@@ -221,34 +221,49 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
+    console.log('Initial columns:', columns);
     return columns.map(column => {
       const columnId = String(column.accessorKey || column.id);
+
+      console.log(`Processing column ${columnId}:`, {
+        meta: column.meta,
+        accessorKey: column.accessorKey,
+        id: column.id
+      });
       
       // Special case for created_at
       if (columnId === 'created_at') {
-        return {
+        const result = {
           ...column,
           id: columnId,
           enableColumnFilter: true,
           filterFn: dateRangeFilter,
           filter: { type: 'dateRange' as const }
         };
+        console.log(`Column ${columnId} result:`, result);
+        return result;
       }
-
+        
       // For custom columns, the columnId starts with 'customValues.' followed by the column ID
       const isCustomColumn = columnId.startsWith('customValues.');
       const customColumnId = isCustomColumn ? columnId.split('.')[1] : null;
+
+      console.log(`Custom column details for ${columnId}:`, {
+        isCustomColumn,
+        customColumnId,
+        meta: column.meta
+      });
 
       // Determine filter type based on column metadata
       let filterType: FilterType = 'text'; // Default to text
       let options: string[] = [];
 
-      if (isCustomColumn && column.meta) {
+      if (isCustomColumn && customColumnId && column.meta) {
         // For custom columns, use the type and options from meta
         filterType = column.meta.type as FilterType;
         if (column.meta.options) {
-          options = column.meta.options;
-          console.log(`Setting options for custom column ${columnId}:`, {
+          options = [...column.meta.options]; // Make a copy to avoid mutations
+          console.log(`Setting options for custom column ${customColumnId}:`, {
             type: filterType,
             options,
             meta: column.meta
@@ -256,7 +271,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         }
       }
 
-      return {
+      const result = {
         ...column,
         id: columnId,
         enableColumnFilter: true,
@@ -270,6 +285,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           options: options
         }
       };
+
+      console.log(`Column ${columnId} result:`, result);
+      return result;
     });
   }, [columns]);
 
