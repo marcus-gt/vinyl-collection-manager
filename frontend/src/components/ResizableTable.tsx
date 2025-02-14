@@ -134,13 +134,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     
     // Convert cell value to array if it's a comma-separated string
     const cellValues = Array.isArray(cellValue) 
-      ? cellValue.map(v => v.trim())
+      ? cellValue.map(v => String(v).trim().toLowerCase())
       : typeof cellValue === 'string'
-        ? cellValue.split(',').map((v: string) => v.trim()).filter(Boolean)
-        : [String(cellValue).trim()];
+        ? cellValue.split(',').map(v => v.trim().toLowerCase()).filter(Boolean)
+        : [String(cellValue).trim().toLowerCase()];
 
-    // Trim the filter values as well
-    const trimmedFilterValues = value.map(v => v.trim());
+    // Trim and lowercase the filter values
+    const trimmedFilterValues = value.map(v => v.trim().toLowerCase());
 
     console.log('Processed values:', {
       filterValues: trimmedFilterValues,
@@ -150,7 +150,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
     // Check if ALL filter values are present in the cell values
     const result = trimmedFilterValues.every(filterValue => 
-      cellValues.includes(filterValue)
+      cellValues.some(cellValue => cellValue === filterValue)
     );
 
     console.log(`Filter result for ${columnId}:`, {
@@ -430,6 +430,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       enableSorting: true
     }
   });
+
+  // Get filtered rows before pagination
+  const filteredRows = table.getFilteredRowModel().rows;
+  const totalFilteredRecords = filteredRows.length;
+
+  // Calculate pagination manually
+  const startIndex = (page - 1) * recordsPerPage;
+  const endIndex = Math.min(startIndex + recordsPerPage, totalFilteredRecords);
+  const paginatedRows = filteredRows.slice(startIndex, endIndex);
 
   const handleFilterChange = (columnId: string, value: any) => {
     console.log('handleFilterChange called:', {
@@ -884,7 +893,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           ))}
         </Table.Thead>
         <Table.Tbody>
-          {table.getRowModel().rows.map((row: Row<T>) => (
+          {paginatedRows.map((row: Row<T>) => (
             <Table.Tr key={row.id}>
               {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
                 <Table.Td
@@ -914,12 +923,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           ))}
         </Table.Tbody>
       </Table>
-      {totalRecords > recordsPerPage && (
+      {totalFilteredRecords > recordsPerPage && (
         <Group justify="center" mt="md">
           <Pagination
             value={page}
             onChange={onPageChange}
-            total={Math.ceil(totalRecords / recordsPerPage)}
+            total={Math.ceil(totalFilteredRecords / recordsPerPage)}
             siblings={0}
             boundaries={0}
             withEdges
