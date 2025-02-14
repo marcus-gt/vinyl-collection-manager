@@ -48,6 +48,10 @@ export function Scanner() {
     };
   }, []);
 
+  useEffect(() => {
+    console.log('activeTab changed:', activeTab);
+  }, [activeTab]);
+
   const loadRecentRecords = async () => {
     try {
       const response = await records.getAll();
@@ -391,26 +395,20 @@ export function Scanner() {
       const source = (() => {
         switch (activeTab) {
           case 'barcode': 
-            console.log('Source determined as: barcode');
-            return 'barcode' as const;
+            console.log('Using source: barcode');
+            return 'barcode';
           case 'discogs': 
-            console.log('Source determined as: discogs_url');
-            return 'discogs_url' as const;
+            console.log('Using source: discogs_url');
+            return 'discogs_url';
           case 'spotify': 
-            console.log('Source determined as: spotify');
-            return 'spotify' as const;
+            console.log('Using source: spotify');
+            return 'spotify';
+          case 'search':
           default: 
-            console.log('Source defaulting to: manual');
-            return 'manual' as const;
+            console.log('Using source: manual');
+            return 'manual';
         }
-      })();
-
-      console.log('Starting add to collection...', {
-        recordData: record,
-        activeTab,
-        source,
-        timestamp: new Date().toISOString()
-      });
+      })() as 'barcode' | 'discogs_url' | 'spotify' | 'manual';
 
       const recordData = {
         artist: record.artist,
@@ -427,7 +425,7 @@ export function Scanner() {
         added_from: source
       };
 
-      console.log('Final record data being sent:', {
+      console.log('Final record data:', {
         ...recordData,
         added_from_value: recordData.added_from,
         added_from_type: typeof recordData.added_from,
@@ -488,10 +486,17 @@ export function Scanner() {
           <Stack>
             <Tabs 
               value={activeTab}
-              onChange={(value: string | null) => {
-                console.log('Tab changed:', { from: activeTab, to: value });
+              onChange={(value) => {
+                console.log('Tab changing from', activeTab, 'to', value);
+                // Clear any existing record data when changing tabs
+                setRecord(null);
+                setBarcode('');
+                setDiscogsUrl('');
+                setSpotifyUrl('');
+                setError(null);
+                setSuccess(null);
+                // Update the active tab
                 setActiveTab(value || 'barcode');
-                console.log('activeTab state updated to:', value || 'barcode');
               }}
             >
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
