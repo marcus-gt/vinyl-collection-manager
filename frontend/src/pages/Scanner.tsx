@@ -262,7 +262,7 @@ export function Scanner() {
         genres: (manualRecord.genresText || '').split(',').map(g => g.trim()).filter(Boolean),
         styles: (manualRecord.stylesText || '').split(',').map(s => s.trim()).filter(Boolean),
         musicians: (manualRecord.musiciansText || '').split(',').map(m => m.trim()).filter(Boolean),
-        added_from: 'manual' as const,
+        added_from: 'manual' as const,  // Explicitly set as manual
         // Ensure required fields have default values
         year: manualRecord.year || undefined,
         label: manualRecord.label || '',
@@ -319,6 +319,16 @@ export function Scanner() {
         timestamp: new Date().toISOString()
       });
 
+      // Determine the source based on the context
+      let source: 'barcode' | 'discogs_url' | 'manual';
+      if (barcode) {
+        source = 'barcode';
+      } else if (discogsUrl) {
+        source = 'discogs_url';
+      } else {
+        source = 'manual';
+      }
+
       const recordData = {
         artist: record.artist,
         album: record.album,
@@ -331,7 +341,7 @@ export function Scanner() {
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         label: record.label || '',
-        added_from: barcode ? ('barcode' as const) : ('discogs_url' as const)
+        added_from: source
       };
 
       console.log('Prepared record data:', recordData);
