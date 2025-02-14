@@ -16,9 +16,10 @@ export function Scanner() {
   const [success, setSuccess] = useState<string | null>(null);
   const [record, setRecord] = useState<VinylRecord | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [scannerKey, setScannerKey] = useState(0); // Used to reset scanner state
+  const [scannerKey, setScannerKey] = useState(0);
   const [recentRecords, setRecentRecords] = useState<VinylRecord[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('barcode');
   const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
     genresText?: string;
     stylesText?: string;
@@ -360,20 +361,15 @@ export function Scanner() {
     try {
       console.log('Starting add to collection...', {
         recordData: record,
+        activeTab,
         timestamp: new Date().toISOString()
       });
 
-      // Determine the source based on how the record was found
-      let source: 'barcode' | 'discogs_url' | 'spotify' | 'manual';
-      if (barcode) {
-        source = 'barcode';
-      } else if (discogsUrl) {
-        source = 'discogs_url';
-      } else if (spotifyUrl) {
-        source = 'spotify';
-      } else {
-        source = 'manual';
-      }
+      // Determine the source based on the active tab
+      const source: 'barcode' | 'discogs_url' | 'spotify' | 'manual' = activeTab === 'barcode' ? 'barcode' :
+        activeTab === 'discogs' ? 'discogs_url' :
+        activeTab === 'spotify' ? 'spotify' :
+        'manual';
 
       const recordData = {
         artist: record.artist,
@@ -443,7 +439,7 @@ export function Scanner() {
 
         <Paper withBorder shadow="md" p="md" radius="md" mb="xl">
           <Stack>
-            <Tabs defaultValue="barcode">
+            <Tabs defaultValue="barcode" onChange={(value: string | null) => setActiveTab(value || 'barcode')}>
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
                 <Tabs.Tab 
                   value="barcode" 
