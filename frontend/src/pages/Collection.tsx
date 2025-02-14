@@ -1097,7 +1097,7 @@ function Collection() {
           <Stack>
             <Box style={{ height: 'calc(100vh - 200px)' }}>
               <ResizableTable
-                data={paginatedRecords}
+                data={userRecords}  // Pass all records, not paginated
                 columns={tableColumns}
                 sortState={sortState}
                 onSortChange={setSortState}
@@ -1105,7 +1105,10 @@ function Collection() {
                 loading={loading}
                 recordsPerPage={PAGE_SIZE}
                 page={page}
-                onPageChange={setPage}
+                onPageChange={(newPage) => {
+                  setPage(newPage);
+                  window.scrollTo(0, 0);
+                }}
                 customColumns={customColumns}
               />
             </Box>

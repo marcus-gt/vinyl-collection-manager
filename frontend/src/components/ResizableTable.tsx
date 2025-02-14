@@ -429,14 +429,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   });
 
-  // Get filtered rows before pagination
-  const filteredRows = table.getFilteredRowModel().rows;
-  const totalFilteredRecords = filteredRows.length;
+  // Get filtered and sorted rows
+  const filteredAndSortedRows = table.getFilteredRowModel().rows;
+  const totalRecords = filteredAndSortedRows.length;
 
-  // Calculate pagination manually
+  // Calculate pagination
   const startIndex = (page - 1) * recordsPerPage;
-  const endIndex = Math.min(startIndex + recordsPerPage, totalFilteredRecords);
-  const paginatedRows = filteredRows.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + recordsPerPage, totalRecords);
+  const paginatedRows = filteredAndSortedRows.slice(startIndex, endIndex);
 
   const handleFilterChange = (columnId: string, value: any) => {
     console.log('handleFilterChange called:', {
@@ -921,16 +921,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           ))}
         </Table.Tbody>
       </Table>
-      {filteredRows.length > recordsPerPage && (
+      {totalRecords > recordsPerPage && (
         <Group justify="center" mt="md">
           <Pagination
             value={page}
-            onChange={(newPage) => {
-              onPageChange(newPage);
-              // Scroll to top when changing pages
-              window.scrollTo(0, 0);
-            }}
-            total={Math.ceil(filteredRows.length / recordsPerPage)}
+            onChange={onPageChange}
+            total={Math.ceil(totalRecords / recordsPerPage)}
             siblings={0}
             boundaries={0}
             withEdges
