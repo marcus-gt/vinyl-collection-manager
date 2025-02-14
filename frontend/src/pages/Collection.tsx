@@ -248,6 +248,7 @@ function Collection() {
       'Styles',
       'Musicians',
       'Added',
+      'Added From',
       'Scanned Release Year',
       'Master URL',
       'Release URL'
@@ -269,6 +270,7 @@ function Collection() {
       record.styles?.join('; ') || '',
       record.musicians?.join('; ') || '',
       record.created_at ? new Date(record.created_at).toLocaleString() : '',
+      record.added_from || '',
       record.current_release_year || '',
       record.master_url || '',
       record.current_release_url || ''
@@ -508,6 +510,26 @@ function Collection() {
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => row.original.created_at ? 
                 new Date(row.original.created_at).toLocaleDateString() : '-'
+            },
+            { 
+              id: 'added_from', 
+              accessorKey: 'added_from', 
+              header: 'Added From', 
+              enableSorting: true,
+              size: 100,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const value = row.original.added_from;
+                const displayMap = {
+                  barcode: 'Barcode',
+                  discogs_url: 'Discogs URL',
+                  spotify: 'Spotify',
+                  manual: 'Manual'
+                };
+                return <Text size="sm">{displayMap[value] || value}</Text>;
+              }
             },
             { 
               id: 'current_release_year', 
@@ -1003,14 +1025,14 @@ function Collection() {
               onClick={() => setAddRecordsModalOpened(true)}
             >
               Add Records
-            </Button>
+              </Button>
             <Button
               variant="light"
               onClick={() => setCustomColumnManagerOpened(true)}
             >
               Manage Columns
-            </Button>
-          </Group>
+              </Button>
+            </Group>
         </Group>
 
         {error && (

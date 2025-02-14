@@ -20,6 +20,10 @@ export interface VinylRecord {
   added_at: string;
   updated_at?: string;
   user_id: string;
+  added_from: 'barcode' | 'discogs_url' | 'spotify' | 'manual';
+  customValues?: {
+    [columnId: string]: string;
+  };
 }
 
 export interface AuthResponse {
