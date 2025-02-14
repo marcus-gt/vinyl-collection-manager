@@ -721,6 +721,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           },
           tr: {
             height: '32px',
+            maxHeight: '32px',
             position: 'relative'
           },
           td: {
@@ -728,14 +729,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             maxHeight: '32px',
             padding: '0 8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
             '&:last-child': {
               borderRight: 'none'
             }
           },
           th: {
+            height: '32px',
+            maxHeight: '32px',
             padding: '8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
             position: 'relative',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
             '&:last-child': {
               borderRight: 'none'
             }
@@ -753,7 +762,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'relative',
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      height: '32px',
+                      maxHeight: '32px'
                     }}
                   >
                     {header.isPlaceholder ? null : (
@@ -762,7 +773,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           display: 'flex',
                           alignItems: 'center',
                           cursor: header.column.getCanSort() ? 'pointer' : 'default',
-                          position: 'relative'
+                          position: 'relative',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          height: '32px',
+                          maxHeight: '32px'
                         }}
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -822,7 +838,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       padding: '4px 8px',
-                      position: 'relative'
+                      position: 'relative',
+                      height: '40px',
+                      maxHeight: '40px'
                     }}
                   >
                     {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
@@ -841,13 +859,19 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   style={{
                     width: cell.column.getSize(),
                     maxWidth: cell.column.getSize(),
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    height: '32px',
+                    maxHeight: '32px'
                   }}
                 >
                   <div style={{ 
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    height: '32px',
+                    maxHeight: '32px',
+                    display: 'flex',
+                    alignItems: 'center'
                   }}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </div>
