@@ -104,6 +104,56 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     return String(cellValue).toLowerCase().includes(value.toLowerCase());
   };
 
+  const multiSelectFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: string[]
+  ): boolean => {
+    if (!value || value.length === 0) return true;
+    const cellValue = row.getValue(columnId);
+    if (!cellValue) return false;
+    
+    // Handle array values
+    if (Array.isArray(cellValue)) {
+      return value.some(filterValue => cellValue.includes(filterValue));
+    }
+    // Handle single values
+    return value.includes(String(cellValue));
+  };
+
+  const numberFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: { min?: number; max?: number }
+  ): boolean => {
+    if (!value || (!value.min && !value.max)) return true;
+    const cellValue = Number(row.getValue(columnId));
+    if (isNaN(cellValue)) return false;
+    if (value.min && cellValue < value.min) return false;
+    if (value.max && cellValue > value.max) return false;
+    return true;
+  };
+
+  const singleSelectFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: string
+  ): boolean => {
+    if (!value) return true;
+    const cellValue = row.getValue(columnId);
+    return String(cellValue) === value;
+  };
+
+  const booleanFilter: FilterFn<T> = (
+    row: Row<T>,
+    columnId: string,
+    value: boolean | null
+  ): boolean => {
+    if (value === null) return true;
+    const cellValue = row.getValue(columnId);
+    return Boolean(cellValue) === value;
+  };
+
   const dateRangeFilter: FilterFn<any> = (
     row: Row<any>,
     columnId: string,
@@ -218,56 +268,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       };
     });
   }, [columns, data]);
-
-  const multiSelectFilter: FilterFn<T> = (
-    row: Row<T>,
-    columnId: string,
-    value: string[]
-  ): boolean => {
-    if (!value || value.length === 0) return true;
-    const cellValue = row.getValue(columnId);
-    if (!cellValue) return false;
-    
-    // Handle array values
-    if (Array.isArray(cellValue)) {
-      return value.some(filterValue => cellValue.includes(filterValue));
-    }
-    // Handle single values
-    return value.includes(String(cellValue));
-  };
-
-  const numberFilter: FilterFn<T> = (
-    row: Row<T>,
-    columnId: string,
-    value: { min?: number; max?: number }
-  ): boolean => {
-    if (!value || (!value.min && !value.max)) return true;
-    const cellValue = Number(row.getValue(columnId));
-    if (isNaN(cellValue)) return false;
-    if (value.min && cellValue < value.min) return false;
-    if (value.max && cellValue > value.max) return false;
-    return true;
-  };
-
-  const singleSelectFilter: FilterFn<T> = (
-    row: Row<T>,
-    columnId: string,
-    value: string
-  ): boolean => {
-    if (!value) return true;
-    const cellValue = row.getValue(columnId);
-    return String(cellValue) === value;
-  };
-
-  const booleanFilter: FilterFn<T> = (
-    row: Row<T>,
-    columnId: string,
-    value: boolean | null
-  ): boolean => {
-    if (value === null) return true;
-    const cellValue = row.getValue(columnId);
-    return Boolean(cellValue) === value;
-  };
 
   const table = useReactTable({
     data,
