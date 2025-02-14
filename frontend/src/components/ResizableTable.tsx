@@ -388,12 +388,28 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnResizeMode,
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
-    onColumnFiltersChange: (updater: Updater<ColumnFiltersState>) => {
-      // Handle both function updater and direct value
-      const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+    onColumnFiltersChange: (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
+      console.log('Filter update received:', {
+        updater,
+        isFunction: typeof updater === 'function',
+        currentFilters: columnFilters
+      });
+
+      let newFilters: ColumnFiltersState;
+      if (typeof updater === 'function') {
+        newFilters = updater(columnFilters);
+        console.log('New filters from function:', newFilters);
+      } else {
+        newFilters = updater;
+        console.log('New filters from direct value:', newFilters);
+      }
+
+      console.log('Setting filters to:', newFilters);
       setColumnFilters(newFilters);
+
       // Reset to first page when filters change
       if (onPageChange) {
+        console.log('Resetting to page 1 due to filter change');
         onPageChange(1);
       }
     },
@@ -417,12 +433,21 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   });
 
   const handleFilterChange = (columnId: string, value: any) => {
+    console.log('handleFilterChange called:', {
+      columnId,
+      value,
+      currentFilters: columnFilters
+    });
+
     setColumnFilters((prev: ColumnFiltersState) => {
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (value == null || (typeof value === 'string' && !value)) {
+        console.log('Removing filter for column:', columnId);
         return existing;
       }
-      return [...existing, { id: columnId, value }];
+      const newFilters = [...existing, { id: columnId, value }];
+      console.log('New filters state:', newFilters);
+      return newFilters;
     });
   };
 
