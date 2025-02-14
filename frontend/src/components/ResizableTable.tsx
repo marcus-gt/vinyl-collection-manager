@@ -244,12 +244,20 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         data.forEach(row => {
           const value = row[columnId as keyof T];
           if (Array.isArray(value)) {
+            // For array values, add each item
             value.forEach((v: unknown) => uniqueValues.add(String(v)));
           } else if (value !== undefined && value !== null) {
-            uniqueValues.add(String(value));
+            // For string values that might be comma-separated
+            if (typeof value === 'string' && value.includes(',')) {
+              value.split(',').forEach((v: string) => uniqueValues.add(v.trim()));
+            } else {
+              uniqueValues.add(String(value));
+            }
           }
         });
-        options = Array.from(uniqueValues).sort();
+        options = Array.from(uniqueValues)
+          .filter(Boolean) // Remove empty strings
+          .sort((a, b) => a.localeCompare(b)); // Sort alphabetically
       }
 
       return {
@@ -479,14 +487,21 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         );
 
       case 'multi-select':
+        const multiSelectOptions = (column.filter.options || []).map((opt: string) => ({
+          value: opt,
+          label: opt
+        }));
+        
         return (
           <MultiSelect
             placeholder="Select options..."
             value={(currentFilter?.value as string[]) || []}
             onChange={(value) => handleFilterChange(header.column.id, value)}
-            data={column.filter.options?.map((opt: string) => ({ value: opt, label: opt })) || []}
+            data={multiSelectOptions}
             clearable
             searchable
+            hidePickedOptions
+            maxDropdownHeight={200}
             size="xs"
             styles={{
               root: { width: '100%' },
