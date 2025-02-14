@@ -1052,7 +1052,7 @@ function Collection() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setPage(1);
+                setPage(1);  // Reset to first page when filtering
               }}
               style={{ width: 300 }}
             />
@@ -1103,10 +1103,14 @@ function Collection() {
                 onSortChange={setSortState}
                 tableId="vinyl-collection"
                 loading={loading}
-                totalRecords={filteredRecords.length}
+                totalRecords={filteredRecords.length}  // Use filtered length for total
                 recordsPerPage={PAGE_SIZE}
                 page={page}
-                onPageChange={setPage}
+                onPageChange={(newPage) => {
+                  setPage(newPage);
+                  // Scroll to top when changing pages
+                  window.scrollTo(0, 0);
+                }}
                 customColumns={customColumns}
               />
             </Box>

@@ -387,7 +387,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnResizeMode,
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: (filters: ColumnFiltersState) => {
+      setColumnFilters(filters);
+      // Reset to first page when filters change
+      if (onPageChange) {
+        onPageChange(1);
+      }
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
