@@ -132,24 +132,28 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     const cellValue = row.getValue(columnId);
     if (!cellValue) return false;
     
-    // Handle array values
-    if (Array.isArray(cellValue)) {
-      const result = value.some(filterValue => cellValue.includes(filterValue));
-      console.log(`Array value filter result:`, {
-        filterValues: value,
-        cellValues: cellValue,
-        result
-      });
-      return result;
-    }
-    
-    // Handle single values
-    const result = value.includes(String(cellValue));
-    console.log(`Single value filter result:`, {
+    // Convert cell value to array if it's a comma-separated string
+    const cellValues = Array.isArray(cellValue) 
+      ? cellValue 
+      : cellValue.split(',').map(v => v.trim()).filter(Boolean);
+
+    console.log('Processed values:', {
       filterValues: value,
-      cellValue,
+      cellValues,
+      cellValueType: typeof cellValue
+    });
+
+    // Check if any of the filter values match any of the cell values
+    const result = value.some(filterValue => 
+      cellValues.includes(filterValue)
+    );
+
+    console.log(`Filter result for ${columnId}:`, {
+      filterValues: value,
+      cellValues,
       result
     });
+    
     return result;
   };
 
