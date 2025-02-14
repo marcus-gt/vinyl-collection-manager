@@ -448,7 +448,10 @@ export function Scanner() {
 
         <Paper withBorder shadow="md" p="md" radius="md" mb="xl">
           <Stack>
-            <Tabs defaultValue="barcode" onChange={(value: string | null) => setActiveTab(value || 'barcode')}>
+            <Tabs 
+              value={activeTab}
+              onChange={(value: string | null) => setActiveTab(value || 'barcode')}
+            >
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
                 <Tabs.Tab 
                   value="barcode" 
