@@ -391,7 +391,7 @@ export function Scanner() {
       console.log('=== Starting Add to Collection ===');
       console.log('Current record:', record);
 
-      // Use the added_from value from the record if it exists
+      // Use the added_from value directly from the record
       const recordData = {
         artist: record.artist,
         album: record.album,
@@ -404,7 +404,7 @@ export function Scanner() {
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         label: record.label || '',
-        added_from: record.added_from
+        added_from: record.added_from  // Use the value from the record
       };
 
       console.log('Final record data:', {

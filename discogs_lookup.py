@@ -252,49 +252,54 @@ def extract_release_id(discogs_url: str) -> Optional[str]:
         print(f"Error extracting ID: {str(e)}")
         return None
 
-def search_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
-    """Search for a release using a Discogs URL (supports both release and master URLs)"""
+def lookup_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
+    """Look up a release by Discogs URL"""
     try:
-        print(f"\n=== Looking up Discogs URL: {url} ===")
+        print(f"\n=== Looking up release by URL: {url} ===")
         
-        # Extract the ID from the URL
-        discogs_id = extract_release_id(url)
-        if not discogs_id:
+        # Extract release ID from URL
+        release_id = extract_release_id(url)
+        if not release_id:
+            print("Invalid Discogs URL")
             return {
                 'success': False,
-                'message': 'Could not extract ID from URL'
+                'error': 'Invalid Discogs URL'
             }
             
-        # Check if it's a master URL
-        if '/master/' in url:
-            print(f"Found master URL, fetching master release {discogs_id}...")
-            master = d.master(int(discogs_id))
-            if not master:
+        print(f"Release ID: {release_id}")
+        
+        try:
+            # Get the full release data with timeout
+            release = d.release(release_id)
+            formatted_data = format_release_data(release)
+            
+            if not formatted_data:
                 return {
                     'success': False,
-                    'message': 'Master release not found'
+                    'error': 'Failed to format release data'
                 }
+            
+            # Add the source to the formatted data
+            formatted_data['added_from'] = 'discogs_url'
                 
-            # Get the main release from the master
-            if not hasattr(master, 'main_release'):
-                return {
-                    'success': False,
-                    'message': 'No main release found for this master'
-                }
-                
-            print(f"Found main release ID: {master.main_release.id}")
-            return search_by_discogs_id(str(master.main_release.id))
-        else:
-            # It's a release URL, use the existing function
-            return search_by_discogs_id(discogs_id)
+            return {
+                'success': True,
+                'data': formatted_data
+            }
+        except Exception as release_err:
+            print(f"Failed to get release data: {str(release_err)}")
+            return {
+                'success': False,
+                'error': 'Failed to get release data'
+            }
             
     except Exception as e:
-        print(f"Error searching by URL: {str(e)}")
+        print(f"Error looking up by URL: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
             'success': False,
-            'message': f'Error looking up release: {str(e)}'
+            'error': f'Error looking up release: {str(e)}'
         }
 
 def get_price_suggestions(release_id: str) -> Optional[Dict[str, Any]]:
@@ -418,6 +423,9 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
                     'success': False,
                     'error': 'Failed to format release data'
                 }
+            
+            # Add the source to the formatted data
+            formatted_data['added_from'] = 'manual'
                 
             return {
                 'success': True,
@@ -432,6 +440,85 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
         
     except Exception as e:
         print(f"Error searching by artist/album: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': f'Error looking up release: {str(e)}'
+        }
+
+def lookup_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
+    """Look up a release by barcode"""
+    try:
+        print(f"\n=== Looking up release by barcode: {barcode} ===")
+        
+        # Clean up barcode
+        barcode = barcode.strip()
+        
+        # Search for releases with a timeout
+        try:
+            results = d.search(barcode, type='release', timeout=30)  # 30 second timeout
+            if not results:
+                print("No results found")
+                return {
+                    'success': False,
+                    'error': 'No results found'
+                }
+        except Exception as search_err:
+            print(f"Search timed out or failed: {str(search_err)}")
+            return {
+                'success': False,
+                'error': 'Search timed out or failed'
+            }
+            
+        # Find the first release that matches the barcode
+        matching_release = None
+        
+        # Only check first 10 results to avoid timeouts
+        for result in list(results)[:10]:
+            try:
+                # Get the full release data
+                full_release = d.release(result.id)
+                if hasattr(full_release, 'identifiers'):
+                    # Check each identifier
+                    for identifier in full_release.identifiers:
+                        if identifier.type.lower() == 'barcode' and identifier.value.strip() == barcode:
+                            matching_release = full_release
+                            break
+                if matching_release:
+                    break
+            except Exception as release_err:
+                print(f"Error checking release {result.id}: {str(release_err)}")
+                continue
+                
+        if not matching_release:
+            print("No matching release found")
+            return {
+                'success': False,
+                'error': 'No matching release found'
+            }
+            
+        print(f"Found matching release: {matching_release.title}")
+        
+        # Format the release data
+        formatted_data = format_release_data(matching_release)
+        
+        if not formatted_data:
+            return {
+                'success': False,
+                'error': 'Failed to format release data'
+            }
+        
+        # Add the source to the formatted data
+        formatted_data['added_from'] = 'barcode'
+            
+        return {
+            'success': True,
+            'data': formatted_data
+        }
+        
+    except Exception as e:
+        print(f"Error looking up by barcode: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
@@ -501,12 +588,12 @@ def main():
         # Test the URL search function with both release and master URLs
         print("\nTesting URL search with release URL...")
         release_url = f"https://www.discogs.com/release/{release_id}-John-Coltrane-Blue-Train"
-        result = search_by_discogs_url(release_url)
+        result = lookup_by_discogs_url(release_url)
         print(f"\nRelease URL search result: {result}")
         
         print("\nTesting URL search with master URL...")
         master_url = "https://www.discogs.com/master/32208-John-Coltrane-Blue-Train"
-        result = search_by_discogs_url(master_url)
+        result = lookup_by_discogs_url(master_url)
         print(f"\nMaster URL search result: {result}")
         
     except Exception as e:
