@@ -20,7 +20,12 @@ from flask_cors import CORS
 import sys
 
 sys.path.append(parent_dir)
-from discogs_lookup import search_by_barcode, search_by_discogs_id, search_by_discogs_url, search_by_artist_album
+from discogs_lookup import (
+    lookup_by_barcode,
+    search_by_discogs_id,
+    lookup_by_discogs_url,
+    search_by_artist_album
+)
 from .db import (
     create_user,
     login_user,
@@ -311,7 +316,7 @@ def api_index():
 @app.route('/lookup/<barcode>')
 def lookup(barcode):
     try:
-        result = search_by_barcode(barcode)
+        result = lookup_by_barcode(barcode)
         
         if result:
             response_data = {
@@ -558,7 +563,7 @@ def lookup_barcode(barcode):
         # Try each barcode format
         for search_barcode in search_barcodes:
             print(f"\nSearching for barcode: {search_barcode}")
-            result = search_by_barcode(search_barcode)
+            result = lookup_by_barcode(search_barcode)
             print(f"Raw Discogs result: {result}")
             
             if result:
@@ -893,7 +898,7 @@ def lookup_discogs_url():
                 'message': 'No URL provided'
             })
             
-        result = search_by_discogs_url(url)
+        result = lookup_by_discogs_url(url)
         if result:
             return jsonify(result)
         else:
