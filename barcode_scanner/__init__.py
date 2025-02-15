@@ -8,9 +8,9 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 from discogs_lookup import (
-    search_by_barcode,
+    lookup_by_barcode,
     search_by_discogs_id,
-    search_by_discogs_url,
+    lookup_by_discogs_url,
     search_by_artist_album,
     get_price_suggestions,
     get_artist_info,
@@ -23,9 +23,9 @@ from discogs_data import (
 )
 
 lookup = {
-    'byBarcode': search_by_barcode,
+    'byBarcode': lookup_by_barcode,
     'byDiscogsId': search_by_discogs_id,
-    'byDiscogsUrl': search_by_discogs_url,
+    'byDiscogsUrl': lookup_by_discogs_url,
     'byArtistAlbum': search_by_artist_album
 }
 
