@@ -975,11 +975,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         <Box 
           mt="md" 
           style={{ 
-            minWidth: Math.max(table.getCenterTotalSize(), 1200),
-            position: 'relative'
+            position: 'sticky',
+            left: 0,
+            width: '100vw',
+            transform: 'translateX(calc((100vw - 100%) / -2))',
+            background: 'var(--mantine-color-dark-7)',
+            padding: 'var(--mantine-spacing-md) 0',
+            borderTop: '1px solid var(--mantine-color-dark-4)',
+            zIndex: 2
           }}
         >
-          <Group justify="center" style={{ width: '100%' }}>
+          <Group justify="center">
             <Pagination
               value={page}
               onChange={onPageChange}
