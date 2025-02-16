@@ -439,14 +439,25 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   });
 
-  // Get filtered and sorted rows first
-  const filteredAndSortedRows = table.getFilteredRowModel().rows;
-  const totalRecords = filteredAndSortedRows.length;
+  // Get all filtered and sorted rows first
+  const allFilteredRows = table.getFilteredRowModel().rows;
+  const totalRecords = allFilteredRows.length;
 
   // Then apply pagination to the filtered results
   const startIndex = (page - 1) * recordsPerPage;
   const endIndex = Math.min(startIndex + recordsPerPage, totalRecords);
-  const paginatedRows = filteredAndSortedRows.slice(startIndex, endIndex);
+  const paginatedRows = allFilteredRows.slice(startIndex, endIndex);
+
+  console.log('Table state:', {
+    totalRecords,
+    currentPage: page,
+    recordsPerPage,
+    startIndex,
+    endIndex,
+    paginatedRowsCount: paginatedRows.length,
+    allFilteredRowsCount: allFilteredRows.length,
+    filters: columnFilters
+  });
 
   const handleFilterChange = (columnId: string, value: any) => {
     console.log('handleFilterChange called:', {

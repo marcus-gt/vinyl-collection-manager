@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Badge, LoadingOverlay, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconX } from '@tabler/icons-react';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Badge, LoadingOverlay, Checkbox, DataTable } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconX, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -116,31 +116,7 @@ function Collection() {
     try {
       const response = await records.getAll();
       if (response.success && response.data) {
-        const recordsData = response.data;
-        
-        // Load custom values for all records
-        const recordIds = recordsData.map(r => r.id).filter((id): id is string => !!id);
-        const customValuesData = await customValuesService.getAllForRecords(recordIds);
-        
-        // Attach custom values to records
-        const recordsWithCustomValues = recordsData.map(record => {
-          if (!record.id) return record;
-          
-          const values = customValuesData[record.id];
-          if (!values) return record;
-          
-          const customValues: Record<string, string> = {};
-          values.forEach(value => {
-            customValues[value.column_id] = value.value;
-          });
-          
-          return {
-            ...record,
-            customValues
-          };
-        });
-        
-        setUserRecords(recordsWithCustomValues);
+        setUserRecords(response.data);
       } else {
         setError(response.error || 'Failed to load records');
       }
@@ -975,17 +951,15 @@ function Collection() {
     return [...standardColumns, ...customColumnDefs, actionsColumn];
   }, [customColumns]);
 
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    // Scroll to top when changing pages
+    window.scrollTo(0, 0);
+  };
+
   return (
-    <Container 
-      fluid
-      h="100%"
-      p={0}
-      style={{
-        maxWidth: '100%',
-        width: '100%'
-      }}
-    >
-      <Stack p="xs">
+    <Container size="xl" py="xl" mt={60}>
+      <Stack>
         <Group justify="space-between" align="center" mb="md">
           <Title>Collection Overview</Title>
           <Group>
@@ -994,84 +968,37 @@ function Collection() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setPage(1);  // Reset to first page when filtering
+                setPage(1); // Reset to first page when searching
               }}
               style={{ width: 300 }}
             />
             <Button
               variant="light"
-              onClick={() => setAddRecordsModalOpened(true)}
+              leftSection={<IconDownload size={16} />}
+              onClick={handleDownloadCSV}
+              disabled={userRecords.length === 0}
             >
-              Add Records
-              </Button>
-            <Button
-              variant="light"
-              onClick={() => setCustomColumnManagerOpened(true)}
-            >
-              Manage Columns
-              </Button>
-            </Group>
+              Export CSV
+            </Button>
+          </Group>
         </Group>
 
         {error && (
           <Text c="red">{error}</Text>
         )}
 
-        {loading ? (
-          <Box style={{ 
-            height: '400px', 
-            position: 'relative',
-            backgroundColor: 'transparent',
-          }}>
-            <LoadingOverlay visible={true} />
-            <Box style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, calc(50% + 20px))',
-              textAlign: 'center',
-              zIndex: 2
-            }}>
-              <Text size="lg" c="dimmed">Loading record collection...</Text>
-            </Box>
-          </Box>
-        ) : (
-          <Stack>
-            <Box style={{ height: 'calc(100vh - 200px)' }}>
-              <ResizableTable
-                data={userRecords}  // Pass all records, not paginated
-                columns={tableColumns}
-                sortState={sortState}
-                onSortChange={setSortState}
-                tableId="collection-table"
-                loading={loading}
-                recordsPerPage={PAGE_SIZE}
-                page={page}
-                onPageChange={(newPage) => {
-                  setPage(newPage);
-                  window.scrollTo(0, 0);
-                }}
-                customColumns={customColumns}
-              />
-            </Box>
-
-            <CustomColumnManager
-              opened={customColumnManagerOpened}
-              onClose={() => {
-                setCustomColumnManagerOpened(false);
-                loadCustomColumns();
-              }}
-            />
-
-            <AddRecordsModal
-              opened={addRecordsModalOpened}
-              onClose={() => {
-                setAddRecordsModalOpened(false);
-                // Records will be loaded via the refresh-table-data event if needed
-              }}
-            />
-          </Stack>
-        )}
+        <ResizableTable
+          data={userRecords} // Pass the full dataset
+          columns={tableColumns}
+          sortState={sortState}
+          onSortChange={setSortState}
+          tableId="collection-table"
+          loading={loading}
+          recordsPerPage={PAGE_SIZE}
+          page={page}
+          onPageChange={handlePageChange}
+          customColumns={customColumns}
+        />
       </Stack>
     </Container>
   );
