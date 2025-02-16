@@ -118,7 +118,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
       setLoading(false);
-      setError('Search aborted');
+      setError('Search cancelled');
     }
   };
 
@@ -194,8 +194,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       return;
     }
 
+    // Validate URL format
     if (!discogsUrl.includes('discogs.com/release/') && !discogsUrl.includes('discogs.com/master/')) {
-      setError('Invalid Discogs URL. Please use a release or master URL');
+      setError('Invalid Discogs URL. Please use a release or master URL (e.g., https://www.discogs.com/release/123456 or https://www.discogs.com/master/123456)');
       return;
     }
     
@@ -246,14 +247,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setRecord(response.data);
         setError(null);
       } else {
-        setError("Couldn't find record");
+        setError(response.error || 'Failed to find record');
         setRecord(null);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
-      setError("Couldn't find record");
+      setError('Failed to lookup record');
       setRecord(null);
     } finally {
       if (abortControllerRef.current) {
@@ -382,29 +383,26 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         current_release_url: record.current_release_url,
         label: record.label
       };
-
-      console.log('Adding record from search:', recordData);
+      
       const response = await records.add(recordData);
-      console.log('Add response:', response);
-
       if (response.success) {
-        console.log('Record added successfully, setting recordsChanged to true');
         setSuccess('Added to collection!');
-        setRecordsChanged(true);  // Record was successfully added
-        // Reset for next scan
+        // Reset for next record
         setRecord(null);
         setBarcode('');
-        setScannerKey(prev => prev + 1);
-        // Clear success message after delay
-        setTimeout(() => {
-          setSuccess(null);
-        }, 3000);
+        setDiscogsUrl('');
+        setArtist('');
+        setAlbum('');
+        notifications.show({
+          title: 'Success',
+          message: 'Record added to collection',
+          color: 'green'
+        });
+        onClose();
       } else {
-        console.log('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
-      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -414,6 +412,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleClear = () => {
     setRecord(null);
     setBarcode('');
+    setDiscogsUrl('');
+    setArtist('');
+    setAlbum('');
     setError(null);
     setSuccess(null);
     setScannerKey(prev => prev + 1);

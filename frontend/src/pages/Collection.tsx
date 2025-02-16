@@ -69,12 +69,12 @@ function Collection() {
   const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
-  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
-  const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
-  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
+  const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
+  const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
+  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
 
   useEffect(() => {
     loadRecords();
@@ -1027,6 +1027,18 @@ function Collection() {
               }}
               style={{ width: 300 }}
             />
+            <Button
+              variant="light"
+              onClick={() => setAddRecordsModalOpened(true)}
+            >
+              Add Records
+            </Button>
+            <Button
+              variant="light"
+              onClick={() => setCustomColumnManagerOpened(true)}
+            >
+              Manage Columns
+            </Button>
             <Button
               variant="light"
               leftSection={<IconDownload size={16} />}
