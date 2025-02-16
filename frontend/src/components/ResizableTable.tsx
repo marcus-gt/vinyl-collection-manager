@@ -392,11 +392,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     state: {
       sorting: sortState,
       columnSizing,
-      columnFilters,
-      pagination: {
-        pageIndex: page - 1,
-        pageSize: recordsPerPage
-      }
+      columnFilters
     },
     columnResizeMode,
     onSortingChange: onSortChange,
