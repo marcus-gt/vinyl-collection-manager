@@ -75,6 +75,7 @@ function Collection() {
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
+  const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'artist', direction: 'asc' });
 
   useEffect(() => {
     loadRecords();
@@ -175,7 +176,7 @@ function Collection() {
 
   const handleUpdateNotes = async () => {
     if (!editingRecord?.id) return;
-
+    
     setLoading(true);
     try {
       const response = await records.updateNotes(editingRecord.id, editingNotes);
@@ -1012,16 +1013,6 @@ function Collection() {
     return [...standardColumns, ...customColumnDefs, actionsColumn];
   }, [customColumns]);
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    // Scroll to top when changing pages
-    window.scrollTo(0, 0);
-  };
-
-  const handleFilterChange = () => {
-    setPage(1);  // Reset to page 1 when filters change
-  };
-
   return (
     <Container size="xl" py="xl" mt={60}>
       <Stack>
@@ -1039,18 +1030,6 @@ function Collection() {
             />
             <Button
               variant="light"
-              onClick={() => setAddRecordsModalOpened(true)}
-            >
-              Add Records
-            </Button>
-            <Button
-              variant="light"
-              onClick={() => setCustomColumnManagerOpened(true)}
-            >
-              Manage Columns
-            </Button>
-            <Button
-              variant="light"
               leftSection={<IconDownload size={16} />}
               onClick={handleDownloadCSV}
               disabled={userRecords.length === 0}
@@ -1058,7 +1037,7 @@ function Collection() {
               Export CSV
             </Button>
           </Group>
-        </Group>
+                </Group>
 
         {error && (
           <Text c="red">{error}</Text>
@@ -1067,15 +1046,15 @@ function Collection() {
         <ResizableTable
           data={userRecords}
           columns={tableColumns}
-          sortState={sortState}
-          onSortChange={setSortState}
+          sortState={sortStatus}
+          onSortChange={setSortStatus}
           tableId="collection-table"
           loading={loading}
           recordsPerPage={PAGE_SIZE}
           page={page}
-          onPageChange={handlePageChange}
-          onColumnFiltersChange={handleFilterChange}
+          onPageChange={setPage}
           customColumns={customColumns}
+          searchQuery={searchQuery}
         />
 
         <CustomColumnManager

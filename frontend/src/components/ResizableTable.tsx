@@ -4,6 +4,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   flexRender,
   ColumnDef,
   SortingState,
@@ -82,6 +83,7 @@ interface ResizableTableProps<T extends RowData & BaseRowData> {
   onPageChange: (page: number) => void;
   customColumns?: CustomColumnData[];
   onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
+  searchQuery?: string;
 }
 
 export function ResizableTable<T extends RowData & BaseRowData>({ 
@@ -95,7 +97,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   page,
   onPageChange,
   customColumns = [],
-  onColumnFiltersChange
+  onColumnFiltersChange,
+  searchQuery = ''
 }: ResizableTableProps<T>) {
   const theme = useMantineTheme();
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -392,7 +395,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     state: {
       sorting: sortState,
       columnSizing,
-      columnFilters
+      columnFilters,
+      globalFilter: searchQuery
     },
     columnResizeMode,
     onSortingChange: onSortChange,
@@ -417,6 +421,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     enableColumnFilters: true,
     manualFiltering: false,
     filterFns: {
@@ -433,21 +438,19 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   });
 
-  // Get all filtered and sorted rows first
+  // Get all filtered and sorted rows
   const allFilteredRows = table.getFilteredRowModel().rows;
   const totalRecords = allFilteredRows.length;
 
-  // Then apply pagination to the filtered results
-  const startIndex = (page - 1) * recordsPerPage;
-  const endIndex = Math.min(startIndex + recordsPerPage, totalRecords);
-  const paginatedRows = allFilteredRows.slice(startIndex, endIndex);
+  // Get paginated rows using TanStack Table's pagination
+  const paginatedRows = table.getPaginationRowModel().rows;
 
   console.log('Table state:', {
     totalRecords,
     currentPage: page,
     recordsPerPage,
-    startIndex,
-    endIndex,
+    startIndex: 0,
+    endIndex: totalRecords,
     paginatedRowsCount: paginatedRows.length,
     allFilteredRowsCount: allFilteredRows.length,
     filters: columnFilters
