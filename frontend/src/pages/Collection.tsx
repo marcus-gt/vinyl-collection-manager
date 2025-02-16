@@ -69,13 +69,12 @@ function Collection() {
   const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortState, setSortState] = useState<SortingState>([{ id: 'artist', desc: false }]);
+  const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
-  const [sortStatus, setSortStatus] = useState<DataTableSortStatus>({ columnAccessor: 'artist', direction: 'asc' });
 
   useEffect(() => {
     loadRecords();
@@ -1024,7 +1023,7 @@ function Collection() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setPage(1);  // Reset to first page when search query changes
+                setPage(1);
               }}
               style={{ width: 300 }}
             />
@@ -1037,7 +1036,7 @@ function Collection() {
               Export CSV
             </Button>
           </Group>
-                </Group>
+        </Group>
 
         {error && (
           <Text c="red">{error}</Text>
