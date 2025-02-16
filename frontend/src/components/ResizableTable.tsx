@@ -411,13 +411,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         console.log('New filters from direct value:', newFilters);
       }
 
-      console.log('Setting filters to:', newFilters);
+      // First update the filters
       setColumnFilters(newFilters);
 
-      // Always reset to first page when filters change
-      onPageChange(1);
-      // Force immediate page update in table state
-      table.setPageIndex(0);
+      // Use setTimeout to ensure this runs after the filter state is updated
+      setTimeout(() => {
+        // Reset to first page
+        onPageChange(1);
+      }, 0);
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
