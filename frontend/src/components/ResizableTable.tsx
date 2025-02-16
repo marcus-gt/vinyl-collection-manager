@@ -469,6 +469,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       currentFilters: columnFilters
     });
 
+    // Reset to page 1 before updating filters
+    onPageChange(1);
+
     setColumnFilters((prev: ColumnFiltersState) => {
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (value == null || (typeof value === 'string' && !value)) {
@@ -481,13 +484,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     });
   };
 
-  // Rename to applyLocalFilter
   const applyLocalFilter = (columnId: string, value: any) => {
     console.log('applyLocalFilter called:', {
       columnId,
       value,
       currentFilters: columnFilters
     });
+
+    // Reset to page 1 before updating filters
+    onPageChange(1);
 
     setColumnFilters((prev: ColumnFiltersState) => {
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
