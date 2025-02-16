@@ -935,14 +935,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           ))}
         </Table.Tbody>
       </Table>
-      {totalRecords > recordsPerPage && (
+      {allFilteredRows.length > 0 && (
         <Group justify="center" mt="md">
           <Pagination
             value={page}
             onChange={onPageChange}
-            total={Math.ceil(totalRecords / recordsPerPage)}
-            siblings={0}
-            boundaries={0}
+            total={Math.max(1, Math.ceil(totalRecords / recordsPerPage))}
+            siblings={1}
+            boundaries={1}
             withEdges
             getControlProps={(control) => {
               if (control === 'first' || control === 'last') {
@@ -966,6 +966,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               }
             }}
           />
+          <Text size="sm" c="dimmed">
+            Showing {paginatedRows.length} of {totalRecords} records
+          </Text>
         </Group>
       )}
     </Box>
