@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Badge, LoadingOverlay, Checkbox, DataTable } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconX, IconDownload } from '@tabler/icons-react';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -73,6 +73,8 @@ function Collection() {
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
+  const [editingNotes, setEditingNotes] = useState('');
 
   useEffect(() => {
     loadRecords();
