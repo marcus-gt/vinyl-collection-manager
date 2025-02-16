@@ -267,7 +267,7 @@ export const customColumns = {
       const data = JSON.parse(responseText);
       console.log('Custom columns fetched successfully:', {
         count: data.data?.length || 0,
-        columns: data.data?.map(col => ({ id: col.id, name: col.name, type: col.type }))
+        columns: data.data?.map((col: { id: string; name: string; type: string }) => ({ id: col.id, name: col.name, type: col.type }))
       });
       return data;
     } catch (err) {
