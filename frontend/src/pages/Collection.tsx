@@ -926,19 +926,20 @@ function Collection() {
           justifyContent: 'center', 
           alignItems: 'center'
         }}>
-                  <Tooltip label="Delete">
-                    <ActionIcon 
-                      color="red" 
-                      variant="light"
-                      size="sm"
+          <Tooltip label="Delete">
+            <ActionIcon 
+              color="red" 
+              variant="light"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Delete clicked for record:', row.original);
                 handleDelete(row.original);
               }}
-                    >
-                      <IconTrash size={16} />
-                    </Tooltip>
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
         </Box>
       ),
     };
