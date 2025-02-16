@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX } from '@tabler/icons-react';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconDownload, IconX, IconNotes } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
+import { CustomColumnManager } from '../components/CustomColumnManager';
+import { AddRecordsModal } from '../components/AddRecordsModal';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
@@ -68,7 +70,11 @@ function Collection() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortState, setSortState] = useState<SortingState>([{ id: 'artist', desc: false }]);
+  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
+  const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
+  const [editingNotes, setEditingNotes] = useState('');
 
   useEffect(() => {
     loadRecords();
@@ -127,12 +133,38 @@ function Collection() {
     try {
       const response = await customColumnsApi.getAll();
       if (response.success && response.data) {
-        // Force a re-render by creating a new array
-        setCustomColumns([...response.data]);
-        console.log('Custom columns loaded:', response.data);
+        setCustomColumns(response.data);
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
+    }
+  };
+
+  const handleUpdateNotes = async () => {
+    if (!editingRecord?.id) return;
+
+    setLoading(true);
+    try {
+      const response = await records.updateNotes(editingRecord.id, editingNotes);
+      if (response.success && response.data) {
+        setUserRecords(prevRecords => 
+          prevRecords.map(record => 
+            record.id === editingRecord.id ? response.data! : record
+          )
+        );
+        setEditingRecord(null);
+        notifications.show({
+          title: 'Success',
+          message: 'Notes updated successfully',
+          color: 'green'
+        });
+      } else {
+        setError(response.error || 'Failed to update notes');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update notes');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -926,20 +958,20 @@ function Collection() {
           justifyContent: 'center', 
           alignItems: 'center'
         }}>
-          <Tooltip label="Delete">
-            <ActionIcon 
-              color="red" 
-              variant="light"
-              size="sm"
+                  <Tooltip label="Delete">
+                    <ActionIcon 
+                      color="red" 
+                      variant="light"
+                      size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Delete clicked for record:', row.original);
                 handleDelete(row.original);
               }}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Tooltip>
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
         </Box>
       ),
     };
@@ -970,6 +1002,18 @@ function Collection() {
             />
             <Button
               variant="light"
+              onClick={() => setAddRecordsModalOpened(true)}
+            >
+              Add Records
+            </Button>
+            <Button
+              variant="light"
+              onClick={() => setCustomColumnManagerOpened(true)}
+            >
+              Manage Columns
+            </Button>
+            <Button
+              variant="light"
               leftSection={<IconDownload size={16} />}
               onClick={handleDownloadCSV}
               disabled={userRecords.length === 0}
@@ -984,7 +1028,7 @@ function Collection() {
         )}
 
         <ResizableTable
-          data={userRecords} // Pass the full dataset
+          data={userRecords}
           columns={tableColumns}
           sortState={sortState}
           onSortChange={setSortState}
@@ -995,6 +1039,50 @@ function Collection() {
           onPageChange={handlePageChange}
           customColumns={customColumns}
         />
+
+        <CustomColumnManager
+          opened={customColumnManagerOpened}
+          onClose={() => {
+            setCustomColumnManagerOpened(false);
+            loadCustomColumns();
+          }}
+        />
+
+        <AddRecordsModal
+          opened={addRecordsModalOpened}
+          onClose={() => {
+            setAddRecordsModalOpened(false);
+            loadRecords();
+          }}
+        />
+
+        <Modal
+          opened={!!editingRecord}
+          onClose={() => setEditingRecord(null)}
+          title="Edit Notes"
+        >
+          <Stack>
+            {editingRecord && (
+              <Text size="sm" fw={500}>
+                {editingRecord.artist} - {editingRecord.album}
+              </Text>
+            )}
+            <TextInput
+              label="Notes"
+              value={editingNotes}
+              onChange={(e) => setEditingNotes(e.target.value)}
+              placeholder="Add notes about this record..."
+            />
+            <Group justify="flex-end">
+              <Button variant="light" onClick={() => setEditingRecord(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateNotes} loading={loading}>
+                Save
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
       </Stack>
     </Container>
   );
