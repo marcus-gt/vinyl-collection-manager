@@ -392,7 +392,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     state: {
       sorting: sortState,
       columnSizing,
-      columnFilters
+      columnFilters,
+      pagination: {
+        pageIndex: page - 1,
+        pageSize: recordsPerPage
+      }
     },
     columnResizeMode,
     onSortingChange: onSortChange,
@@ -408,10 +412,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       // Update local filter state
       setColumnFilters(newFilters);
 
-      // Notify parent component of filter change
+      // Notify parent component of filter change and reset page
       if (onColumnFiltersChange) {
         onColumnFiltersChange(newFilters);
       }
+      onPageChange(1);  // Always reset to page 1 when filters change
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -471,6 +476,32 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     });
   };
 
+  // Rename to applyLocalFilter
+  const applyLocalFilter = (columnId: string, value: any) => {
+    console.log('applyLocalFilter called:', {
+      columnId,
+      value,
+      currentFilters: columnFilters
+    });
+
+    setColumnFilters((prev: ColumnFiltersState) => {
+      const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
+      if (value == null || (typeof value === 'string' && !value)) {
+        console.log('Removing filter for column:', columnId);
+        return existing;
+      }
+      const newFilters = [...existing, { id: columnId, value }];
+      console.log('New filters state:', newFilters);
+
+      // Notify parent of filter change
+      if (onColumnFiltersChange) {
+        onColumnFiltersChange(newFilters);
+      }
+
+      return newFilters;
+    });
+  };
+
   const renderDateRangeFilter = (header: Header<T, unknown>) => {
     const currentFilter = table.getState().columnFilters.find(
       (filter: { id: string; value: unknown }) => filter.id === header.column.id
@@ -486,9 +517,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           onChange={(date: Date | null) => {
             const newValue = { ...value, start: date };
             if (!date && !value.end) {
-              handleFilterChange(header.column.id, undefined);
+              applyLocalFilter(header.column.id, undefined);
             } else {
-              handleFilterChange(header.column.id, newValue);
+              applyLocalFilter(header.column.id, newValue);
             }
           }}
           leftSection={<IconCalendar size={14} />}
@@ -524,9 +555,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           onChange={(date: Date | null) => {
             const newValue = { ...value, end: date };
             if (!date && !value.start) {
-              handleFilterChange(header.column.id, undefined);
+              applyLocalFilter(header.column.id, undefined);
             } else {
-              handleFilterChange(header.column.id, newValue);
+              applyLocalFilter(header.column.id, newValue);
             }
           }}
           leftSection={<IconCalendar size={14} />}
@@ -581,7 +612,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               onChange={(e) => {
                 const min = e.target.value ? Number(e.target.value) : undefined;
                 const max = numberValue.max;
-                handleFilterChange(header.column.id, { min, max });
+                applyLocalFilter(header.column.id, { min, max });
               }}
               size="xs"
               styles={{
@@ -601,7 +632,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               onChange={(e) => {
                 const max = e.target.value ? Number(e.target.value) : undefined;
                 const min = numberValue.min;
-                handleFilterChange(header.column.id, { min, max });
+                applyLocalFilter(header.column.id, { min, max });
               }}
               size="xs"
               styles={{
