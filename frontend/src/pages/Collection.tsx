@@ -116,13 +116,46 @@ function Collection() {
     setLoading(true);
     setError(null);
     try {
+      console.log('=== Loading Records and Custom Values ===');
       const response = await records.getAll();
+      
       if (response.success && response.data) {
-        setUserRecords(response.data);
+        // First, get all record IDs
+        const recordIds = response.data.map(record => record.id!).filter(Boolean);
+        console.log(`Found ${recordIds.length} records, fetching their custom values...`);
+
+        // Fetch custom values for all records in parallel
+        const customValuesPromises = recordIds.map(id => customValuesService.getForRecord(id));
+        const customValuesResponses = await Promise.all(customValuesPromises);
+        
+        // Create a map of record ID to custom values
+        const customValuesMap = new Map<string, Record<string, string>>();
+        customValuesResponses.forEach((cvResponse, index) => {
+          if (cvResponse.success && cvResponse.data) {
+            const recordId = recordIds[index];
+            const values: Record<string, string> = {};
+            cvResponse.data.forEach(cv => {
+              values[cv.column_id] = cv.value;
+            });
+            customValuesMap.set(recordId, values);
+          }
+        });
+
+        console.log('Custom values map:', Object.fromEntries(customValuesMap));
+
+        // Merge custom values into records
+        const recordsWithCustomValues = response.data.map(record => ({
+          ...record,
+          customValues: customValuesMap.get(record.id!) || {}
+        }));
+
+        console.log('Records with custom values:', recordsWithCustomValues);
+        setUserRecords(recordsWithCustomValues);
       } else {
         setError(response.error || 'Failed to load records');
       }
     } catch (err) {
+      console.error('Error loading records:', err);
       setError(err instanceof Error ? err.message : 'Failed to load records');
     } finally {
       setLoading(false);
