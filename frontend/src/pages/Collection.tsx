@@ -75,7 +75,6 @@ function Collection() {
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
-  const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
     loadRecords();
@@ -1019,8 +1018,7 @@ function Collection() {
     window.scrollTo(0, 0);
   };
 
-  const handleFilterChange = (filters: any) => {
-    setColumnFilters(filters);
+  const handleFilterChange = () => {
     setPage(1);  // Reset to page 1 when filters change
   };
 
