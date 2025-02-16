@@ -127,7 +127,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     });
     
     if (!value || value.length === 0) return true;
-    const cellValue = row.getValue(columnId);
+
+    // For custom columns, access the value through customValues
+    let cellValue = row.getValue(columnId);
+    if (columnId.startsWith('customValues.') && typeof row.original === 'object' && row.original !== null) {
+      const customValues = (row.original as any).customValues;
+      if (customValues && typeof customValues === 'object') {
+        const customColumnId = columnId.split('.')[1];
+        cellValue = customValues[customColumnId];
+      }
+    }
+
     if (!cellValue) return false;
     
     // Convert cell value to array if it's a comma-separated string
