@@ -1,11 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconNotes, IconDownload, IconX } from '@tabler/icons-react';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconDownload, IconX } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
-import { CustomColumnManager } from '../components/CustomColumnManager';
-import { AddRecordsModal } from '../components/AddRecordsModal';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
@@ -70,11 +68,7 @@ function Collection() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortState, setSortState] = useState<SortingState>([{ id: 'artist', desc: false }]);
-  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
-  const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
-  const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
-  const [editingNotes, setEditingNotes] = useState('');
 
   useEffect(() => {
     loadRecords();
@@ -944,8 +938,7 @@ function Collection() {
               }}
                     >
                       <IconTrash size={16} />
-                    </ActionIcon>
-                  </Tooltip>
+                    </Tooltip>
         </Box>
       ),
     };
