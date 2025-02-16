@@ -11,7 +11,7 @@ import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 40;
 
 // Create a service for custom values
 const customValuesService = {
