@@ -972,29 +972,37 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         </Table.Tbody>
       </Table>
       {allFilteredRows.length > 0 && (
-        <Group justify="center" mt="md">
-          <Pagination
-            value={page}
-            onChange={onPageChange}
-            total={Math.max(1, Math.ceil(totalRecords / recordsPerPage))}
-            siblings={1}
-            boundaries={1}
-            withEdges
-            withControls
-            styles={{
-              control: {
-                '@media (max-width: 600px)': {
-                  minWidth: '32px',
-                  height: '32px',
-                  padding: 0
+        <Box 
+          mt="md" 
+          style={{ 
+            minWidth: Math.max(table.getCenterTotalSize(), 1200),
+            position: 'relative'
+          }}
+        >
+          <Group justify="center" style={{ width: '100%' }}>
+            <Pagination
+              value={page}
+              onChange={onPageChange}
+              total={Math.max(1, Math.ceil(totalRecords / recordsPerPage))}
+              siblings={1}
+              boundaries={1}
+              withEdges
+              withControls
+              styles={{
+                control: {
+                  '@media (max-width: 600px)': {
+                    minWidth: '32px',
+                    height: '32px',
+                    padding: 0
+                  }
                 }
-              }
-            }}
-          />
-          <Text size="sm" c="dimmed">
-            Showing {paginatedRows.length} of {totalRecords} records
-          </Text>
-        </Group>
+              }}
+            />
+            <Text size="sm" c="dimmed">
+              Showing {paginatedRows.length} of {totalRecords} records
+            </Text>
+          </Group>
+        </Box>
       )}
     </Box>
   );
