@@ -8,7 +8,6 @@ import { BarcodeScanner } from '../components/BarcodeScanner';
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
-  const [spotifyUrl, setSpotifyUrl] = useState('');
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,10 +15,9 @@ export function Scanner() {
   const [success, setSuccess] = useState<string | null>(null);
   const [record, setRecord] = useState<VinylRecord | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [scannerKey, setScannerKey] = useState(0);
+  const [scannerKey, setScannerKey] = useState(0); // Used to reset scanner state
   const [recentRecords, setRecentRecords] = useState<VinylRecord[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('barcode');
   const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
     genresText?: string;
     stylesText?: string;
@@ -47,10 +45,6 @@ export function Scanner() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    console.log('activeTab changed:', activeTab);
-  }, [activeTab]);
 
   const loadRecentRecords = async () => {
     try {
@@ -88,12 +82,7 @@ export function Scanner() {
     try {
       const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        // Add the source to the record data
-        const recordWithSource = {
-          ...response.data,
-          added_from: 'barcode' as const
-        };
-        setRecord(recordWithSource);
+        setRecord(response.data);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -130,12 +119,7 @@ export function Scanner() {
     try {
       const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        // Add the source to the record data
-        const recordWithSource = {
-          ...response.data,
-          added_from: 'barcode' as const
-        };
-        setRecord(recordWithSource);
+        setRecord(response.data);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -178,12 +162,7 @@ export function Scanner() {
     try {
       const response = await lookup.byDiscogsUrl(discogsUrl, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        // Add the source to the record data
-        const recordWithSource = {
-          ...response.data,
-          added_from: 'discogs_url' as const
-        };
-        setRecord(recordWithSource);
+        setRecord(response.data);
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -195,54 +174,6 @@ export function Scanner() {
         return;
       }
       setError('Failed to lookup Discogs release');
-      setRecord(null);
-    } finally {
-      if (abortControllerRef.current) {
-        abortControllerRef.current = null;
-      }
-      setLoading(false);
-    }
-  };
-
-  const handleSpotifyLookup = async () => {
-    if (!spotifyUrl.trim()) {
-      setError('Please enter a Spotify URL');
-      return;
-    }
-
-    // Validate URL format
-    if (!spotifyUrl.includes('spotify.com/album/') && !spotifyUrl.includes('open.spotify.com/album/')) {
-      setError('Invalid Spotify URL. Please use a Spotify album URL (e.g., https://open.spotify.com/album/123456 or https://spotify.com/album/123456)');
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    // Create new AbortController for this request
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      const response = await lookup.bySpotifyUrl(spotifyUrl, abortControllerRef.current.signal);
-      if (response.success && response.data) {
-        // Add the source to the record data
-        const recordWithSource = {
-          ...response.data,
-          added_from: 'spotify' as const
-        };
-        setRecord(recordWithSource);
-        setError(null);
-      } else {
-        setError(response.error || 'Failed to find record');
-        setRecord(null);
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        // Request was cancelled, already handled
-        return;
-      }
-      setError('Failed to lookup Spotify album');
       setRecord(null);
     } finally {
       if (abortControllerRef.current) {
@@ -268,12 +199,7 @@ export function Scanner() {
     try {
       const response = await lookup.byArtistAlbum(artist, album, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        // Add the source to the record data
-        const recordWithSource = {
-          ...response.data,
-          added_from: 'manual' as const
-        };
-        setRecord(recordWithSource);
+        setRecord(response.data);
         setError(null);
       } else {
         setError("Couldn't find record");
@@ -324,30 +250,18 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      if (!manualRecord.artist || !manualRecord.album) {
-        setError('Artist and album are required');
-        return;
-      }
-
-      // Convert text fields to arrays and prepare record data
-      const recordData = {
-        artist: manualRecord.artist.trim(),  // Required field
-        album: manualRecord.album.trim(),    // Required field
-        genres: (manualRecord.genresText || '').split(',').map(g => g.trim()).filter(Boolean),
-        styles: (manualRecord.stylesText || '').split(',').map(s => s.trim()).filter(Boolean),
-        musicians: (manualRecord.musiciansText || '').split(',').map(m => m.trim()).filter(Boolean),
-        added_from: 'manual' as const,  // Explicitly set as manual
-        // Ensure required fields have default values
-        year: manualRecord.year || undefined,
-        label: manualRecord.label || '',
-        barcode: undefined,
-        master_url: undefined,
-        current_release_url: undefined,
-        current_release_year: undefined
+      // Convert text fields to arrays
+      const recordToSubmit = {
+        ...manualRecord,
+        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
+        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
+        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
       };
 
-      console.log('Submitting manual record:', recordData);
-      const response = await records.add(recordData);
+      // Remove the text fields before submitting
+      const { genresText, stylesText, musiciansText, ...submitData } = recordToSubmit;
+
+      const response = await records.add(submitData);
       if (response.success) {
         setSuccess('Added to collection!');
         // Refresh recent records
@@ -373,7 +287,6 @@ export function Scanner() {
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
-      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -388,30 +301,26 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      console.log('=== Starting Add to Collection ===');
-      console.log('Current record:', record);
+      console.log('Starting add to collection...', {
+        recordData: record,
+        timestamp: new Date().toISOString()
+      });
 
-      // Use the added_from value directly from the record
       const recordData = {
         artist: record.artist,
         album: record.album,
         year: record.year,
         current_release_year: record.current_release_year,
-        barcode: record.barcode || undefined,
+        barcode: record.barcode,
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url || undefined,
-        current_release_url: record.current_release_url || undefined,
-        label: record.label || '',
-        added_from: record.added_from  // Use the value from the record
+        master_url: record.master_url,
+        current_release_url: record.current_release_url,
+        label: record.label
       };
 
-      console.log('Final record data:', {
-        ...recordData,
-        added_from_value: recordData.added_from,
-        added_from_type: typeof recordData.added_from
-      });
+      console.log('Prepared record data:', recordData);
       
       const response = await records.add(recordData);
       console.log('Add record response:', response);
@@ -423,13 +332,35 @@ export function Scanner() {
         // Reset for next scan
         setRecord(null);
         setBarcode('');
-        setDiscogsUrl('');
-        setSpotifyUrl('');
         // Reset scanner state to allow new scan
         setScannerKey(prev => prev + 1);
       } else {
         console.error('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
+        // Add retry logic
+        if (response.error?.includes('security policy')) {
+          console.log('Detected security policy error, retrying in 1 second...');
+          setTimeout(async () => {
+            try {
+              console.log('Retrying add to collection...');
+              const retryResponse = await records.add(recordData);
+              if (retryResponse.success) {
+                setSuccess('Added to collection!');
+                await loadRecentRecords();
+                setRecord(null);
+                setBarcode('');
+                setScannerKey(prev => prev + 1);
+                setError(null);
+              } else {
+                console.error('Retry failed:', retryResponse.error);
+                setError('Failed to add to collection after retry');
+              }
+            } catch (retryErr) {
+              console.error('Retry error:', retryErr);
+              setError('Failed to add to collection after retry');
+            }
+          }, 1000);
+        }
       }
     } catch (err) {
       console.error('Error adding to collection:', {
@@ -446,8 +377,6 @@ export function Scanner() {
   const handleClear = () => {
     setRecord(null);
     setBarcode('');
-    setDiscogsUrl('');
-    setSpotifyUrl('');
     setError(null);
     setSuccess(null);
     // Reset scanner state to allow new scan
@@ -464,21 +393,7 @@ export function Scanner() {
 
         <Paper withBorder shadow="md" p="md" radius="md" mb="xl">
           <Stack>
-            <Tabs 
-              value={activeTab}
-              onChange={(value) => {
-                console.log('Tab changing from', activeTab, 'to', value);
-                // Clear any existing record data when changing tabs
-                setRecord(null);
-                setBarcode('');
-                setDiscogsUrl('');
-                setSpotifyUrl('');
-                setError(null);
-                setSuccess(null);
-                // Update the active tab
-                setActiveTab(value || 'barcode');
-              }}
-            >
+            <Tabs defaultValue="barcode">
               <Tabs.List style={{ flexWrap: 'nowrap' }}>
                 <Tabs.Tab 
                   value="barcode" 
@@ -497,15 +412,6 @@ export function Scanner() {
                   }}
                 >
                   URL
-                </Tabs.Tab>
-                <Tabs.Tab 
-                  value="spotify" 
-                  style={{ 
-                    minWidth: 0,
-                    padding: '8px 12px'
-                  }}
-                >
-                  Spotify
                 </Tabs.Tab>
                 <Tabs.Tab 
                   value="search" 
@@ -603,26 +509,6 @@ export function Scanner() {
                     disabled={!discogsUrl.trim()}
                   >
                     Look up Release
-                  </Button>
-                </Stack>
-              </Tabs.Panel>
-
-              <Tabs.Panel value="spotify" pt="xs">
-                <Stack>
-                  <TextInput
-                    label="Spotify Album URL"
-                    placeholder="https://open.spotify.com/album/123456"
-                    value={spotifyUrl}
-                    onChange={(e) => setSpotifyUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSpotifyLookup()}
-                    disabled={loading}
-                  />
-                  <Button 
-                    onClick={handleSpotifyLookup}
-                    loading={loading}
-                    disabled={!spotifyUrl.trim()}
-                  >
-                    Look up Album
                   </Button>
                 </Stack>
               </Tabs.Panel>

@@ -20,12 +20,7 @@ from flask_cors import CORS
 import sys
 
 sys.path.append(parent_dir)
-from discogs_lookup import (
-    lookup_by_barcode,
-    search_by_discogs_id,
-    lookup_by_discogs_url,
-    search_by_artist_album
-)
+from discogs_lookup import search_by_barcode, search_by_discogs_id, search_by_discogs_url, search_by_artist_album
 from .db import (
     create_user,
     login_user,
@@ -316,7 +311,7 @@ def api_index():
 @app.route('/lookup/<barcode>')
 def lookup(barcode):
     try:
-        result = lookup_by_barcode(barcode)
+        result = search_by_barcode(barcode)
         
         if result:
             response_data = {
@@ -493,43 +488,66 @@ def get_records():
     return jsonify({'success': False, 'error': result['error']}), 400
 
 @app.route('/api/records', methods=['POST'])
-@require_auth
 def add_record():
-    """Add a record to the user's collection."""
+    """Add a new record to the user's collection."""
+    print("\n=== Adding Record to Collection ===")
+    user_id = session.get('user_id')
+    print(f"User ID from session: {user_id}")
+    
+    if not user_id:
+        print("Error: User not authenticated")
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
     try:
-        # Get user ID from session
-        user_id = session.get('user_id')
-        print("\n=== Adding Record to Collection ===")
-        print(f"User ID from session: {user_id}")
-        
-        # Get record data from request
-        raw_data = request.get_data()
-        print(f"Raw request data: {raw_data}")
         record_data = request.get_json()
+        print(f"Raw request data: {request.data}")
         print(f"Parsed record data: {record_data}")
         
-        # Log each field for debugging
-        print("Record data to be added:")
+        if not record_data:
+            print("Error: No record data provided")
+            return jsonify({'success': False, 'error': 'Record data required'}), 400
+        
+        # Log the record data before adding
+        print("\nRecord data to be added:")
         for key, value in record_data.items():
             print(f"{key}: {type(value).__name__} = {value}")
         
-        # Add record to collection
-        result = add_record_to_collection(user_id, record_data)
+        # Ensure required fields are present
+        required_fields = ['artist', 'album']
+        missing_fields = [field for field in required_fields if not record_data.get(field)]
+        if missing_fields:
+            error_msg = f"Missing required fields: {', '.join(missing_fields)}"
+            print(f"Error: {error_msg}")
+            return jsonify({'success': False, 'error': error_msg}), 400
         
-        if result.get('success'):
-            return jsonify(result)
-        else:
-            print(f"Failed to add record: {result.get('error')}")
-            return jsonify(result), 400
+        # Validate data types
+        if not isinstance(record_data.get('genres', []), list):
+            print("Error: genres must be a list")
+            return jsonify({'success': False, 'error': 'genres must be a list'}), 400
             
+        if not isinstance(record_data.get('styles', []), list):
+            print("Error: styles must be a list")
+            return jsonify({'success': False, 'error': 'styles must be a list'}), 400
+            
+        if not isinstance(record_data.get('musicians', []), list):
+            print("Error: musicians must be a list")
+            return jsonify({'success': False, 'error': 'musicians must be a list'}), 400
+        
+        result = add_record_to_collection(user_id, record_data)
+        print(f"\nAdd record result: {result}")
+        
+        if result['success']:
+            print("\nSuccessfully added record:")
+            print(f"Record ID: {result['record'].get('id')}")
+            return jsonify({'success': True, 'record': result['record']}), 201
+            
+        print(f"\nFailed to add record: {result['error']}")
+        return jsonify({'success': False, 'error': result['error']}), 400
     except Exception as e:
-        print(f"Error adding record: {str(e)}")
+        print(f"\nError adding record: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
+        return jsonify({'success': False, 'error': f'Failed to add record: {str(e)}'}), 500
 
 @app.route('/api/records/<record_id>', methods=['DELETE'])
 def delete_record(record_id):
@@ -563,7 +581,7 @@ def lookup_barcode(barcode):
         # Try each barcode format
         for search_barcode in search_barcodes:
             print(f"\nSearching for barcode: {search_barcode}")
-            result = lookup_by_barcode(search_barcode)
+            result = search_by_barcode(search_barcode)
             print(f"Raw Discogs result: {result}")
             
             if result:
@@ -898,7 +916,7 @@ def lookup_discogs_url():
                 'message': 'No URL provided'
             })
             
-        result = lookup_by_discogs_url(url)
+        result = search_by_discogs_url(url)
         if result:
             return jsonify(result)
         else:

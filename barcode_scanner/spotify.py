@@ -489,8 +489,7 @@ def get_playlist_tracks(playlist_id):
                     'artist': album['artists'][0]['name'],
                     'release_date': album['release_date'],
                     'total_tracks': album['total_tracks'],
-                    'image_url': album['images'][0]['url'] if album['images'] else None,
-                    'added_from': 'spotify'  # Add the source
+                    'image_url': album['images'][0]['url'] if album['images'] else None
                 }
         
         return {
@@ -572,8 +571,7 @@ def get_album_from_url(url):
     album_info = {
         'name': data['name'],
         'artist': data['artists'][0]['name'],  # Using first artist
-        'release_date': data['release_date'],
-        'added_from': 'spotify'  # Add the source
+        'release_date': data['release_date']
     }
 
     return {
@@ -745,8 +743,7 @@ def sync_subscribed_playlists():
                                 'current_release_url': lookup_response['data']['current_release_url'],
                                 'current_release_year': lookup_response['data']['current_release_year'],
                                 'created_at': datetime.utcnow().isoformat(),
-                                'updated_at': datetime.utcnow().isoformat(),
-                                'added_from': 'spotify'  # Ensure source is set
+                                'updated_at': datetime.utcnow().isoformat()
                             }).execute()
                             
                             print(f"Add to collection response: {add_response}")

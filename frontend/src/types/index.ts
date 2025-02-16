@@ -4,26 +4,22 @@ export interface User {
 }
 
 export interface VinylRecord {
-  id?: string;
-  user_id?: string;
+  id: string;
   artist: string;
   album: string;
-  year?: number;
+  year: string;
   barcode?: string;
-  genres?: string[];
-  styles?: string[];
-  musicians?: string[];
-  master_url?: string;
-  current_release_url?: string;
-  current_release_year?: number;
   label?: string;
+  genres?: string;
+  styles?: string;
   notes?: string;
-  created_at?: string;
+  musicians?: string;
+  master_url?: string;
+  release_url?: string;
+  release_year?: string;
+  added_at: string;
   updated_at?: string;
-  added_from: 'barcode' | 'discogs_url' | 'spotify' | 'manual';
-  customValues?: {
-    [columnId: string]: string;
-  };
+  user_id: string;
 }
 
 export interface AuthResponse {

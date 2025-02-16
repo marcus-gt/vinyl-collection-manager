@@ -145,27 +145,7 @@ export const records = {
   },
 
   add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
-    console.log('API: Starting add record request:', {
-      record,
-      added_from: record.added_from,
-      recordType: typeof record.added_from,
-      recordKeys: Object.keys(record)
-    });
-
-    // Create a copy of the record to ensure added_from is included
-    const recordToSend = {
-      ...record,
-      added_from: record.added_from
-    };
-
-    console.log('API: Sending record data:', {
-      recordToSend,
-      added_from: recordToSend.added_from,
-      recordType: typeof recordToSend.added_from
-    });
-
-    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', recordToSend);
-    console.log('API: Add record response:', response.data);
+    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
     return response.data;
   },
 
@@ -218,20 +198,6 @@ export const lookup = {
     const encodedUrl = encodeURIComponent(url);
     const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
       `/api/lookup/discogs-url?url=${encodedUrl}`,
-      { signal }
-    );
-    return {
-      success: response.data.success,
-      data: response.data.data,
-      error: response.data.error
-    };
-  },
-
-  bySpotifyUrl: async (url: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
-    // URL encode the Spotify URL
-    const encodedUrl = encodeURIComponent(url);
-    const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
-      `/api/lookup/spotify-url?url=${encodedUrl}`,
       { signal }
     );
     return {

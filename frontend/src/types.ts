@@ -20,7 +20,6 @@ export interface VinylRecord {
   notes?: string;
   created_at?: string;
   updated_at?: string;
-  added_from?: 'barcode' | 'discogs_url' | 'spotify' | 'manual';
   customValues?: {
     [columnId: string]: string;
   };
