@@ -243,7 +243,7 @@ export const lookup = {
 export const customColumns = {
   getAll: async (): Promise<ApiResponse<CustomColumn[]>> => {
     try {
-      console.log('API: Fetching all custom columns');
+      console.log('=== Fetching Custom Columns ===');
       const response = await fetch('/api/custom-columns', {
         method: 'GET',
         credentials: 'include',
@@ -252,10 +252,12 @@ export const customColumns = {
         }
       });
       const responseText = await response.text();
-      console.log('API: Custom columns response:', responseText);
       
       if (!response.ok) {
-        console.error('API: Failed to fetch custom columns:', response.status, responseText);
+        console.error('Failed to fetch custom columns:', {
+          status: response.status,
+          error: responseText
+        });
         return { 
           success: false, 
           error: `Failed to fetch custom columns: ${response.status} ${responseText}` 
@@ -263,10 +265,13 @@ export const customColumns = {
       }
       
       const data = JSON.parse(responseText);
-      console.log('API: Parsed custom columns:', data);
+      console.log('Custom columns fetched successfully:', {
+        count: data.data?.length || 0,
+        columns: data.data?.map(col => ({ id: col.id, name: col.name, type: col.type }))
+      });
       return data;
     } catch (err) {
-      console.error('Failed to get custom columns:', err);
+      console.error('Error in getAll custom columns:', err);
       return { success: false, error: 'Failed to get custom columns' };
     }
   },
@@ -364,13 +369,46 @@ export const customColumns = {
 
 export const customValues = {
   getForRecord: async (recordId: string): Promise<ApiResponse<CustomColumnValue[]>> => {
-    const response = await api.get<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`);
-    return response.data;
+    console.log(`=== Fetching Custom Values for Record ${recordId} ===`);
+    try {
+      const response = await api.get<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`);
+      console.log('Custom values response:', {
+        success: response.data.success,
+        count: response.data.data?.length || 0,
+        values: response.data.data?.map(val => ({ 
+          column_id: val.column_id,
+          value: val.value 
+        }))
+      });
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching custom values:', {
+        recordId,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
+      return { success: false, error: 'Failed to get custom values' };
+    }
   },
 
   update: async (recordId: string, values: Record<string, string>): Promise<ApiResponse<void>> => {
-    const response = await api.put<ApiResponse<void>>(`/api/records/${recordId}/custom-values`, values);
-    return response.data;
+    console.log(`=== Updating Custom Values for Record ${recordId} ===`, {
+      values
+    });
+    try {
+      const response = await api.put<ApiResponse<void>>(`/api/records/${recordId}/custom-values`, values);
+      console.log('Update custom values response:', {
+        success: response.data.success,
+        error: response.data.error
+      });
+      return response.data;
+    } catch (err) {
+      console.error('Error updating custom values:', {
+        recordId,
+        values,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
+      return { success: false, error: 'Failed to update custom values' };
+    }
   }
 };
 
