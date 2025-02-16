@@ -145,30 +145,8 @@ export const records = {
   },
 
   add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
-    try {
-      // Add timestamps
-      const recordWithTimestamps = {
-        ...record,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('Adding record with data:', recordWithTimestamps);
-
-      const response = await fetch('/api/records', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(recordWithTimestamps)
-      });
-
-      return handleApiResponse(response);
-    } catch (err) {
-      console.error('Failed to add record:', err);
-      return { success: false, error: 'Failed to add record' };
-    }
+    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
+    return response.data;
   },
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
@@ -268,28 +246,15 @@ export const customColumns = {
       console.log('API: Fetching all custom columns');
       const response = await fetch('/api/custom-columns', {
         method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        credentials: 'include'
       });
-
       const responseText = await response.text();
       console.log('API: Custom columns response:', responseText);
-
-      if (!response.ok) {
-        console.error('API: Failed to fetch custom columns:', response.status, responseText);
-        return { 
-          success: false, 
-          error: `Failed to fetch custom columns: ${response.status} ${responseText}` 
-        };
-      }
-
       const data = JSON.parse(responseText);
       console.log('API: Parsed custom columns:', data);
       return data;
     } catch (err) {
-      console.error('API: Failed to get custom columns:', err);
+      console.error('Failed to get custom columns:', err);
       return { success: false, error: 'Failed to get custom columns' };
     }
   },
