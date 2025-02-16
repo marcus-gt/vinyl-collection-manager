@@ -1029,7 +1029,7 @@ function Collection() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                setPage(1); // Reset to first page when searching
+                setPage(1);  // Reset to first page when search query changes
               }}
               style={{ width: 300 }}
             />
