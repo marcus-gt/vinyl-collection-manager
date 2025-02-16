@@ -977,37 +977,39 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           style={{ 
             position: 'sticky',
             left: 0,
-            width: '100vw',
-            transform: 'translateX(calc((100vw - 100%) / -2))',
+            width: '100%',
             background: 'var(--mantine-color-dark-7)',
             padding: 'var(--mantine-spacing-md) 0',
             borderTop: '1px solid var(--mantine-color-dark-4)',
-            zIndex: 2
+            zIndex: 2,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: 'column',
+            gap: 'var(--mantine-spacing-xs)'
           }}
         >
-          <Group justify="center">
-            <Pagination
-              value={page}
-              onChange={onPageChange}
-              total={Math.max(1, Math.ceil(totalRecords / recordsPerPage))}
-              siblings={1}
-              boundaries={1}
-              withEdges
-              withControls
-              styles={{
-                control: {
-                  '@media (max-width: 600px)': {
-                    minWidth: '32px',
-                    height: '32px',
-                    padding: 0
-                  }
+          <Pagination
+            value={page}
+            onChange={onPageChange}
+            total={Math.max(1, Math.ceil(totalRecords / recordsPerPage))}
+            siblings={1}
+            boundaries={1}
+            withEdges
+            withControls
+            styles={{
+              control: {
+                '@media (max-width: 600px)': {
+                  minWidth: '32px',
+                  height: '32px',
+                  padding: 0
                 }
-              }}
-            />
-            <Text size="sm" c="dimmed">
-              Showing {paginatedRows.length} of {totalRecords} records
-            </Text>
-          </Group>
+              }
+            }}
+          />
+          <Text size="sm" c="dimmed">
+            Showing {paginatedRows.length} of {totalRecords} records
+          </Text>
         </Box>
       )}
     </Box>
