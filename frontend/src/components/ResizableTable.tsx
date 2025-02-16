@@ -429,11 +429,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   });
 
-  // Get filtered and sorted rows
+  // Get filtered and sorted rows first
   const filteredAndSortedRows = table.getFilteredRowModel().rows;
   const totalRecords = filteredAndSortedRows.length;
 
-  // Calculate pagination
+  // Then apply pagination to the filtered results
   const startIndex = (page - 1) * recordsPerPage;
   const endIndex = Math.min(startIndex + recordsPerPage, totalRecords);
   const paginatedRows = filteredAndSortedRows.slice(startIndex, endIndex);
