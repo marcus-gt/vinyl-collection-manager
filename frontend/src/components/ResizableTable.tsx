@@ -396,7 +396,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       sorting: sortState,
       columnSizing,
       columnFilters,
-      globalFilter: searchQuery
+      globalFilter: searchQuery,
+      pagination: {
+        pageIndex: page - 1,
+        pageSize: recordsPerPage
+      }
     },
     columnResizeMode,
     onSortingChange: onSortChange,
@@ -422,6 +426,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    pageCount: Math.ceil(data.length / recordsPerPage),
+    manualPagination: false,
     enableColumnFilters: true,
     manualFiltering: false,
     filterFns: {
