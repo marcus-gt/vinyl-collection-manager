@@ -414,11 +414,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       console.log('Setting filters to:', newFilters);
       setColumnFilters(newFilters);
 
-      // Reset to first page when filters change
-      if (onPageChange) {
-        console.log('Resetting to page 1 due to filter change');
-        onPageChange(1);
-      }
+      // Always reset to first page when filters change
+      onPageChange(1);
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
