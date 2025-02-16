@@ -246,10 +246,22 @@ export const customColumns = {
       console.log('API: Fetching all custom columns');
       const response = await fetch('/api/custom-columns', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       const responseText = await response.text();
       console.log('API: Custom columns response:', responseText);
+      
+      if (!response.ok) {
+        console.error('API: Failed to fetch custom columns:', response.status, responseText);
+        return { 
+          success: false, 
+          error: `Failed to fetch custom columns: ${response.status} ${responseText}` 
+        };
+      }
+      
       const data = JSON.parse(responseText);
       console.log('API: Parsed custom columns:', data);
       return data;
@@ -352,8 +364,19 @@ export const customColumns = {
 
 export const customValues = {
   getForRecord: async (recordId: string): Promise<ApiResponse<CustomColumnValue[]>> => {
-    const response = await api.get<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`);
-    return response.data;
+    try {
+      const response = await fetch(`/api/records/${recordId}/custom-values`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      return handleApiResponse(response);
+    } catch (err) {
+      console.error('Failed to get custom values:', err);
+      return { success: false, error: 'Failed to get custom values' };
+    }
   },
 
   update: async (recordId: string, values: Record<string, string>): Promise<ApiResponse<void>> => {
@@ -366,7 +389,20 @@ export const customValues = {
         },
         body: JSON.stringify(values)
       });
-      return handleApiResponse(response);
+      
+      const responseText = await response.text();
+      console.log('API: Custom values update response:', responseText);
+      
+      if (!response.ok) {
+        console.error('API: Failed to update custom values:', response.status, responseText);
+        return { 
+          success: false, 
+          error: `Failed to update custom values: ${response.status} ${responseText}` 
+        };
+      }
+      
+      const data = responseText ? JSON.parse(responseText) : { success: true };
+      return data;
     } catch (err) {
       console.error('Failed to update custom values:', err);
       return { success: false, error: 'Failed to update custom values' };
