@@ -416,6 +416,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
       // Always reset to first page when filters change
       onPageChange(1);
+      // Force immediate page update in table state
+      table.setPageIndex(0);
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

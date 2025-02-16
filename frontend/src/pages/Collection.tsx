@@ -10,6 +10,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
+import { DataTable } from '@mantine/core';
 
 const PAGE_SIZE = 15;
 
