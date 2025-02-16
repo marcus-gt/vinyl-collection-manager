@@ -980,18 +980,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             siblings={1}
             boundaries={1}
             withEdges
-            getControlProps={(control) => {
-              if (control === 'first' || control === 'last') {
-                return {
-                  style: {
-                    '@media (max-width: 600px)': {
-                      display: 'none'
-                    }
-                  }
-                };
-              }
-              return {};
-            }}
+            withControls
             styles={{
               control: {
                 '@media (max-width: 600px)': {
