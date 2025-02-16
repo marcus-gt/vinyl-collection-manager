@@ -75,6 +75,7 @@ function Collection() {
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
+  const [columnFilters, setColumnFilters] = useState([]);
 
   useEffect(() => {
     loadRecords();
@@ -1018,6 +1019,11 @@ function Collection() {
     window.scrollTo(0, 0);
   };
 
+  const handleFilterChange = (filters: any) => {
+    setColumnFilters(filters);
+    setPage(1);  // Reset to page 1 when filters change
+  };
+
   return (
     <Container size="xl" py="xl" mt={60}>
       <Stack>
@@ -1070,6 +1076,7 @@ function Collection() {
           recordsPerPage={PAGE_SIZE}
           page={page}
           onPageChange={handlePageChange}
+          onColumnFiltersChange={handleFilterChange}
           customColumns={customColumns}
         />
 

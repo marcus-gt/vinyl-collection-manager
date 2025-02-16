@@ -81,6 +81,7 @@ interface ResizableTableProps<T extends RowData & BaseRowData> {
   page: number;
   onPageChange: (page: number) => void;
   customColumns?: CustomColumnData[];
+  onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
 }
 
 export function ResizableTable<T extends RowData & BaseRowData>({ 
@@ -93,7 +94,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   recordsPerPage,
   page,
   onPageChange,
-  customColumns = []
+  customColumns = [],
+  onColumnFiltersChange
 }: ResizableTableProps<T>) {
   const theme = useMantineTheme();
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -396,29 +398,20 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
     onColumnFiltersChange: (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
-      console.log('Filter update received:', {
-        updater,
-        isFunction: typeof updater === 'function',
-        currentFilters: columnFilters
-      });
-
       let newFilters: ColumnFiltersState;
       if (typeof updater === 'function') {
         newFilters = updater(columnFilters);
-        console.log('New filters from function:', newFilters);
       } else {
         newFilters = updater;
-        console.log('New filters from direct value:', newFilters);
       }
 
-      // First update the filters
+      // Update local filter state
       setColumnFilters(newFilters);
 
-      // Use setTimeout to ensure this runs after the filter state is updated
-      setTimeout(() => {
-        // Reset to first page
-        onPageChange(1);
-      }, 0);
+      // Notify parent component of filter change
+      if (onColumnFiltersChange) {
+        onColumnFiltersChange(newFilters);
+      }
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
