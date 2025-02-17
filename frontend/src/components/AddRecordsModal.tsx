@@ -123,32 +123,26 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleScan = async (scannedBarcode: string) => {
-    setBarcode(scannedBarcode);
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    abortControllerRef.current = new AbortController();
+    console.log('=== Scanning Barcode ===');
+    console.log('Scanned barcode:', scannedBarcode);
     
     try {
-      const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
-      if (response.success && response.data) {
-        setRecord(response.data);
-        setError(null);
+      setLoading(true);
+      setError(null);
+      
+      const result = await lookup.byBarcode(scannedBarcode);
+      console.log('Barcode lookup result:', result);
+      console.log('added_from in result:', result.data?.added_from);
+      
+      if (result.success && result.data) {
+        setRecord(result.data);
       } else {
-        setError(response.error || 'Failed to find record');
-        setRecord(null);
+        setError('No record found for this barcode');
       }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return;
-      }
-      setError('Failed to lookup barcode');
-      setRecord(null);
+    } catch (error) {
+      console.error('Barcode lookup error:', error);
+      setError('Failed to look up barcode');
     } finally {
-      if (abortControllerRef.current) {
-        abortControllerRef.current = null;
-      }
       setLoading(false);
     }
   };
@@ -364,6 +358,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleAddToCollection = async () => {
     if (!record) return;
     
+    console.log('=== Adding Record to Collection ===');
+    console.log('Record data before adding:', record);
+    console.log('added_from value:', record.added_from);
+
     setLoading(true);
     setError(null);
     setSuccess(null);

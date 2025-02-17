@@ -72,6 +72,9 @@ def get_musicians(credits) -> list[str]:
 def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
     """Format a Discogs release object into a standardized format"""
     try:
+        print("\n=== Formatting Release Data ===")
+        print(f"Input added_from value: {added_from}")
+        
         # Get artist name(s)
         artists = [artist.name for artist in release.artists]
         artist_name = ' & '.join(artists) if artists else 'Unknown Artist'
@@ -150,6 +153,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             'added_from': added_from
         }
 
+        print(f"Formatted data added_from value: {data['added_from']}")
         print(f"Formatted release data: {data}")  # Debug logging
         return data
 

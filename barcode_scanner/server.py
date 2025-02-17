@@ -503,6 +503,7 @@ def add_record():
         record_data = request.get_json()
         print(f"Raw request data: {request.data}")
         print(f"Parsed record data: {record_data}")
+        print(f"added_from value: {record_data.get('added_from', 'NOT SET')}")
         
         if not record_data:
             print("Error: No record data provided")
@@ -523,7 +524,10 @@ def add_record():
         
         # Set added_from if not already set
         if not record_data.get('added_from'):
+            print("No added_from value provided, defaulting to 'manual'")
             record_data['added_from'] = 'manual'
+        else:
+            print(f"Using provided added_from value: {record_data['added_from']}")
         
         # Initialize empty lists for list fields if not present
         if 'genres' not in record_data:
@@ -596,6 +600,7 @@ def lookup_barcode(barcode):
             print(f"\nSearching for barcode: {search_barcode}")
             result = search_by_barcode(search_barcode)
             print(f"Raw Discogs result: {result}")
+            print(f"added_from in raw result: {result.get('added_from') if result else 'NO RESULT'}")
             
             if result:
                 # Found a match, process it
@@ -613,6 +618,8 @@ def lookup_barcode(barcode):
                     'label': result.get('label'),
                     'added_from': result.get('added_from', 'barcode')  # Use the value from result, fallback to 'barcode'
                 }
+                print(f"Processed record data: {record}")
+                print(f"Final added_from value: {record['added_from']}")
                 return jsonify({
                     'success': True,
                     'data': record
