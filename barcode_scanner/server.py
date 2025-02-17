@@ -895,6 +895,10 @@ def lookup_discogs(release_id):
                 'message': 'No results found'
             })
             
+        # Add the source to the data if successful
+        if result.get('success') and result.get('data'):
+            result['data']['added_from'] = 'discogs_url'
+            
         return jsonify(result)  # result already contains success and data fields
         
     except Exception as e:
