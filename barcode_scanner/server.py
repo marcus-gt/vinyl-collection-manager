@@ -907,11 +907,7 @@ def lookup_discogs(release_id):
                 'message': 'No results found'
             })
             
-        # Add the source to the data if successful
-        if result.get('success') and result.get('data'):
-            result['data']['added_from'] = 'discogs_url'
-            
-        return jsonify(result)  # result already contains success and data fields
+        return jsonify(result)  # result already contains success and data fields with added_from
         
     except Exception as e:
         print(f"Error looking up Discogs release: {str(e)}")
@@ -935,9 +931,7 @@ def lookup_discogs_url():
             
         result = search_by_discogs_url(url)
         if result and result.get('success'):
-            # Add the source to the data
-            result['data']['added_from'] = 'discogs_url'
-            return jsonify(result)
+            return jsonify(result)  # result already contains success and data fields with added_from
         else:
             return jsonify({
                 'success': False,
