@@ -520,6 +520,18 @@ def add_record():
             print(f"Error: {error_msg}")
             return jsonify({'success': False, 'error': error_msg}), 400
         
+        # Set added_from if not already set
+        if not record_data.get('added_from'):
+            record_data['added_from'] = 'manual'
+        
+        # Initialize empty lists for list fields if not present
+        if 'genres' not in record_data:
+            record_data['genres'] = []
+        if 'styles' not in record_data:
+            record_data['styles'] = []
+        if 'musicians' not in record_data:
+            record_data['musicians'] = []
+        
         # Validate data types
         if not isinstance(record_data.get('genres', []), list):
             print("Error: genres must be a list")
