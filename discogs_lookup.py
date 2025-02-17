@@ -69,7 +69,7 @@ def get_musicians(credits) -> list[str]:
 
     return sorted(list(musicians))
 
-def format_release_data(release) -> Dict[str, Any]:
+def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
     """Format a Discogs release object into a standardized format"""
     try:
         # Get artist name(s)
@@ -146,7 +146,8 @@ def format_release_data(release) -> Dict[str, Any]:
             'master_url': f'https://www.discogs.com/master/{master.id}' if master else None,
             'current_release_url': f'https://www.discogs.com/release/{release.id}',
             'current_release_year': getattr(release, 'year', None),
-            'barcode': None
+            'barcode': None,
+            'added_from': added_from
         }
 
         print(f"Formatted release data: {data}")  # Debug logging
@@ -175,7 +176,7 @@ def search_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
 
         # Get the full release data
         full_release = d.release(release.id)
-        return format_release_data(full_release)
+        return format_release_data(full_release, added_from='barcode')
 
     except Exception as e:
         print(f"Error searching by barcode: {str(e)}")
@@ -210,7 +211,7 @@ def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
         print(f"Found release: {release.title} by {[a.name for a in release.artists]}")
         
         # Get the formatted data
-        formatted_data = format_release_data(release)
+        formatted_data = format_release_data(release, added_from='discogs_url')
         print(f"Formatted release data: {formatted_data}")
         
         if not formatted_data:
@@ -411,7 +412,7 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
         try:
             # Get the full release data with timeout
             full_release = d.release(best_match.id)
-            formatted_data = format_release_data(full_release)
+            formatted_data = format_release_data(full_release, added_from='manual')
             
             if not formatted_data:
                 return {
