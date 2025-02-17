@@ -340,10 +340,11 @@ def get_label_info(label_id: str) -> Optional[Dict[str, Any]]:
         print(f"Error getting label info: {str(e)}")
         return None
 
-def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
+def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> Optional[Dict[str, Any]]:
     """Search for a release by artist and album name"""
     try:
         print(f"\n=== Looking up release by artist: {artist}, album: {album} ===")
+        print(f"Source: {source}")
         
         # Clean up search terms
         artist = artist.strip()
@@ -412,7 +413,7 @@ def search_by_artist_album(artist: str, album: str) -> Optional[Dict[str, Any]]:
         try:
             # Get the full release data with timeout
             full_release = d.release(best_match.id)
-            formatted_data = format_release_data(full_release, added_from='manual')
+            formatted_data = format_release_data(full_release, added_from=source)
             
             if not formatted_data:
                 return {

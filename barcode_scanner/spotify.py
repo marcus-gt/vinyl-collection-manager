@@ -726,7 +726,7 @@ def sync_subscribed_playlists():
                         print(f"\nProcessing new album: {album['name']} by {album['artist']}")
                         
                         # Look up in Discogs
-                        lookup_response = search_by_artist_album(album['artist'], album['name'])
+                        lookup_response = search_by_artist_album(album['artist'], album['name'], source='spotify_list_sub')
                         print(f"Discogs lookup response: {lookup_response}")
                         
                         if lookup_response['success'] and lookup_response['data']:

@@ -966,7 +966,7 @@ def lookup_artist_album():
                 'error': 'Artist and album names are required'
             })
             
-        result = search_by_artist_album(artist, album)
+        result = search_by_artist_album(artist, album, source='discogs_url')
         if result and result.get('success'):
             # If the lookup was successful, it means we found it in Discogs
             result['data']['added_from'] = 'discogs_url'
