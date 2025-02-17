@@ -968,13 +968,21 @@ def lookup_artist_album():
             
         result = search_by_artist_album(artist, album)
         if result and result.get('success'):
-            # Add the source to the data
-            result['data']['added_from'] = 'manual'
+            # If the lookup was successful, it means we found it in Discogs
+            result['data']['added_from'] = 'discogs_url'
             return jsonify(result)
         else:
+            # If no match was found, return a basic structure for manual entry
             return jsonify({
-                'success': False,
-                'error': 'No results found'
+                'success': True,
+                'data': {
+                    'artist': artist,
+                    'album': album,
+                    'added_from': 'manual',
+                    'genres': [],
+                    'styles': [],
+                    'musicians': []
+                }
             })
             
     except Exception as e:
