@@ -327,7 +327,8 @@ def lookup(barcode):
                 'is_master': result.get('is_master', False),
                 'release_year': result.get('release_year'),
                 'release_url': result.get('release_url'),
-                'musicians': result.get('musicians')
+                'musicians': result.get('musicians'),
+                'added_from': result.get('added_from', '')
             }
             return jsonify(response_data)
         else:
