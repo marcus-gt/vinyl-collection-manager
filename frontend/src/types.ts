@@ -20,6 +20,7 @@ export interface VinylRecord {
   notes?: string;
   created_at?: string;
   updated_at?: string;
+  added_from?: string;
   customValues?: {
     [columnId: string]: string;
   };
