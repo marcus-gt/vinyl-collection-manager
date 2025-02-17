@@ -610,7 +610,7 @@ def lookup_barcode(barcode):
                     'master_url': result.get('master_url'),
                     'current_release_url': result.get('main_release_url'),
                     'label': result.get('label'),
-                    'added_from': 'barcode'  # Add the source
+                    'added_from': result.get('added_from', 'barcode')  # Use the value from result, fallback to 'barcode'
                 }
                 return jsonify({
                     'success': True,
@@ -968,8 +968,7 @@ def lookup_artist_album():
             
         result = search_by_artist_album(artist, album, source='discogs_url')
         if result and result.get('success'):
-            # If the lookup was successful, it means we found it in Discogs
-            result['data']['added_from'] = 'discogs_url'
+            # Return the result directly, source is already set in search_by_artist_album
             return jsonify(result)
         else:
             # If no match was found, return a basic structure for manual entry

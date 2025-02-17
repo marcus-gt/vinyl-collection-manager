@@ -730,9 +730,6 @@ def sync_subscribed_playlists():
                         print(f"Discogs lookup response: {lookup_response}")
                         
                         if lookup_response['success'] and lookup_response['data']:
-                            # Add the source to the data
-                            lookup_response['data']['added_from'] = 'spotify_list_sub'
-                            
                             # Add to collection
                             add_response = client.table('vinyl_records').insert({
                                 'user_id': sub['user_id'],
@@ -746,7 +743,7 @@ def sync_subscribed_playlists():
                                 'master_url': lookup_response['data']['master_url'],
                                 'current_release_url': lookup_response['data']['current_release_url'],
                                 'current_release_year': lookup_response['data']['current_release_year'],
-                                'added_from': lookup_response['data']['added_from'],
+                                'added_from': lookup_response['data']['added_from'],  # Use the value from lookup_response
                                 'created_at': datetime.utcnow().isoformat(),
                                 'updated_at': datetime.utcnow().isoformat()
                             }).execute()
