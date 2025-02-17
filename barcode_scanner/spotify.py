@@ -571,7 +571,8 @@ def get_album_from_url(url):
     album_info = {
         'name': data['name'],
         'artist': data['artists'][0]['name'],  # Using first artist
-        'release_date': data['release_date']
+        'release_date': data['release_date'],
+        'added_from': 'spotify'  # Add the source
     }
 
     return {
@@ -729,6 +730,9 @@ def sync_subscribed_playlists():
                         print(f"Discogs lookup response: {lookup_response}")
                         
                         if lookup_response['success'] and lookup_response['data']:
+                            # Add the source to the data
+                            lookup_response['data']['added_from'] = 'spotify_list_sub'
+                            
                             # Add to collection
                             add_response = client.table('vinyl_records').insert({
                                 'user_id': sub['user_id'],
@@ -742,6 +746,7 @@ def sync_subscribed_playlists():
                                 'master_url': lookup_response['data']['master_url'],
                                 'current_release_url': lookup_response['data']['current_release_url'],
                                 'current_release_year': lookup_response['data']['current_release_year'],
+                                'added_from': lookup_response['data']['added_from'],
                                 'created_at': datetime.utcnow().isoformat(),
                                 'updated_at': datetime.utcnow().isoformat()
                             }).execute()

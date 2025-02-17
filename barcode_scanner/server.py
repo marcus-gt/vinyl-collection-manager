@@ -597,7 +597,8 @@ def lookup_barcode(barcode):
                     'musicians': result.get('musicians', []),
                     'master_url': result.get('master_url'),
                     'current_release_url': result.get('main_release_url'),
-                    'label': result.get('label')
+                    'label': result.get('label'),
+                    'added_from': 'barcode'  # Add the source
                 }
                 return jsonify({
                     'success': True,
@@ -917,7 +918,9 @@ def lookup_discogs_url():
             })
             
         result = search_by_discogs_url(url)
-        if result:
+        if result and result.get('success'):
+            # Add the source to the data
+            result['data']['added_from'] = 'discogs_url'
             return jsonify(result)
         else:
             return jsonify({
@@ -948,7 +951,9 @@ def lookup_artist_album():
             })
             
         result = search_by_artist_album(artist, album)
-        if result:
+        if result and result.get('success'):
+            # Add the source to the data
+            result['data']['added_from'] = 'manual'
             return jsonify(result)
         else:
             return jsonify({
