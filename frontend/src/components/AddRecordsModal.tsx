@@ -378,7 +378,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         musicians: record.musicians || [],
         master_url: record.master_url,
         current_release_url: record.current_release_url,
-        label: record.label
+        label: record.label,
+        added_from: record.added_from
       };
 
       console.log('Adding record from search:', recordData);
