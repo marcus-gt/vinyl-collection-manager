@@ -81,6 +81,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   }>({ title: '', content: null });
   const [recordsChanged, setRecordsChanged] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isLoadingAlbumLookup, setIsLoadingAlbumLookup] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -470,39 +471,33 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleSpotifyUrlLookup = async () => {
     if (!spotifyUrl) return;
     
-    setLoading(true);
+    setIsLoadingAlbumLookup(true);
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
-        const recordData: Partial<VinylRecord> = {
-          artist: result.data.artist,
-          album: result.data.name,
-          year: parseInt(result.data.release_date.split('-')[0]),
-          added_from: 'spotify'  // Explicitly set to 'spotify' for Spotify URL imports
-        };
-        const response = await records.add(recordData);
-        if (response.success) {
-          setSuccess('Added to collection!');
+        // First try to find the record in Discogs
+        const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
+        if (lookupResponse.success && lookupResponse.data) {
+          // Show the record preview instead of adding directly
+          const recordData = {
+            ...lookupResponse.data,
+            added_from: 'spotify'  // Set the source as spotify
+          };
+          setRecord(recordData);
           setSpotifyUrl('');
-          notifications.show({
-            title: 'Success',
-            message: 'Record added to collection',
-            color: 'green'
-          });
-          onClose();
+          setError(null);
         } else {
-          setError(response.error || 'Failed to add to collection');
+          setError("Couldn't find record in Discogs");
         }
       } else if (result.needs_auth) {
         setShowSpotifyConnect(true);
       } else {
         setError(result.error || 'Failed to get album information');
       }
-    } catch (error) {
-      console.error('Error looking up Spotify URL:', error);
-      setError('Failed to get album information');
+    } catch (err) {
+      setError('Failed to lookup album');
     } finally {
-      setLoading(false);
+      setIsLoadingAlbumLookup(false);
     }
   };
 
@@ -632,34 +627,31 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     artist: string;
     release_date: string;
   }) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      const recordData: Partial<VinylRecord> = {
-        artist: album.artist,
-        album: album.name,
-        year: parseInt(album.release_date.split('-')[0]),
-        added_from: 'spotify_list'  // Explicitly set to 'spotify_list' for playlist imports
-      };
-      const response = await records.add(recordData);
-      if (response.success) {
-        notifications.show({
-          title: 'Success',
-          message: 'Record added to collection',
-          color: 'green'
-        });
+      const response = await lookup.byArtistAlbum(album.artist, album.name);
+      if (response.success && response.data) {
+        const recordData = {
+          ...response.data,
+          added_from: 'spotify_list'  // Set the source as spotify_list
+        };
+        const addResponse = await records.add(recordData);
+        if (addResponse.success) {
+          setSuccess('Added to collection!');
+          setRecordsChanged(true);
+        } else {
+          setError(addResponse.error || 'Failed to add to collection');
+        }
       } else {
-        notifications.show({
-          title: 'Error',
-          message: response.error || 'Failed to add record',
-          color: 'red'
-        });
+        setError("Couldn't find record in Discogs");
       }
-    } catch (error) {
-      console.error('Error adding album:', error);
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to add record',
-        color: 'red'
-      });
+    } catch (err) {
+      setError('Failed to add album');
+    } finally {
+      setLoading(false);
     }
   };
 
