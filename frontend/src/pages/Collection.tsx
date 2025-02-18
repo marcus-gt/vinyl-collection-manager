@@ -604,8 +604,8 @@ function Collection() {
               filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
                 const cellValue = row.getValue(columnId);
                 // Get the labelMap from the column definition directly
-                const column = row.getVisibleCells().find((cell: { column: { id: string } }) => cell.column.id === columnId);
-                const labelMap = column?.column.columnDef.meta?.labelMap as Record<string, string>;
+                const column = row.getVisibleCells().find((cell: { column: { id: string; columnDef: { meta?: { labelMap?: Record<string, string> } } } }) => cell.column.id === columnId);
+                const labelMap = column?.column.columnDef.meta?.labelMap;
                 const internalValue = labelMap?.[filterValue];
                 console.log('Filter comparison:', { cellValue, filterValue, internalValue, labelMap });
                 return cellValue === internalValue;
