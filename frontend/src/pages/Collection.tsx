@@ -562,9 +562,9 @@ function Collection() {
               accessorKey: 'added_from',
               header: 'Source',
               enableSorting: true,
-              size: 100,
+              size: 160,
               enableResizing: true,
-              minSize: 80,
+              minSize: 160,
               maxSize: 200,
               meta: {
                 type: 'single-select',
@@ -603,7 +603,7 @@ function Collection() {
               },
               filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
                 const cellValue = row.getValue(columnId);
-                const valueMap: Record<string, string> = {
+                const labelMap: Record<string, string> = {
                   'Manual': 'manual',
                   'Spotify URL': 'spotify',
                   'Spotify List Manual': 'spotify_list',
@@ -611,7 +611,8 @@ function Collection() {
                   'Barcode': 'barcode',
                   'Discogs': 'discogs_url'
                 };
-                return cellValue === valueMap[filterValue];
+                const internalValue = labelMap[filterValue];
+                return cellValue === internalValue;
               },
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
