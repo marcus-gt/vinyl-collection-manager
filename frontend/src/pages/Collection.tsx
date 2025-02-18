@@ -566,7 +566,7 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 200,
-              meta: {
+              meta: { 
                 type: 'single-select',
                 options: [
                   { label: 'Manual', value: 'manual' },
@@ -576,7 +576,21 @@ function Collection() {
                   { label: 'Spotify List Auto', value: 'spotify_list_sub' },
                   { label: 'Barcode', value: 'barcode' },
                   { label: 'Discogs', value: 'discogs' }
-                ]
+                ],
+                customColumn: {
+                  id: 'added_from',
+                  name: 'Source',
+                  type: 'single-select',
+                  options: [
+                    'manual',
+                    'spotify',
+                    'spotify_url',
+                    'spotify_list',
+                    'spotify_list_sub',
+                    'barcode',
+                    'discogs'
+                  ]
+                }
               },
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
