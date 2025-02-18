@@ -569,39 +569,26 @@ function Collection() {
               meta: {
                 type: 'single-select',
                 options: [
-                  'manual',
-                  'spotify',
-                  'spotify_url',
-                  'spotify_list',
-                  'spotify_list_sub',
-                  'barcode',
-                  'discogs'
-                ],
+                  { value: 'manual', label: 'Manual' },
+                  { value: 'spotify', label: 'Spotify URL' },
+                  { value: 'spotify_list', label: 'Spotify List Manual' },
+                  { value: 'spotify_list_sub', label: 'Spotify List Auto' },
+                  { value: 'barcode', label: 'Barcode' },
+                  { value: 'discogs_url', label: 'Discogs' }
+                ].map(opt => opt.label),
                 option_colors: {
-                  manual: 'gray',
-                  spotify: 'green',
-                  spotify_url: 'green',
-                  spotify_list: 'green',
-                  spotify_list_sub: 'green',
-                  barcode: 'blue',
-                  discogs: 'orange'
-                },
-                option_labels: {
-                  manual: 'Manual',
-                  spotify: 'Spotify URL',
-                  spotify_list: 'Spotify List Manual',
-                  spotify_list_sub: 'Spotify List Auto',
-                  barcode: 'Barcode',
-                  discogs_url: 'Discogs'
+                  'Manual': 'gray',
+                  'Spotify URL': 'green',
+                  'Spotify List Manual': 'green',
+                  'Spotify List Auto': 'green',
+                  'Barcode': 'blue',
+                  'Discogs': 'orange'
                 }
               },
               filterFn: 'equals',
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
-                let displayText = source;
-                let color: string | undefined;
-                
                 const sourceOptions = [
                   { value: 'manual', label: 'Manual', color: 'gray' },
                   { value: 'spotify', label: 'Spotify URL', color: 'green' },
@@ -612,10 +599,8 @@ function Collection() {
                 ];
                 
                 const sourceOption = sourceOptions.find(opt => opt.value === source);
-                if (sourceOption) {
-                  displayText = sourceOption.label;
-                  color = sourceOption.color;
-                }
+                const displayText = sourceOption?.label || source;
+                const color = sourceOption?.color;
                 
                 return (
                   <Box style={{ position: 'relative' }}>
