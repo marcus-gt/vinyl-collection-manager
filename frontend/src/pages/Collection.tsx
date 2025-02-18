@@ -606,11 +606,10 @@ function Collection() {
                 const sourceOptions = [
                   { value: 'manual', label: 'Manual', color: 'gray' },
                   { value: 'spotify', label: 'Spotify URL', color: 'green' },
-                  { value: 'spotify_url', label: 'Spotify URL', color: 'green' },
                   { value: 'spotify_list', label: 'Spotify List Manual', color: 'green' },
                   { value: 'spotify_list_sub', label: 'Spotify List Auto', color: 'green' },
                   { value: 'barcode', label: 'Barcode', color: 'blue' },
-                  { value: 'discogs', label: 'Discogs', color: 'orange' }
+                  { value: 'discogs_url', label: 'Discogs URL', color: 'orange' }
                 ];
                 
                 const sourceOption = sourceOptions.find(opt => opt.value === source);
