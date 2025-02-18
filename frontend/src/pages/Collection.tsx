@@ -566,31 +566,47 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 200,
-              meta: { 
+              meta: {
                 type: 'single-select',
                 options: [
-                  { label: 'Manual', value: 'manual' },
-                  { label: 'Spotify URL', value: 'spotify' },
-                  { label: 'Spotify URL', value: 'spotify_url' },
-                  { label: 'Spotify List Manual', value: 'spotify_list' },
-                  { label: 'Spotify List Auto', value: 'spotify_list_sub' },
-                  { label: 'Barcode', value: 'barcode' },
-                  { label: 'Discogs', value: 'discogs' }
+                  'manual',
+                  'spotify',
+                  'spotify_url',
+                  'spotify_list',
+                  'spotify_list_sub',
+                  'barcode',
+                  'discogs'
                 ],
-                customColumn: {
-                  id: 'added_from',
-                  name: 'Source',
-                  type: 'single-select',
-                  options: [
-                    'manual',
-                    'spotify',
-                    'spotify_url',
-                    'spotify_list',
-                    'spotify_list_sub',
-                    'barcode',
-                    'discogs'
-                  ]
+                option_colors: {
+                  manual: 'gray',
+                  spotify: 'green',
+                  spotify_url: 'green',
+                  spotify_list: 'green',
+                  spotify_list_sub: 'green',
+                  barcode: 'blue',
+                  discogs: 'orange'
+                },
+                option_labels: {
+                  manual: 'Manual',
+                  spotify: 'Spotify URL',
+                  spotify_url: 'Spotify URL',
+                  spotify_list: 'Spotify List Manual',
+                  spotify_list_sub: 'Spotify List Auto',
+                  barcode: 'Barcode',
+                  discogs: 'Discogs'
                 }
+              },
+              filter: {
+                type: 'single-select',
+                options: [
+                  'manual',
+                  'spotify',
+                  'spotify_url',
+                  'spotify_list',
+                  'spotify_list_sub',
+                  'barcode',
+                  'discogs'
+                ]
               },
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
@@ -695,7 +711,16 @@ function Collection() {
       enableResizing: true,
       minSize: column.type === 'boolean' ? 50 : 100, // Smaller min width for boolean
       maxSize: column.type === 'boolean' ? 100 : 1000, // Smaller max width for boolean
-      meta: { type: column.type },
+      meta: { 
+        type: column.type,
+        options: column.options,
+        option_colors: column.option_colors
+      },
+      filter: column.type === 'multi-select' || column.type === 'single-select' ? {
+        type: column.type,
+        options: column.options || []
+      } : undefined,
+      enableColumnFilter: column.type === 'multi-select' || column.type === 'single-select',
       cell: ({ row }: { row: Row<VinylRecord> }) => {
         const [localValue, setLocalValue] = useState(row.original.customValues?.[column.id] || '');
         
