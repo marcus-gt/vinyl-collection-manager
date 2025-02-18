@@ -134,26 +134,32 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleScan = async (scannedBarcode: string) => {
-    console.log('=== Scanning Barcode ===');
-    console.log('Scanned barcode:', scannedBarcode);
+    setBarcode(scannedBarcode);
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    abortControllerRef.current = new AbortController();
     
     try {
-      setLoading(true);
-      setError(null);
-      
-      const result = await lookup.byBarcode(scannedBarcode);
-      console.log('Barcode lookup result:', result);
-      console.log('added_from in result:', result.data?.added_from);
-      
-      if (result.success && result.data) {
-        setRecord(result.data);
+      const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
+      if (response.success && response.data) {
+        setRecord(response.data);
+        setError(null);
       } else {
-        setError('No record found for this barcode');
+        setError(response.error || 'Failed to find record');
+        setRecord(null);
       }
-    } catch (error) {
-      console.error('Barcode lookup error:', error);
-      setError('Failed to look up barcode');
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      setError('Failed to lookup barcode');
+      setRecord(null);
     } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -470,42 +476,29 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!spotifyUrl) return;
     
     setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
-        const recordData: Partial<VinylRecord> = {
-          artist: result.data.artist,
-          album: result.data.name,
-          year: parseInt(result.data.release_date.split('-')[0]),
-          added_from: 'spotify'
-        };
-        const response = await records.add(recordData);
-        if (response.success) {
-          setSuccess('Added to collection!');
+        // First try to find the record in Discogs
+        const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
+        if (lookupResponse.success && lookupResponse.data) {
+          // Show the record preview instead of adding directly
+          setRecord(lookupResponse.data);
           setSpotifyUrl('');
-          notifications.show({
-            title: 'Success',
-            message: 'Record added to collection',
-            color: 'green'
-          });
-          onClose();
+          setError(null);
         } else {
-          setError(response.error || 'Failed to add to collection');
+          setError("Couldn't find record in Discogs");
         }
       } else if (result.needs_auth) {
         setIsSpotifyAuthenticated(false);
-        // Show authentication required notification
-        notifications.show({
-          title: 'Authentication Required',
-          message: 'Please connect your Spotify account to use this feature.',
-          color: 'blue'
-        });
       } else {
         setError(result.error || 'Failed to get album information');
       }
-    } catch (error) {
-      console.error('Error looking up Spotify URL:', error);
-      setError('Failed to get album information');
+    } catch (err) {
+      setError('Failed to lookup album');
     } finally {
       setLoading(false);
     }
@@ -637,23 +630,29 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     artist: string;
     release_date: string;
   }) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      // First get Discogs data
       const lookupResponse = await lookup.byArtistAlbum(album.artist, album.name);
       if (lookupResponse.success && lookupResponse.data) {
         // Override the added_from field
-        const recordData: Partial<VinylRecord> = {
+        const recordData: VinylRecord = {
           ...lookupResponse.data,
           added_from: 'spotify_list'  // Force 'spotify_list' as the source
         };
         const response = await records.add(recordData);
         if (response.success) {
+          setSuccess('Added to collection!');
+          setRecordsChanged(true);
           notifications.show({
             title: 'Success',
             message: 'Record added to collection',
             color: 'green'
           });
         } else {
+          setError(response.error || 'Failed to add record');
           notifications.show({
             title: 'Error',
             message: response.error || 'Failed to add record',
@@ -661,19 +660,23 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           });
         }
       } else {
+        setError(lookupResponse.error || 'Failed to find album in Discogs');
         notifications.show({
           title: 'Error',
           message: lookupResponse.error || 'Failed to find album in Discogs',
           color: 'red'
         });
       }
-    } catch (error) {
-      console.error('Error adding album:', error);
+    } catch (err) {
+      console.error('Error adding album:', err);
+      setError('Failed to add record');
       notifications.show({
         title: 'Error',
         message: 'Failed to add record',
         color: 'red'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
