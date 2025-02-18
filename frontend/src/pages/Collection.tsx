@@ -596,18 +596,7 @@ function Collection() {
                   discogs: 'Discogs'
                 }
               },
-              filter: {
-                type: 'single-select',
-                options: [
-                  'manual',
-                  'spotify',
-                  'spotify_url',
-                  'spotify_list',
-                  'spotify_list_sub',
-                  'barcode',
-                  'discogs'
-                ]
-              },
+              filterFn: 'equals',
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
@@ -716,10 +705,9 @@ function Collection() {
         options: column.options,
         option_colors: column.option_colors
       },
-      filter: column.type === 'multi-select' || column.type === 'single-select' ? {
-        type: column.type,
-        options: column.options || []
-      } : undefined,
+      filterFn: column.type === 'multi-select' ? 'arrIncludes' : 
+                column.type === 'single-select' ? 'equals' : 
+                undefined,
       enableColumnFilter: column.type === 'multi-select' || column.type === 'single-select',
       cell: ({ row }: { row: Row<VinylRecord> }) => {
         const [localValue, setLocalValue] = useState(row.original.customValues?.[column.id] || '');
