@@ -63,6 +63,8 @@ type ExtendedColumnDef<T> = ColumnDef<T> & {
     type?: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
     options?: string[];
     customColumn?: CustomColumnData;
+    labelMap?: Record<string, string>;
+    valueMap?: Record<string, string>;
   };
 };
 
@@ -680,7 +682,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         // Get the mapping from display labels to raw values
         const labelToValueMap = columnMeta?.labelMap || {};
         // Get the mapping from raw values to display labels
-        const valueToLabelMap = Object.entries(labelToValueMap).reduce((acc, [label, value]) => {
+        const valueToLabelMap = Object.entries(labelToValueMap as Record<string, string>).reduce((acc, [label, value]) => {
           acc[value] = label;
           return acc;
         }, {} as Record<string, string>);
