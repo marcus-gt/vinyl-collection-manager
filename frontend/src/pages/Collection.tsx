@@ -569,16 +569,15 @@ function Collection() {
               meta: {
                 type: 'single-select',
                 options: [
-                  'manual',
-                  'spotify',
-                  'spotify_url',
-                  'spotify_list',
-                  'spotify_list_sub',
-                  'barcode',
-                  'discogs'
+                  { label: 'Manual', value: 'manual' },
+                  { label: 'Spotify URL', value: 'spotify' },
+                  { label: 'Spotify URL', value: 'spotify_url' },
+                  { label: 'Spotify List Manual', value: 'spotify_list' },
+                  { label: 'Spotify List Auto', value: 'spotify_list_sub' },
+                  { label: 'Barcode', value: 'barcode' },
+                  { label: 'Discogs', value: 'discogs' }
                 ]
               },
-              filterFn: 'single-select',
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
