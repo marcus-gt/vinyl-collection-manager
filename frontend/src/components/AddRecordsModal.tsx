@@ -11,6 +11,19 @@ interface AddRecordsModalProps {
   onClose: () => void;
 }
 
+interface ManualRecordForm {
+  artist: string;
+  album: string;
+  year?: number;
+  label?: string;
+  genres: string[];
+  styles: string[];
+  musicians: string[];
+  genresText: string;
+  stylesText: string;
+  musiciansText: string;
+}
+
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
@@ -23,12 +36,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [recordsChanged, setRecordsChanged] = useState(false);
-  const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
-    genresText?: string;
-    stylesText?: string;
-    musiciansText?: string;
-  }>({
+  const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
     artist: '',
     album: '',
     year: undefined,
@@ -66,9 +74,13 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     total_tracks: number;
     image_url: string | null;
   }>>([]);
-  const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    content: React.ReactNode;
+  }>({ title: '', content: null });
   const [showModal, setShowModal] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [recordsChanged, setRecordsChanged] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -298,57 +310,42 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // If we're in the manual form, use all the info, otherwise just use artist and album
-      const recordToSubmit = showManualForm ? {
-        artist: manualRecord.artist,
-        album: manualRecord.album,
+      // Convert text fields to arrays
+      const recordToSubmit: Partial<VinylRecord> = {
+        artist: manualRecord.artist || '',
+        album: manualRecord.album || '',
         year: manualRecord.year,
         label: manualRecord.label,
-        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
-        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
-      } : {
-        artist: artist.trim(),
-        album: album.trim()
+        genres: manualRecord.genresText?.split(',').map((g: string) => g.trim()).filter(Boolean) || [],
+        styles: manualRecord.stylesText?.split(',').map((s: string) => s.trim()).filter(Boolean) || [],
+        musicians: manualRecord.musiciansText?.split(',').map((m: string) => m.trim()).filter(Boolean) || [],
+        added_from: 'manual'
       };
 
-      console.log('Submitting record:', recordToSubmit);
       const response = await records.add(recordToSubmit);
-      console.log('Submit response:', response);
-
       if (response.success) {
-        console.log('Record added successfully, setting recordsChanged to true');
         setSuccess('Added to collection!');
-        setRecordsChanged(true);  // Record was successfully added
-        // Reset form
+        // Reset fields
         setArtist('');
         setAlbum('');
         setRecord(null);
-        if (showManualForm) {
-          setShowManualForm(false);
-          setManualRecord({
-            artist: '',
-            album: '',
-            year: undefined,
-            label: '',
-            genres: [],
-            styles: [],
-            musicians: [],
-            genresText: '',
-            stylesText: '',
-            musiciansText: ''
-          });
-        }
-        // Clear success message after delay
-        setTimeout(() => {
-          setSuccess(null);
-        }, 3000);
+        setShowManualForm(false);
+        setManualRecord({
+          artist: '',
+          album: '',
+          year: undefined,
+          label: '',
+          genres: [],
+          styles: [],
+          musicians: [],
+          genresText: '',
+          stylesText: '',
+          musiciansText: ''
+        });
       } else {
-        console.log('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
-      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -477,25 +474,33 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
-        // First get Discogs data
-        const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
-        if (lookupResponse.success && lookupResponse.data) {
-          // Override the added_from field
-          setRecord({
-            ...lookupResponse.data,
-            added_from: 'spotify'  // Force 'spotify' as the source
-          });
+        const recordData: Partial<VinylRecord> = {
+          artist: result.data.artist,
+          album: result.data.name,
+          year: parseInt(result.data.release_date.split('-')[0]),
+          added_from: 'spotify'
+        };
+        const response = await records.add(recordData);
+        if (response.success) {
+          setSuccess('Added to collection!');
           setSpotifyUrl('');
           notifications.show({
             title: 'Success',
-            message: 'Album found',
+            message: 'Record added to collection',
             color: 'green'
           });
+          onClose();
         } else {
-          setError(lookupResponse.error || 'Failed to find album in Discogs');
+          setError(response.error || 'Failed to add to collection');
         }
       } else if (result.needs_auth) {
-        setShowSpotifyConnect(true);
+        setIsSpotifyAuthenticated(false);
+        // Show authentication required notification
+        notifications.show({
+          title: 'Authentication Required',
+          message: 'Please connect your Spotify account to use this feature.',
+          color: 'blue'
+        });
       } else {
         setError(result.error || 'Failed to get album information');
       }
