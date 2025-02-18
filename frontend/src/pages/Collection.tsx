@@ -589,11 +589,10 @@ function Collection() {
                 option_labels: {
                   manual: 'Manual',
                   spotify: 'Spotify URL',
-                  spotify_url: 'Spotify URL',
                   spotify_list: 'Spotify List Manual',
                   spotify_list_sub: 'Spotify List Auto',
                   barcode: 'Barcode',
-                  discogs: 'Discogs'
+                  discogs_url: 'Discogs'
                 }
               },
               filterFn: 'equals',
@@ -609,7 +608,7 @@ function Collection() {
                   { value: 'spotify_list', label: 'Spotify List Manual', color: 'green' },
                   { value: 'spotify_list_sub', label: 'Spotify List Auto', color: 'green' },
                   { value: 'barcode', label: 'Barcode', color: 'blue' },
-                  { value: 'discogs_url', label: 'Discogs URL', color: 'orange' }
+                  { value: 'discogs_url', label: 'Discogs', color: 'orange' }
                 ];
                 
                 const sourceOption = sourceOptions.find(opt => opt.value === source);
