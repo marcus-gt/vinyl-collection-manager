@@ -194,11 +194,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const singleSelectFilter: FilterFn<T> = (
     row: Row<T>,
     columnId: string,
-    value: string
+    filterValue: string
   ): boolean => {
-    if (!value) return true;
+    if (!filterValue) return true;
     const cellValue = row.getValue(columnId);
-    return String(cellValue) === value;
+    
+    // For the Source column, we need to compare raw values
+    if (columnId === 'added_from') {
+      console.log('Single-select filter comparison:', {
+        columnId,
+        cellValue,
+        filterValue,
+        matches: cellValue === filterValue
+      });
+    }
+    
+    return cellValue === filterValue;
   };
 
   const booleanFilter: FilterFn<T> = (
@@ -665,12 +676,35 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         );
 
       case 'single-select':
+        const columnMeta = column.meta;
+        // Get the mapping from display labels to raw values
+        const labelToValueMap = columnMeta?.labelMap || {};
+        // Get the mapping from raw values to display labels
+        const valueToLabelMap = Object.entries(labelToValueMap).reduce((acc, [label, value]) => {
+          acc[value] = label;
+          return acc;
+        }, {} as Record<string, string>);
+
+        // Create options array with value = raw value, label = display label
+        const selectOptions = column.filter.options?.map((displayLabel: string) => ({
+          value: labelToValueMap[displayLabel] || displayLabel,  // Use raw value
+          label: displayLabel  // Use display label
+        })) || [];
+
+        console.log('Single-select setup:', {
+          columnId: header.column.id,
+          labelToValueMap,
+          valueToLabelMap,
+          selectOptions,
+          currentFilter
+        });
+
         return (
           <Select
             placeholder="Select..."
             value={(currentFilter?.value as string) || null}
             onChange={(value) => handleFilterChange(header.column.id, value)}
-            data={column.filter.options?.map((opt: string) => ({ value: opt, label: opt })) || []}
+            data={selectOptions}
             clearable
             searchable
             size="xs"
