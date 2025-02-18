@@ -11,6 +11,19 @@ interface AddRecordsModalProps {
   onClose: () => void;
 }
 
+interface ManualRecordForm {
+  artist: string;
+  album: string;
+  year?: number;
+  label?: string;
+  genres: string[];
+  styles: string[];
+  musicians: string[];
+  genresText: string;
+  stylesText: string;
+  musiciansText: string;
+}
+
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
@@ -23,12 +36,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [recordsChanged, setRecordsChanged] = useState(false);
-  const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
-    genresText?: string;
-    stylesText?: string;
-    musiciansText?: string;
-  }>({
+  const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
     artist: '',
     album: '',
     year: undefined,
@@ -41,23 +49,17 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     musiciansText: ''
   });
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [showSpotifyConnect, setShowSpotifyConnect] = useState(false);
+  const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
+  const [loadingSpotify, setLoadingSpotify] = useState(false);
+  const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
   const [spotifyPlaylists, setSpotifyPlaylists] = useState<Array<{
     id: string;
     name: string;
     tracks: number;
   }>>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
-  const [loadingSpotify, setLoadingSpotify] = useState(false);
-  const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
-  const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
-  const [spotifyUrl, setSpotifyUrl] = useState('');
-  const [isLoadingAlbumLookup, setIsLoadingAlbumLookup] = useState(false);
-  const [subscribedPlaylist, setSubscribedPlaylist] = useState<{
-    playlist_id: string;
-    playlist_name: string;
-    last_checked_at: string;
-  } | null>(null);
-  const [isSubscribing, setIsSubscribing] = useState(false);
   const [playlistAlbums, setPlaylistAlbums] = useState<Array<{
     id: string;
     name: string;
@@ -66,8 +68,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     total_tracks: number;
     image_url: string | null;
   }>>([]);
-  const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
+  const [subscribedPlaylist, setSubscribedPlaylist] = useState<{
+    playlist_id: string;
+    playlist_name: string;
+    last_checked_at: string;
+  } | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState<{
+    title: string;
+    content: React.ReactNode;
+  }>({ title: '', content: null });
+  const [recordsChanged, setRecordsChanged] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   // Reset state when modal is opened
@@ -298,57 +310,42 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // If we're in the manual form, use all the info, otherwise just use artist and album
-      const recordToSubmit = showManualForm ? {
-        artist: manualRecord.artist,
-        album: manualRecord.album,
+      // Convert text fields to arrays
+      const recordToSubmit: Partial<VinylRecord> = {
+        artist: manualRecord.artist || '',
+        album: manualRecord.album || '',
         year: manualRecord.year,
         label: manualRecord.label,
-        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
-        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
-      } : {
-        artist: artist.trim(),
-        album: album.trim()
+        genres: manualRecord.genresText?.split(',').map((g: string) => g.trim()).filter(Boolean) || [],
+        styles: manualRecord.stylesText?.split(',').map((s: string) => s.trim()).filter(Boolean) || [],
+        musicians: manualRecord.musiciansText?.split(',').map((m: string) => m.trim()).filter(Boolean) || [],
+        added_from: 'manual'
       };
 
-      console.log('Submitting record:', recordToSubmit);
       const response = await records.add(recordToSubmit);
-      console.log('Submit response:', response);
-
       if (response.success) {
-        console.log('Record added successfully, setting recordsChanged to true');
         setSuccess('Added to collection!');
-        setRecordsChanged(true);  // Record was successfully added
-        // Reset form
+        // Reset fields
         setArtist('');
         setAlbum('');
         setRecord(null);
-        if (showManualForm) {
-          setShowManualForm(false);
-          setManualRecord({
-            artist: '',
-            album: '',
-            year: undefined,
-            label: '',
-            genres: [],
-            styles: [],
-            musicians: [],
-            genresText: '',
-            stylesText: '',
-            musiciansText: ''
-          });
-        }
-        // Clear success message after delay
-        setTimeout(() => {
-          setSuccess(null);
-        }, 3000);
+        setShowManualForm(false);
+        setManualRecord({
+          artist: '',
+          album: '',
+          year: undefined,
+          label: '',
+          genres: [],
+          styles: [],
+          musicians: [],
+          genresText: '',
+          stylesText: '',
+          musiciansText: ''
+        });
       } else {
-        console.log('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
-      console.error('Error adding record:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -978,187 +975,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
                 <Tabs.Panel value="spotify" pt="xs">
                   <Stack>
-                    {loadingSpotify ? (
-                      <Stack align="center" gap="md">
-                        <Loader size="sm" />
-                        <Text c="dimmed" size="sm">Checking Spotify connection...</Text>
-                      </Stack>
-                    ) : !isSpotifyAuthenticated ? (
-                      <Stack align="center" gap="md">
-                        <Text c="dimmed" size="sm">Connect your Spotify account to import albums from your playlists</Text>
-                        <Button
-                          leftSection={<IconBrandSpotify size={20} />}
-                          onClick={handleSpotifyAuth}
-                          loading={isLoadingSpotifyAuth}
-                        >
-                          Connect Spotify
-                        </Button>
-                      </Stack>
-                    ) : (
-                      <>
-                        <Box mb="md">
-                          <Text size="sm" mb={5}>Paste a Spotify album/track URL:</Text>
-                          <Group>
-                            <TextInput
-                              placeholder="https://open.spotify.com/album/..."
-                              value={spotifyUrl}
-                              onChange={(e) => setSpotifyUrl(e.target.value)}
-                              style={{ flex: 1 }}
-                              disabled={isLoadingAlbumLookup}
-                            />
-                            <Button
-                              onClick={handleSpotifyUrlLookup}
-                              loading={isLoadingAlbumLookup}
-                              disabled={!spotifyUrl}
-                            >
-                              Lookup
-                            </Button>
-                          </Group>
-                        </Box>
-                        <Divider my="md" />
-
-                        <Title order={4} mb="md">Browse Playlists</Title>
-                        <Select
-                          label="Select Playlist"
-                          placeholder="Choose a playlist to view albums"
-                          data={spotifyPlaylists.map(playlist => ({
-                            value: playlist.id,
-                            label: `${playlist.name} (${playlist.tracks} tracks)`
-                          }))}
-                          value={selectedPlaylist}
-                          onChange={handlePlaylistSelect}
-                          searchable
-                          clearable
-                        />
-
-                        {playlistAlbums.length > 0 && (
-                          <Stack mt="md">
-                            <Text size="sm" fw={500}>Albums in Playlist</Text>
-                            <ScrollArea h={300}>
-                              {playlistAlbums.map(album => (
-                                <Paper
-                                  key={album.id}
-                                  withBorder
-                                  p="xs"
-                                  mb="xs"
-                                >
-                                  <Group justify="space-between">
-                                    <Box>
-                                      <Text size="sm" fw={500}>{album.name}</Text>
-                                      <Text size="xs" c="dimmed">{album.artist}</Text>
-                                      <Text size="xs" c="dimmed">
-                                        Released: {new Date(album.release_date).getFullYear()}
-                                      </Text>
-                                    </Box>
-                                    <Button
-                                      size="xs"
-                                      variant="light"
-                                      onClick={() => handleAddSpotifyAlbum(album)}
-                                      loading={loading}
-                                    >
-                                      Add
-                                    </Button>
-                                  </Group>
-                                </Paper>
-                              ))}
-                            </ScrollArea>
-                            {error && (
-                              <Alert color="red" title="Error" variant="light">
-                                {error}
-                              </Alert>
-                            )}
-                            {success && (
-                              <Alert color="green" title="Success" variant="light">
-                                {success}
-                              </Alert>
-                            )}
-                          </Stack>
-                        )}
-
-                        <Divider my="xl" label="Or Subscribe to a Playlist" labelPosition="center" />
-
-                        <Title order={4} mb="md">Playlist Subscription</Title>
-                        <Text size="sm" c="dimmed" mb="md">
-                          Subscribe to a playlist to automatically import new albums when they're added.
-                        </Text>
-
-                        {loadingSpotify ? (
-                          <Stack align="center" gap="md">
-                            <Loader size="sm" />
-                            <Text c="dimmed" size="sm">Loading playlists...</Text>
-                          </Stack>
-                        ) : (
-                          <>
-                            {subscribedPlaylist ? (
-                              <Paper withBorder p="md" mb="md">
-                                <Stack>
-                                  <Group justify="space-between">
-                                    <div>
-                                      <Text size="sm" fw={500}>Currently Subscribed</Text>
-                                      <Text size="sm">{subscribedPlaylist.playlist_name}</Text>
-                                      <Text size="xs" c="dimmed">
-                                        Last checked: {new Date(subscribedPlaylist.last_checked_at).toLocaleString()}
-                                      </Text>
-                                    </div>
-                                    <Stack gap="xs">
-                                      <Button
-                                        variant="light"
-                                        size="xs"
-                                        onClick={handleSyncPlaylists}
-                                        loading={loading}
-                                      >
-                                        Sync Now
-                                      </Button>
-                                      <Button
-                                        variant="light"
-                                        color="red"
-                                        size="xs"
-                                        onClick={handleUnsubscribe}
-                                        loading={isSubscribing}
-                                      >
-                                        Unsubscribe
-                                      </Button>
-                                    </Stack>
-                                  </Group>
-                                </Stack>
-                              </Paper>
-                            ) : (
-                              <Select
-                                label="Select Playlist to Subscribe"
-                                placeholder="Choose a playlist"
-                                data={spotifyPlaylists.map(playlist => ({
-                                  value: playlist.id,
-                                  label: `${playlist.name} (${playlist.tracks} tracks)`
-                                }))}
-                                value={selectedPlaylist}
-                                onChange={(value) => value && handleSubscribe(value)}
-                                searchable
-                                clearable
-                                disabled={isSubscribing}
-                              />
-                            )}
-                            <Text size="xs" c="dimmed" mt={5}>
-                              {subscribedPlaylist 
-                                ? 'New albums added to this playlist will be automatically imported into your collection.'
-                                : 'Select a playlist to automatically import new albums when they are added.'}
-                            </Text>
-                          </>
-                        )}
-
-                        {isSpotifyAuthenticated && (
-                          <Group justify="flex-end" mb="md">
-                            <Button
-                              variant="light"
-                              color="red"
-                              onClick={handleSpotifyDisconnect}
-                              loading={isDisconnecting}
-                            >
-                              Disconnect Spotify
-                            </Button>
-                          </Group>
-                        )}
-                      </>
-                    )}
+                    <TextInput
+                      label="Spotify Album/Track URL"
+                      placeholder="https://open.spotify.com/album/..."
+                      value={spotifyUrl}
+                      onChange={(e) => setSpotifyUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSpotifyUrlLookup()}
+                      disabled={loading}
+                    />
+                    <Button 
+                      onClick={handleSpotifyUrlLookup}
+                      loading={loading}
+                      disabled={!spotifyUrl.trim()}
+                    >
+                      Look up Album
+                    </Button>
                   </Stack>
                 </Tabs.Panel>
               </Tabs>
