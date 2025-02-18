@@ -486,7 +486,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
         if (lookupResponse.success && lookupResponse.data) {
           // Show the record preview instead of adding directly
-          setRecord(lookupResponse.data);
+          setRecord({
+            ...lookupResponse.data,
+            added_from: 'spotify_url'  // Set the source as spotify_url
+          });
           setSpotifyUrl('');
           setError(null);
         } else {
