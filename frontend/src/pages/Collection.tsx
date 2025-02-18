@@ -558,6 +558,48 @@ function Collection() {
               cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_year || '-'
             },
             {
+              id: 'added_from',
+              accessorKey: 'added_from',
+              header: 'Source',
+              enableSorting: true,
+              size: 100,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const source = row.original.added_from;
+                let displayText = source;
+                let color: string | undefined;
+                
+                switch (source) {
+                  case 'manual':
+                    displayText = 'Manual';
+                    color = 'gray';
+                    break;
+                  case 'spotify':
+                    displayText = 'Spotify';
+                    color = 'green';
+                    break;
+                  case 'barcode':
+                    displayText = 'Barcode';
+                    color = 'blue';
+                    break;
+                  case 'discogs':
+                    displayText = 'Discogs';
+                    color = 'orange';
+                    break;
+                  default:
+                    displayText = source || '-';
+                }
+                
+                return source ? (
+                  <Badge color={color} size="sm">
+                    {displayText}
+                  </Badge>
+                ) : '-';
+              }
+            },
+            {
               id: 'links',
               accessorKey: 'links',
               header: 'Links',
