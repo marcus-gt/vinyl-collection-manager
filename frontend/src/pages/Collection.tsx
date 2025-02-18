@@ -578,18 +578,8 @@ function Collection() {
                   'discogs'
                 ]
               },
-              filter: {
-                type: 'single-select',
-                options: [
-                  'manual',
-                  'spotify',
-                  'spotify_url',
-                  'spotify_list',
-                  'spotify_list_sub',
-                  'barcode',
-                  'discogs'
-                ]
-              },
+              filterFn: 'single-select',
+              enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
                 let displayText = source;
