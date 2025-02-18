@@ -603,15 +603,11 @@ function Collection() {
               },
               filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
                 const cellValue = row.getValue(columnId);
-                const labelMap: Record<string, string> = {
-                  'Manual': 'manual',
-                  'Spotify URL': 'spotify',
-                  'Spotify List Manual': 'spotify_list',
-                  'Spotify List Auto': 'spotify_list_sub',
-                  'Barcode': 'barcode',
-                  'Discogs': 'discogs_url'
-                };
-                const internalValue = labelMap[filterValue];
+                // Get the labelMap from the column's meta
+                const column = row.getTable().getColumn(columnId);
+                const labelMap = column?.columnDef?.meta?.labelMap as Record<string, string>;
+                const internalValue = labelMap?.[filterValue];
+                console.log('Filter comparison:', { cellValue, filterValue, internalValue, labelMap });
                 return cellValue === internalValue;
               },
               enableColumnFilter: true,
