@@ -569,12 +569,12 @@ function Collection() {
               meta: {
                 type: 'single-select',
                 options: [
-                  { value: 'manual', label: 'Manual' },
-                  { value: 'spotify', label: 'Spotify URL' },
-                  { value: 'spotify_list', label: 'Spotify List Manual' },
-                  { value: 'spotify_list_sub', label: 'Spotify List Auto' },
-                  { value: 'barcode', label: 'Barcode' },
-                  { value: 'discogs_url', label: 'Discogs' }
+                  'Manual',
+                  'Spotify URL',
+                  'Spotify List Manual',
+                  'Spotify List Auto',
+                  'Barcode',
+                  'Discogs'
                 ],
                 valueMap: {
                   'manual': 'Manual',
@@ -583,6 +583,14 @@ function Collection() {
                   'spotify_list_sub': 'Spotify List Auto',
                   'barcode': 'Barcode',
                   'discogs_url': 'Discogs'
+                },
+                labelMap: {
+                  'Manual': 'manual',
+                  'Spotify URL': 'spotify',
+                  'Spotify List Manual': 'spotify_list',
+                  'Spotify List Auto': 'spotify_list_sub',
+                  'Barcode': 'barcode',
+                  'Discogs': 'discogs_url'
                 },
                 option_colors: {
                   'Manual': 'gray',
@@ -595,32 +603,38 @@ function Collection() {
               },
               filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
                 const cellValue = row.getValue(columnId);
-                const sourceOptions = [
-                  { value: 'manual', label: 'Manual' },
-                  { value: 'spotify', label: 'Spotify URL' },
-                  { value: 'spotify_list', label: 'Spotify List Manual' },
-                  { value: 'spotify_list_sub', label: 'Spotify List Auto' },
-                  { value: 'barcode', label: 'Barcode' },
-                  { value: 'discogs_url', label: 'Discogs' }
-                ];
-                const option = sourceOptions.find(opt => opt.label === filterValue);
-                return option ? cellValue === option.value : true;
+                const valueMap: Record<string, string> = {
+                  'Manual': 'manual',
+                  'Spotify URL': 'spotify',
+                  'Spotify List Manual': 'spotify_list',
+                  'Spotify List Auto': 'spotify_list_sub',
+                  'Barcode': 'barcode',
+                  'Discogs': 'discogs_url'
+                };
+                return cellValue === valueMap[filterValue];
               },
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
-                const sourceOptions = [
-                  { value: 'manual', label: 'Manual', color: 'gray' },
-                  { value: 'spotify', label: 'Spotify URL', color: 'green' },
-                  { value: 'spotify_list', label: 'Spotify List Manual', color: 'green' },
-                  { value: 'spotify_list_sub', label: 'Spotify List Auto', color: 'green' },
-                  { value: 'barcode', label: 'Barcode', color: 'blue' },
-                  { value: 'discogs_url', label: 'Discogs', color: 'orange' }
-                ];
+                const displayMap: Record<string, string> = {
+                  'manual': 'Manual',
+                  'spotify': 'Spotify URL',
+                  'spotify_list': 'Spotify List Manual',
+                  'spotify_list_sub': 'Spotify List Auto',
+                  'barcode': 'Barcode',
+                  'discogs_url': 'Discogs'
+                };
+                const colorMap: Record<string, string> = {
+                  'manual': 'gray',
+                  'spotify': 'green',
+                  'spotify_list': 'green',
+                  'spotify_list_sub': 'green',
+                  'barcode': 'blue',
+                  'discogs_url': 'orange'
+                };
                 
-                const sourceOption = sourceOptions.find(opt => opt.value === source);
-                const displayText = sourceOption?.label || source;
-                const color = sourceOption?.color;
+                const displayText = source ? displayMap[source] || source : '-';
+                const color = source ? colorMap[source] : undefined;
                 
                 return (
                   <Box style={{ position: 'relative' }}>
