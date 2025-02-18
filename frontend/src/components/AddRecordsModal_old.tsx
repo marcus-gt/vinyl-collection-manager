@@ -11,19 +11,6 @@ interface AddRecordsModalProps {
   onClose: () => void;
 }
 
-interface ManualRecordForm {
-  artist: string;
-  album: string;
-  year?: number;
-  label?: string;
-  genres: string[];
-  styles: string[];
-  musicians: string[];
-  genresText: string;
-  stylesText: string;
-  musiciansText: string;
-}
-
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
@@ -36,7 +23,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
+  const [recordsChanged, setRecordsChanged] = useState(false);
+  const [manualRecord, setManualRecord] = useState<Partial<VinylRecord> & {
+    genresText?: string;
+    stylesText?: string;
+    musiciansText?: string;
+  }>({
     artist: '',
     album: '',
     year: undefined,
@@ -59,6 +51,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
   const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [isLoadingAlbumLookup, setIsLoadingAlbumLookup] = useState(false);
   const [subscribedPlaylist, setSubscribedPlaylist] = useState<{
     playlist_id: string;
     playlist_name: string;
@@ -73,13 +66,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     total_tracks: number;
     image_url: string | null;
   }>>([]);
-  const [modalContent, setModalContent] = useState<{
-    title: string;
-    content: React.ReactNode;
-  }>({ title: '', content: null });
+  const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode } | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [recordsChanged, setRecordsChanged] = useState(false);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -134,32 +123,26 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleScan = async (scannedBarcode: string) => {
-    setBarcode(scannedBarcode);
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
-    abortControllerRef.current = new AbortController();
+    console.log('=== Scanning Barcode ===');
+    console.log('Scanned barcode:', scannedBarcode);
     
     try {
-      const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
-      if (response.success && response.data) {
-        setRecord(response.data);
-        setError(null);
+      setLoading(true);
+      setError(null);
+      
+      const result = await lookup.byBarcode(scannedBarcode);
+      console.log('Barcode lookup result:', result);
+      console.log('added_from in result:', result.data?.added_from);
+      
+      if (result.success && result.data) {
+        setRecord(result.data);
       } else {
-        setError(response.error || 'Failed to find record');
-        setRecord(null);
+        setError('No record found for this barcode');
       }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return;
-      }
-      setError('Failed to lookup barcode');
-      setRecord(null);
+    } catch (error) {
+      console.error('Barcode lookup error:', error);
+      setError('Failed to look up barcode');
     } finally {
-      if (abortControllerRef.current) {
-        abortControllerRef.current = null;
-      }
       setLoading(false);
     }
   };
@@ -323,18 +306,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         label: manualRecord.label,
         genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
         styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
-        added_from: 'manual'
+        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
       } : {
         artist: artist.trim(),
-        album: album.trim(),
-        added_from: 'manual'
+        album: album.trim()
       };
-
-      if (!recordToSubmit.artist || !recordToSubmit.album) {
-        setError('Artist and album are required');
-        return;
-      }
 
       console.log('Submitting record:', recordToSubmit);
       const response = await records.add(recordToSubmit);
@@ -497,10 +473,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleSpotifyUrlLookup = async () => {
     if (!spotifyUrl) return;
     
-    setLoading(true);
+    setIsLoadingAlbumLookup(true);
     setError(null);
-    setSuccess(null);
-    
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
@@ -508,10 +482,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
         if (lookupResponse.success && lookupResponse.data) {
           // Show the record preview instead of adding directly
-          setRecord({
-            ...lookupResponse.data,
-            added_from: 'spotify'  // Changed from 'spotify_url' to 'spotify'
-          });
+          setRecord(lookupResponse.data);
           setSpotifyUrl('');
           setError(null);
         } else {
@@ -525,7 +496,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     } catch (err) {
       setError('Failed to lookup album');
     } finally {
-      setLoading(false);
+      setIsLoadingAlbumLookup(false);
     }
   };
 
@@ -660,46 +631,20 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      const lookupResponse = await lookup.byArtistAlbum(album.artist, album.name);
-      if (lookupResponse.success && lookupResponse.data) {
-        // Override the added_from field
-        const recordData: VinylRecord = {
-          ...lookupResponse.data,
-          added_from: 'spotify_list'  // Force 'spotify_list' as the source
-        };
-        const response = await records.add(recordData);
-        if (response.success) {
+      const response = await lookup.byArtistAlbum(album.artist, album.name);
+      if (response.success && response.data) {
+        const addResponse = await records.add(response.data);
+        if (addResponse.success) {
           setSuccess('Added to collection!');
           setRecordsChanged(true);
-          notifications.show({
-            title: 'Success',
-            message: 'Record added to collection',
-            color: 'green'
-          });
         } else {
-          setError(response.error || 'Failed to add record');
-          notifications.show({
-            title: 'Error',
-            message: response.error || 'Failed to add record',
-            color: 'red'
-          });
+          setError(addResponse.error || 'Failed to add to collection');
         }
       } else {
-        setError(lookupResponse.error || 'Failed to find album in Discogs');
-        notifications.show({
-          title: 'Error',
-          message: lookupResponse.error || 'Failed to find album in Discogs',
-          color: 'red'
-        });
+        setError("Couldn't find record in Discogs");
       }
     } catch (err) {
-      console.error('Error adding album:', err);
-      setError('Failed to add record');
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to add record',
-        color: 'red'
-      });
+      setError('Failed to add album');
     } finally {
       setLoading(false);
     }
@@ -1043,9 +988,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                               value={spotifyUrl}
                               onChange={(e) => setSpotifyUrl(e.target.value)}
                               style={{ flex: 1 }}
+                              disabled={isLoadingAlbumLookup}
                             />
                             <Button
                               onClick={handleSpotifyUrlLookup}
+                              loading={isLoadingAlbumLookup}
                               disabled={!spotifyUrl}
                             >
                               Lookup
