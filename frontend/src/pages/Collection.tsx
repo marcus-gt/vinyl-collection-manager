@@ -577,7 +577,16 @@ function Collection() {
                     color = 'gray';
                     break;
                   case 'spotify':
-                    displayText = 'Spotify';
+                  case 'spotify_url':
+                    displayText = 'Spotify URL';
+                    color = 'green';
+                    break;
+                  case 'spotify_list':
+                    displayText = 'Spotify List Manual';
+                    color = 'green';
+                    break;
+                  case 'spotify_list_sub':
+                    displayText = 'Spotify List Auto';
                     color = 'green';
                     break;
                   case 'barcode':
@@ -592,11 +601,31 @@ function Collection() {
                     displayText = source || '-';
                 }
                 
-                return source ? (
-                  <Badge color={color} size="sm">
-                    {displayText}
-                  </Badge>
-                ) : '-';
+                return (
+                  <Box style={{ position: 'relative' }}>
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'default', maxWidth: '90vw' }}>
+                      {source ? (
+                        <Badge
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={color}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'default',
+                              padding: '3px 8px'
+                            }
+                          }}
+                        >
+                          {displayText}
+                        </Badge>
+                      ) : (
+                        <Text size="sm" c="dimmed">-</Text>
+                      )}
+                    </Text>
+                  </Box>
+                );
               }
             },
             {
