@@ -473,30 +473,39 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleSpotifyUrlLookup = async () => {
     if (!spotifyUrl) return;
     
-    setIsLoadingAlbumLookup(true);
-    setError(null);
+    setLoading(true);
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
-        // First try to find the record in Discogs
-        const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
-        if (lookupResponse.success && lookupResponse.data) {
-          // Show the record preview instead of adding directly
-          setRecord(lookupResponse.data);
+        const recordData: Partial<VinylRecord> = {
+          artist: result.data.artist,
+          album: result.data.name,
+          year: parseInt(result.data.release_date.split('-')[0]),
+          added_from: 'spotify'  // Explicitly set to 'spotify' for Spotify URL imports
+        };
+        const response = await records.add(recordData);
+        if (response.success) {
+          setSuccess('Added to collection!');
           setSpotifyUrl('');
-          setError(null);
+          notifications.show({
+            title: 'Success',
+            message: 'Record added to collection',
+            color: 'green'
+          });
+          onClose();
         } else {
-          setError("Couldn't find record in Discogs");
+          setError(response.error || 'Failed to add to collection');
         }
       } else if (result.needs_auth) {
-        setIsSpotifyAuthenticated(false);
+        setShowSpotifyConnect(true);
       } else {
         setError(result.error || 'Failed to get album information');
       }
-    } catch (err) {
-      setError('Failed to lookup album');
+    } catch (error) {
+      console.error('Error looking up Spotify URL:', error);
+      setError('Failed to get album information');
     } finally {
-      setIsLoadingAlbumLookup(false);
+      setLoading(false);
     }
   };
 
@@ -626,27 +635,34 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     artist: string;
     release_date: string;
   }) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
     try {
-      const response = await lookup.byArtistAlbum(album.artist, album.name);
-      if (response.success && response.data) {
-        const addResponse = await records.add(response.data);
-        if (addResponse.success) {
-          setSuccess('Added to collection!');
-          setRecordsChanged(true);
-        } else {
-          setError(addResponse.error || 'Failed to add to collection');
-        }
+      const recordData: Partial<VinylRecord> = {
+        artist: album.artist,
+        album: album.name,
+        year: parseInt(album.release_date.split('-')[0]),
+        added_from: 'spotify_list'  // Explicitly set to 'spotify_list' for playlist imports
+      };
+      const response = await records.add(recordData);
+      if (response.success) {
+        notifications.show({
+          title: 'Success',
+          message: 'Record added to collection',
+          color: 'green'
+        });
       } else {
-        setError("Couldn't find record in Discogs");
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to add record',
+          color: 'red'
+        });
       }
-    } catch (err) {
-      setError('Failed to add album');
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error adding album:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to add record',
+        color: 'red'
+      });
     }
   };
 
