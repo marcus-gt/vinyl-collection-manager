@@ -566,11 +566,34 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 200,
+              meta: {
+                type: 'single-select',
+                options: [
+                  'manual',
+                  'spotify',
+                  'spotify_url',
+                  'spotify_list',
+                  'spotify_list_sub',
+                  'barcode',
+                  'discogs'
+                ]
+              },
+              filter: {
+                type: 'single-select',
+                options: [
+                  'manual',
+                  'spotify',
+                  'spotify_url',
+                  'spotify_list',
+                  'spotify_list_sub',
+                  'barcode',
+                  'discogs'
+                ]
+              },
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
                 let displayText = source;
                 let color: string | undefined;
-                const [opened, setOpened] = useState(false);
                 
                 const sourceOptions = [
                   { value: 'manual', label: 'Manual', color: 'gray' },
@@ -590,67 +613,27 @@ function Collection() {
                 
                 return (
                   <Box style={{ position: 'relative' }}>
-                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                      <Popover.Target>
-                        <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
-                          {source ? (
-                            <Badge
-                              variant="filled"
-                              size="sm"
-                              radius="sm"
-                              color={color}
-                              styles={{
-                                root: {
-                                  textTransform: 'none',
-                                  cursor: 'pointer',
-                                  padding: '3px 8px'
-                                }
-                              }}
-                            >
-                              {displayText}
-                            </Badge>
-                          ) : (
-                            <Text size="sm" c="dimmed">-</Text>
-                          )}
-                        </Text>
-                      </Popover.Target>
-                      <Popover.Dropdown>
-                        <Stack gap="xs">
-                          <Group justify="space-between" align="center">
-                            <Text size="sm" fw={500}>Edit Source</Text>
-                            <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
-                              <IconX size={16} />
-                            </ActionIcon>
-                          </Group>
-                          <Group gap="xs" wrap="wrap">
-                            {sourceOptions.map((opt) => (
-                              <Badge
-                                key={opt.value}
-                                variant="filled"
-                                size="sm"
-                                radius="sm"
-                                color={opt.color}
-                                styles={{
-                                  root: {
-                                    textTransform: 'none',
-                                    cursor: 'pointer',
-                                    padding: '3px 8px',
-                                    opacity: source === opt.value ? 1 : 0.5
-                                  }
-                                }}
-                                onClick={() => {
-                                  // Here you would typically update the record's source
-                                  // For now, we'll just close the popover since this is read-only
-                                  setOpened(false);
-                                }}
-                              >
-                                {opt.label}
-                              </Badge>
-                            ))}
-                          </Group>
-                        </Stack>
-                      </Popover.Dropdown>
-                    </Popover>
+                    <Text size="sm" lineClamp={1} style={{ cursor: 'default', maxWidth: '90vw' }}>
+                      {source ? (
+                        <Badge
+                          variant="filled"
+                          size="sm"
+                          radius="sm"
+                          color={color}
+                          styles={{
+                            root: {
+                              textTransform: 'none',
+                              cursor: 'default',
+                              padding: '3px 8px'
+                            }
+                          }}
+                        >
+                          {displayText}
+                        </Badge>
+                      ) : (
+                        <Text size="sm" c="dimmed">-</Text>
+                      )}
+                    </Text>
                   </Box>
                 );
               }
