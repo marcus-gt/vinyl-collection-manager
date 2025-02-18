@@ -299,48 +299,54 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       });
 
       // Determine filter type based on column metadata
-      let filterType: FilterType = 'text'; // Default to text
+      let filterType: FilterType = 'text';
       let options: string[] = [];
 
-      if (isCustomColumn && customColumnId && column.meta) {
-        // For custom columns, use the type and options from meta
+      // Check meta.type first, regardless of whether it's a custom column
+      if (column.meta?.type) {
         filterType = column.meta.type as FilterType;
-        
-        // Get options from the meta object
-        if (column.meta.customColumn?.options) {
-          // If we have the full custom column data, use it
-          options = [...column.meta.customColumn.options];
-          console.log('Using options from customColumn:', {
-            source: 'customColumn',
-            options,
-            customColumn: column.meta.customColumn
-          });
-        } else if (Array.isArray(column.meta.options)) {
-          // Fallback to direct options if available
-          options = [...column.meta.options];
-          console.log('Using options from direct meta:', {
-            source: 'meta.options',
-            options,
-            metaOptions: column.meta.options
-          });
-        } else {
-          // Try to find the custom column data from the API response
-          const customColumn = customColumns.find((col: CustomColumnData) => col.id === customColumnId);
-          if (customColumn) {
-            options = [...(customColumn.options || [])];
-            // Update the meta to include the full custom column data
-            column.meta.customColumn = customColumn;
-            console.log('Found options from API data:', {
-              source: 'api',
+        options = column.meta.options || [];
+      }
+
+      // For custom columns, we might need additional processing
+      if (isCustomColumn && customColumnId && column.meta) {
+        // Get options from the meta object if not already set
+        if (!options.length) {
+          if (column.meta.customColumn?.options) {
+            // If we have the full custom column data, use it
+            options = [...column.meta.customColumn.options];
+            console.log('Using options from customColumn:', {
+              source: 'customColumn',
               options,
-              customColumn
+              customColumn: column.meta.customColumn
+            });
+          } else if (Array.isArray(column.meta.options)) {
+            // Fallback to direct options if available
+            options = [...column.meta.options];
+            console.log('Using options from direct meta:', {
+              source: 'meta.options',
+              options,
+              metaOptions: column.meta.options
             });
           } else {
-            console.log('No valid options found:', {
-              metaType: typeof column.meta.options,
-              metaOptions: column.meta.options,
-              fullMeta: column.meta
-            });
+            // Try to find the custom column data from the API response
+            const customColumn = customColumns.find((col: CustomColumnData) => col.id === customColumnId);
+            if (customColumn) {
+              options = [...(customColumn.options || [])];
+              // Update the meta to include the full custom column data
+              column.meta.customColumn = customColumn;
+              console.log('Found options from API data:', {
+                source: 'api',
+                options,
+                customColumn
+              });
+            } else {
+              console.log('No valid options found:', {
+                metaType: typeof column.meta.options,
+                metaOptions: column.meta.options,
+                fullMeta: column.meta
+              });
+            }
           }
         }
 
