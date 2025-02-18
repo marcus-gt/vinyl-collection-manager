@@ -575,7 +575,15 @@ function Collection() {
                   { value: 'spotify_list_sub', label: 'Spotify List Auto' },
                   { value: 'barcode', label: 'Barcode' },
                   { value: 'discogs_url', label: 'Discogs' }
-                ].map(opt => opt.label),
+                ],
+                valueMap: {
+                  'manual': 'Manual',
+                  'spotify': 'Spotify URL',
+                  'spotify_list': 'Spotify List Manual',
+                  'spotify_list_sub': 'Spotify List Auto',
+                  'barcode': 'Barcode',
+                  'discogs_url': 'Discogs'
+                },
                 option_colors: {
                   'Manual': 'gray',
                   'Spotify URL': 'green',
@@ -585,7 +593,19 @@ function Collection() {
                   'Discogs': 'orange'
                 }
               },
-              filterFn: 'equals',
+              filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
+                const cellValue = row.getValue(columnId);
+                const sourceOptions = [
+                  { value: 'manual', label: 'Manual' },
+                  { value: 'spotify', label: 'Spotify URL' },
+                  { value: 'spotify_list', label: 'Spotify List Manual' },
+                  { value: 'spotify_list_sub', label: 'Spotify List Auto' },
+                  { value: 'barcode', label: 'Barcode' },
+                  { value: 'discogs_url', label: 'Discogs' }
+                ];
+                const option = sourceOptions.find(opt => opt.label === filterValue);
+                return option ? cellValue === option.value : true;
+              },
               enableColumnFilter: true,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
                 const source = row.original.added_from;
