@@ -59,7 +59,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
   const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
   const [spotifyUrl, setSpotifyUrl] = useState('');
-  const [isLoadingAlbumLookup, setIsLoadingAlbumLookup] = useState(false);
   const [subscribedPlaylist, setSubscribedPlaylist] = useState<{
     playlist_id: string;
     playlist_name: string;
@@ -1016,11 +1015,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                               value={spotifyUrl}
                               onChange={(e) => setSpotifyUrl(e.target.value)}
                               style={{ flex: 1 }}
-                              disabled={isLoadingAlbumLookup}
                             />
                             <Button
                               onClick={handleSpotifyUrlLookup}
-                              loading={isLoadingAlbumLookup}
                               disabled={!spotifyUrl}
                             >
                               Lookup
