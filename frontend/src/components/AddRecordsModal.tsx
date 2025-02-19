@@ -144,7 +144,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Ensure we preserve the current_release_url from the lookup
+        setRecord({
+          ...response.data,
+          added_from: 'barcode',
+          current_release_url: response.data.current_release_url || null
+        });
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -179,7 +184,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        // Ensure we preserve the current_release_url from the lookup
+        setRecord({
+          ...response.data,
+          added_from: 'barcode',
+          current_release_url: response.data.current_release_url || null
+        });
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
