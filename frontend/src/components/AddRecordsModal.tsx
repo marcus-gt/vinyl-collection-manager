@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Badge } from '@mantine/core';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Badge, Checkbox, MultiSelect } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
@@ -1355,35 +1355,128 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                             if (!value) return null;
 
                             // Format display value based on column type
-                            let displayValue = value;
                             if (column.type === 'boolean') {
-                              displayValue = value === 'true' ? 'Yes' : 'No';
+                              return (
+                                <Box key={column.id} mt="xs">
+                                  <Group gap="xs">
+                                    <Text size="sm" fw={500}>{column.name}:</Text>
+                                    <Checkbox
+                                      checked={value === 'true'}
+                                      onChange={(e) => {
+                                        const newValue = e.currentTarget.checked.toString();
+                                        setRecord(prev => prev ? {
+                                          ...prev,
+                                          customValues: {
+                                            ...prev.customValues,
+                                            [column.id]: newValue
+                                          }
+                                        } : null);
+                                      }}
+                                      size="sm"
+                                    />
+                                  </Group>
+                                </Box>
+                              );
                             } else if (column.type === 'single-select' || column.type === 'multi-select') {
                               // For multi-select, split by comma
                               const values = column.type === 'multi-select' ? value.split(',') : [value];
                               return (
                                 <Box key={column.id} mt="xs">
-                                  <Text size="sm" fw={500}>{column.name}:</Text>
-                                  <Group gap={4}>
-                                    {values.map(val => (
-                                      <Badge
-                                        key={val}
-                                        variant="filled"
-                                        size="sm"
-                                        color={column.option_colors?.[val] || 'blue'}
-                                      >
-                                        {val}
-                                      </Badge>
-                                    ))}
-                                  </Group>
+                                  <Text size="sm" fw={500} mb={4}>{column.name}:</Text>
+                                  {column.type === 'single-select' ? (
+                                    <Select
+                                      data={column.options || []}
+                                      value={value}
+                                      onChange={(newValue) => {
+                                        setRecord(prev => prev ? {
+                                          ...prev,
+                                          customValues: {
+                                            ...prev.customValues,
+                                            [column.id]: newValue || ''
+                                          }
+                                        } : null);
+                                      }}
+                                      size="xs"
+                                      clearable
+                                      styles={{
+                                        input: {
+                                          minHeight: '28px'
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <MultiSelect
+                                      data={column.options || []}
+                                      value={values}
+                                      onChange={(newValues) => {
+                                        setRecord(prev => prev ? {
+                                          ...prev,
+                                          customValues: {
+                                            ...prev.customValues,
+                                            [column.id]: newValues.join(',')
+                                          }
+                                        } : null);
+                                      }}
+                                      size="xs"
+                                      clearable
+                                      styles={{
+                                        input: {
+                                          minHeight: '28px'
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                              );
+                            } else if (column.type === 'number') {
+                              return (
+                                <Box key={column.id} mt="xs">
+                                  <Text size="sm" fw={500} mb={4}>{column.name}:</Text>
+                                  <TextInput
+                                    type="number"
+                                    value={value}
+                                    onChange={(e) => {
+                                      setRecord(prev => prev ? {
+                                        ...prev,
+                                        customValues: {
+                                          ...prev.customValues,
+                                          [column.id]: e.target.value
+                                        }
+                                      } : null);
+                                    }}
+                                    size="xs"
+                                    styles={{
+                                      input: {
+                                        minHeight: '28px'
+                                      }
+                                    }}
+                                  />
                                 </Box>
                               );
                             }
 
                             return (
-                              <Text key={column.id} size="sm">
-                                {column.name}: {displayValue}
-                              </Text>
+                              <Box key={column.id} mt="xs">
+                                <Text size="sm" fw={500} mb={4}>{column.name}:</Text>
+                                <TextInput
+                                  value={value}
+                                  onChange={(e) => {
+                                    setRecord(prev => prev ? {
+                                      ...prev,
+                                      customValues: {
+                                        ...prev.customValues,
+                                        [column.id]: e.target.value
+                                      }
+                                    } : null);
+                                  }}
+                                  size="xs"
+                                  styles={{
+                                    input: {
+                                      minHeight: '28px'
+                                    }
+                                  }}
+                                />
+                              </Box>
                             );
                           })}
                         </>
