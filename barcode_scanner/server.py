@@ -608,13 +608,13 @@ def lookup_barcode(barcode):
                     'artist': result.get('artist', 'Unknown Artist'),
                     'album': result.get('album'),
                     'year': result.get('year'),
-                    'current_release_year': result.get('current_release_year'),
+                    'current_release_year': result.get('current_release_year') if result.get('added_from') == 'barcode' else None,
                     'barcode': barcode,
                     'genres': result.get('genres', []),
                     'styles': result.get('styles', []),
                     'musicians': result.get('musicians', []),
                     'master_url': result.get('master_url'),
-                    'current_release_url': result.get('current_release_url'),
+                    'current_release_url': result.get('current_release_url') if result.get('added_from') == 'barcode' else None,
                     'label': result.get('label'),
                     'added_from': result.get('added_from', 'barcode')
                 }
