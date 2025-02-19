@@ -939,7 +939,11 @@ def lookup_discogs_url():
             
         result = search_by_discogs_url(url)
         if result and result.get('success'):
-            return jsonify(result)  # result already contains success and data fields with added_from
+            # Ensure current_release fields are null for discogs_url method
+            if result.get('data'):
+                result['data']['current_release_url'] = None
+                result['data']['current_release_year'] = None
+            return jsonify(result)
         else:
             return jsonify({
                 'success': False,
@@ -970,7 +974,10 @@ def lookup_artist_album():
             
         result = search_by_artist_album(artist, album, source='discogs_url')
         if result and result.get('success'):
-            # Return the result directly, source is already set in search_by_artist_album
+            # Ensure current_release fields are null for artist-album lookup
+            if result.get('data'):
+                result['data']['current_release_url'] = None
+                result['data']['current_release_year'] = None
             return jsonify(result)
         else:
             # If no match was found, return a basic structure for manual entry
@@ -982,7 +989,9 @@ def lookup_artist_album():
                     'added_from': 'manual',
                     'genres': [],
                     'styles': [],
-                    'musicians': []
+                    'musicians': [],
+                    'current_release_url': None,
+                    'current_release_year': None
                 }
             })
             
@@ -1109,6 +1118,10 @@ def spotify_album_from_url():
         })
         
     result = get_album_from_url(url)
+    if result.get('success') and result.get('data'):
+        # Ensure current_release fields are null for Spotify URL lookup
+        result['data']['current_release_url'] = None
+        result['data']['current_release_year'] = None
     return jsonify(result)
 
 @app.route('/api/spotify/disconnect', methods=['POST'])
