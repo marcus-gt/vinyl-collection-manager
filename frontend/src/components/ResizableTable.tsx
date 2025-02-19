@@ -1049,7 +1049,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 '@media (max-width: 600px)': {
                   minWidth: '32px',
                   height: '32px',
-                  padding: 0
+                  padding: 0,
+                  fontSize: '12px'
+                }
+              },
+              dots: {
+                '@media (max-width: 600px)': {
+                  padding: '0 2px'
                 }
               }
             }}
