@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea } from '@mantine/core';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Badge } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
-import { lookup, records, spotify } from '../services/api';
-import type { VinylRecord } from '../types';
+import { lookup, records, spotify, customColumns } from '../services/api';
+import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
+import { customColumnsApi } from '../services/customColumnsApi';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -80,6 +81,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [showModal, setShowModal] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -133,6 +135,38 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  // Add useEffect to load custom columns
+  useEffect(() => {
+    const loadCustomColumns = async () => {
+      try {
+        const response = await customColumnsApi.getAll();
+        if (response.success && response.data) {
+          setCustomColumns(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to load custom columns:', err);
+      }
+    };
+    loadCustomColumns();
+  }, []);
+
+  // Helper function to get default values
+  const getRecordWithDefaults = (recordData: VinylRecord) => {
+    const customValues: Record<string, string> = {};
+    
+    // Add default values from custom columns
+    customColumns.forEach(column => {
+      if (column.defaultValue) {
+        customValues[column.id] = column.defaultValue;
+      }
+    });
+
+    return {
+      ...recordData,
+      customValues
+    };
+  };
+
   const handleScan = async (scannedBarcode: string) => {
     setBarcode(scannedBarcode);
     setLoading(true);
@@ -144,12 +178,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        // Ensure we preserve the current_release_url from the lookup
-        setRecord({
-          ...response.data,
-          added_from: 'barcode',
-          current_release_url: response.data.current_release_url || null
-        });
+        setRecord(getRecordWithDefaults(response.data));
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -184,12 +213,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        // Ensure we preserve the current_release_url from the lookup
-        setRecord({
-          ...response.data,
-          added_from: 'barcode',
-          current_release_url: response.data.current_release_url || null
-        });
+        setRecord(getRecordWithDefaults(response.data));
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -229,7 +253,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await lookup.byDiscogsUrl(discogsUrl, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        setRecord(getRecordWithDefaults(response.data));
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
@@ -264,7 +288,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const response = await lookup.byArtistAlbum(artist, album, abortControllerRef.current.signal);
       if (response.success && response.data) {
-        setRecord(response.data);
+        setRecord(getRecordWithDefaults(response.data));
         setError(null);
       } else {
         setError("Couldn't find record");
@@ -523,10 +547,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
         if (lookupResponse.success && lookupResponse.data) {
           // Show the record preview instead of adding directly
-          setRecord({
+          setRecord(getRecordWithDefaults({
             ...lookupResponse.data,
-            added_from: 'spotify'  // Changed from 'spotify_url' to 'spotify'
-          });
+            added_from: 'spotify'
+          }));
           setSpotifyUrl('');
           setError(null);
         } else {
@@ -1322,6 +1346,50 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
                       {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
                       {record.label && <Text size="sm">Label: {record.label}</Text>}
+                      
+                      {/* Add custom column preview */}
+                      {customColumns.length > 0 && record.customValues && (
+                        <>
+                          <Divider my="sm" label="Custom Fields" labelPosition="center" />
+                          {customColumns.map(column => {
+                            const value = record.customValues?.[column.id];
+                            if (!value) return null;
+
+                            // Format display value based on column type
+                            let displayValue = value;
+                            if (column.type === 'boolean') {
+                              displayValue = value === 'true' ? 'Yes' : 'No';
+                            } else if (column.type === 'single-select' || column.type === 'multi-select') {
+                              // For multi-select, split by comma
+                              const values = column.type === 'multi-select' ? value.split(',') : [value];
+                              return (
+                                <Box key={column.id} mt="xs">
+                                  <Text size="sm" fw={500}>{column.name}:</Text>
+                                  <Group gap={4}>
+                                    {values.map(val => (
+                                      <Badge
+                                        key={val}
+                                        variant="filled"
+                                        size="sm"
+                                        color={column.option_colors?.[val] || 'blue'}
+                                      >
+                                        {val}
+                                      </Badge>
+                                    ))}
+                                  </Group>
+                                </Box>
+                              );
+                            }
+
+                            return (
+                              <Text key={column.id} size="sm">
+                                {column.name}: {displayValue}
+                              </Text>
+                            );
+                          })}
+                        </>
+                      )}
+
                       <Group gap="xs" mt="xs">
                         {record.master_url && (
                           <Button 
