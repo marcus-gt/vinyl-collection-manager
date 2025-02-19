@@ -701,18 +701,28 @@ def create_custom_column():
             return jsonify({'success': False, 'error': 'Name and type are required'}), 400
         
         now = datetime.utcnow().isoformat()
-        
-        # Convert to snake_case for database
-        db_column_data = {
+        column_data = {
             'user_id': user_id,
             'name': data['name'],
             'type': data['type'],
             'options': data.get('options', []),
-            'option_colors': data.get('option_colors', {}),
-            'default_value': data.get('defaultValue'),  # Convert camelCase to snake_case
-            'apply_to_all': data.get('applyToAll', False),  # Convert camelCase to snake_case
+            'defaultValue': data.get('defaultValue'),
+            'applyToAll': data.get('applyToAll', False),
             'created_at': now,
             'updated_at': now
+        }
+        print(f"Column data to insert: {column_data}")
+        
+        # Convert to snake_case for database
+        db_column_data = {
+            'user_id': column_data['user_id'],
+            'name': column_data['name'],
+            'type': column_data['type'],
+            'options': column_data['options'],
+            'default_value': column_data['defaultValue'],
+            'apply_to_all': column_data['applyToAll'],
+            'created_at': column_data['created_at'],
+            'updated_at': column_data['updated_at']
         }
         
         print("Getting Supabase client...")
@@ -720,7 +730,6 @@ def create_custom_column():
         print("Got Supabase client")
         
         print("Inserting data into custom_columns table...")
-        print(f"Column data to insert: {db_column_data}")
         response = client.table('custom_columns').insert(db_column_data).execute()
         print(f"Supabase response data: {response.data}")
         
@@ -732,12 +741,10 @@ def create_custom_column():
         response_data = response.data[0]
         response_data['defaultValue'] = response_data.pop('default_value', None)
         response_data['applyToAll'] = response_data.pop('apply_to_all', False)
-        response_data['optionColors'] = response_data.pop('option_colors', {})
         
         # If apply_to_all is true and there's a default value, apply it to all records
         if db_column_data['apply_to_all'] and db_column_data['default_value'] is not None:
             try:
-                print(f"Applying default value {db_column_data['default_value']} to all records...")
                 # Get all records for the user
                 records_response = client.table('vinyl_records').select('id').eq('user_id', user_id).execute()
                 if records_response.data:
@@ -751,9 +758,7 @@ def create_custom_column():
                     } for record in records_response.data]
                     
                     if values_data:
-                        print(f"Inserting {len(values_data)} default values...")
-                        insert_response = client.table('custom_column_values').insert(values_data).execute()
-                        print(f"Insert response: {insert_response.data}")
+                        client.table('custom_column_values').insert(values_data).execute()
             except Exception as e:
                 print(f"Warning: Failed to apply default values: {str(e)}")
                 # Don't fail the request if applying defaults fails

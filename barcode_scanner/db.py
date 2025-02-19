@@ -141,7 +141,7 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'current_release_url': record_data.get('current_release_url'),
             'current_release_year': record_data.get('current_release_year'),
             'barcode': record_data.get('barcode'),
-            'added_from': record_data.get('added_from', '')  # Add the new field with default empty string
+            'added_from': record_data.get('added_from', '')
         }
         
         print("\nPrepared record data:")
@@ -155,6 +155,34 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
         if not response.data:
             print("Error: No data returned from Supabase")
             return {"success": False, "error": "No data returned from database"}
+
+        # Get the newly created record's ID
+        new_record_id = response.data[0]['id']
+        
+        # Get custom columns with default values
+        custom_columns_response = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
+        if custom_columns_response.data:
+            print("\nApplying default values from custom columns...")
+            now = datetime.utcnow().isoformat()
+            
+            # Collect custom values to insert
+            custom_values = []
+            for column in custom_columns_response.data:
+                if column.get('default_value'):  # Only process columns with default values
+                    print(f"Processing column {column['name']} with default value: {column['default_value']}")
+                    custom_values.append({
+                        'record_id': new_record_id,
+                        'column_id': column['id'],
+                        'value': column['default_value'],
+                        'created_at': now,
+                        'updated_at': now
+                    })
+            
+            # Insert custom values if any exist
+            if custom_values:
+                print(f"Inserting {len(custom_values)} custom values with defaults")
+                custom_values_response = client.table('custom_column_values').insert(custom_values).execute()
+                print(f"Custom values response: {custom_values_response.data}")
             
         return {"success": True, "record": response.data[0]}
     except Exception as e:
