@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Badge } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
-import { lookup, records, spotify, customColumns } from '../services/api';
+import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
-import { customColumnsApi } from '../services/customColumnsApi';
 
 interface AddRecordsModalProps {
   opened: boolean;
