@@ -578,7 +578,7 @@ def delete_record(record_id):
         return jsonify({'success': True}), 200
     return jsonify({'success': False, 'error': result['error']}), 400
 
-@app.route('/api/lookup/barcode/<barcode>', methods=['GET'])
+@app.route('/api/lookup/barcode/<barcode>')
 def lookup_barcode(barcode):
     try:
         print(f"\n=== Looking up barcode: {barcode} ===")
@@ -608,15 +608,15 @@ def lookup_barcode(barcode):
                     'artist': result.get('artist', 'Unknown Artist'),
                     'album': result.get('album'),
                     'year': result.get('year'),
-                    'current_release_year': result.get('release_year'),
+                    'current_release_year': result.get('current_release_year'),
                     'barcode': barcode,
                     'genres': result.get('genres', []),
                     'styles': result.get('styles', []),
                     'musicians': result.get('musicians', []),
                     'master_url': result.get('master_url'),
-                    'current_release_url': result.get('main_release_url'),
+                    'current_release_url': result.get('current_release_url'),
                     'label': result.get('label'),
-                    'added_from': result.get('added_from', 'barcode')  # Use the value from result, fallback to 'barcode'
+                    'added_from': result.get('added_from', 'barcode')
                 }
                 print(f"Processed record data: {record}")
                 print(f"Final added_from value: {record['added_from']}")
