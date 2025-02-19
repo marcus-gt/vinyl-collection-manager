@@ -316,7 +316,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     
     try {
       // If we're in the manual form, use all the info, otherwise just use artist and album
-      const recordToSubmit = showManualForm ? {
+      const recordToSubmit: VinylRecord = showManualForm ? {
         artist: manualRecord.artist,
         album: manualRecord.album,
         year: manualRecord.year,
@@ -324,11 +324,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
         styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
         musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
-        added_from: 'manual'
+        added_from: 'manual',
+        master_url: null,
+        current_release_url: null
       } : {
         artist: artist.trim(),
         album: album.trim(),
-        added_from: 'manual'
+        added_from: 'manual',
+        master_url: null,
+        current_release_url: null
       };
 
       if (!recordToSubmit.artist || !recordToSubmit.album) {
@@ -391,7 +395,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      const recordData = {
+      // For non-barcode methods, ensure current_release_url is null
+      const recordData: VinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,
@@ -400,8 +405,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url,
-        current_release_url: record.current_release_url,
+        master_url: record.master_url || null,
+        current_release_url: record.added_from === 'barcode' ? (record.current_release_url || null) : null,
         label: record.label,
         added_from: record.added_from
       };
@@ -662,10 +667,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const lookupResponse = await lookup.byArtistAlbum(album.artist, album.name);
       if (lookupResponse.success && lookupResponse.data) {
-        // Override the added_from field
+        // Override the added_from field and ensure current_release_url is null
         const recordData: VinylRecord = {
           ...lookupResponse.data,
-          added_from: 'spotify_list'  // Force 'spotify_list' as the source
+          added_from: 'spotify_list',  // Force 'spotify_list' as the source
+          master_url: lookupResponse.data.master_url || null,
+          current_release_url: null  // Ensure current_release_url is null
         };
         const response = await records.add(recordData);
         if (response.success) {
