@@ -395,7 +395,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // For non-barcode methods, ensure current_release_url is null
+      // For barcode method, keep both URLs. For spotify_list_sub, keep master_url only
       const recordData: VinylRecord = {
         artist: record.artist,
         album: record.album,
@@ -406,7 +406,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         styles: record.styles || [],
         musicians: record.musicians || [],
         master_url: record.master_url || null,
-        current_release_url: record.added_from === 'barcode' ? (record.current_release_url || null) : null,
+        current_release_url: record.added_from === 'barcode' ? record.current_release_url : null,
         label: record.label,
         added_from: record.added_from
       };
@@ -667,12 +667,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const lookupResponse = await lookup.byArtistAlbum(album.artist, album.name);
       if (lookupResponse.success && lookupResponse.data) {
-        // Override the added_from field and ensure current_release_url is null
+        // For spotify_list_sub, keep master_url only
         const recordData: VinylRecord = {
           ...lookupResponse.data,
           added_from: 'spotify_list',  // Force 'spotify_list' as the source
           master_url: lookupResponse.data.master_url || null,
-          current_release_url: null  // Ensure current_release_url is null
+          current_release_url: null  // Always null for spotify_list
         };
         const response = await records.add(recordData);
         if (response.success) {
