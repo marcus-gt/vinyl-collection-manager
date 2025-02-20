@@ -8,7 +8,7 @@ import { AddRecordsModal } from '../components/AddRecordsModal';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
-import { SortingState, ColumnDef, Row, ColumnFiltersState } from '@tanstack/react-table';
+import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 
 const PAGE_SIZE = 40;
 
