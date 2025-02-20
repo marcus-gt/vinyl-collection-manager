@@ -818,38 +818,49 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   };
 
   return (
-    <Box style={{ 
-      overflow: 'auto',
-      width: '100%',
-      minWidth: '100%',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1rem'
-    }}>
+    <Box 
+      style={{ 
+        overflow: 'auto',
+        width: '100%',
+        minWidth: '100%',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        maxWidth: '100vw',
+        margin: '0 auto'
+      }}
+      px={{ base: 0, xl: 'md' }}
+    >
       <LoadingOverlay visible={loading} />
       <Table
         striped
         highlightOnHover
-        style={{
-          width: '100%',
-          minWidth: Math.max(table.getCenterTotalSize(), 1200),
-          borderCollapse: 'separate',
-          borderSpacing: 0,
-          lineHeight: '32px',
-          position: 'relative'
-        }}
-        styles={{
+        styles={(theme) => ({
           table: {
             tableLayout: 'fixed',
             width: '100%',
-            minWidth: '100%'
+            minWidth: Math.max(table.getCenterTotalSize(), 1200),
+            borderCollapse: 'separate',
+            borderSpacing: 0,
+            lineHeight: '32px',
+            position: 'relative',
+            
+            [`@media (max-width: ${theme.breakpoints.sm})`]: {
+              minWidth: '100%',
+              fontSize: theme.fontSizes.sm
+            }
           },
           thead: {
             height: 'auto',
             width: '100%',
             position: 'relative',
-            zIndex: 10
+            zIndex: 10,
+            backgroundColor: theme.colors.dark[7],
+            
+            [`@media (max-width: ${theme.breakpoints.sm})`]: {
+              fontSize: theme.fontSizes.sm
+            }
           },
           tbody: {
             width: '100%',
@@ -857,36 +868,56 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             zIndex: 1
           },
           tr: {
-            height: '32px',
-            maxHeight: '32px',
-            position: 'relative'
+            height: '40px',
+            maxHeight: '40px',
+            position: 'relative',
+            
+            [`@media (max-width: ${theme.breakpoints.sm})`]: {
+              height: '36px',
+              maxHeight: '36px'
+            }
           },
           td: {
-            height: '32px',
-            maxHeight: '32px',
-            padding: '0 8px',
-            borderRight: '1px solid var(--mantine-color-dark-4)',
+            height: '40px',
+            maxHeight: '40px',
+            padding: '4px 12px',
+            borderRight: `1px solid ${theme.colors.dark[4]}`,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            
             '&:last-child': {
               borderRight: 'none'
+            },
+            
+            [`@media (max-width: ${theme.breakpoints.sm})`]: {
+              height: '36px',
+              maxHeight: '36px',
+              padding: '4px 8px'
             }
           },
           th: {
-            height: '32px',
-            maxHeight: '32px',
-            padding: '8px',
-            borderRight: '1px solid var(--mantine-color-dark-4)',
+            height: '40px',
+            maxHeight: '40px',
+            padding: '8px 12px',
+            borderRight: `1px solid ${theme.colors.dark[4]}`,
             position: 'relative',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            backgroundColor: theme.colors.dark[7],
+            
             '&:last-child': {
               borderRight: 'none'
+            },
+            
+            [`@media (max-width: ${theme.breakpoints.sm})`]: {
+              height: '36px',
+              maxHeight: '36px',
+              padding: '4px 8px'
             }
           }
-        }}
+        })}
       >
         <Table.Thead>
           {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
@@ -900,8 +931,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       width: header.getSize(),
                       position: 'relative',
                       userSelect: 'none',
-                      height: '32px',
-                      maxHeight: '32px'
+                      height: '40px',
+                      maxHeight: '40px',
+                      '@media (max-width: 768px)': {
+                        height: '36px',
+                        maxHeight: '36px'
+                      }
                     }}
                   >
                     {header.isPlaceholder ? null : (
@@ -914,8 +949,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          height: '32px',
-                          maxHeight: '32px'
+                          height: '40px',
+                          maxHeight: '40px',
+                          '@media (max-width: 768px)': {
+                            height: '36px',
+                            maxHeight: '36px'
+                          }
                         }}
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -974,10 +1013,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     colSpan={header.colSpan}
                     style={{
                       width: header.getSize(),
-                      padding: '4px 8px',
+                      padding: '4px 12px',
                       position: 'relative',
-                      height: '40px',
-                      maxHeight: '40px'
+                      height: '48px',
+                      maxHeight: '48px',
+                      '@media (max-width: 768px)': {
+                        padding: '4px 8px',
+                        height: '44px',
+                        maxHeight: '44px'
+                      }
                     }}
                   >
                     {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
@@ -997,18 +1041,26 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     width: cell.column.getSize(),
                     maxWidth: cell.column.getSize(),
                     overflow: 'hidden',
-                    height: '32px',
-                    maxHeight: '32px'
+                    height: '40px',
+                    maxHeight: '40px',
+                    '@media (max-width: 768px)': {
+                      height: '36px',
+                      maxHeight: '36px'
+                    }
                   }}
                 >
                   <div style={{ 
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    height: '32px',
-                    maxHeight: '32px',
+                    height: '40px',
+                    maxHeight: '40px',
                     display: 'flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    '@media (max-width: 768px)': {
+                      height: '36px',
+                      maxHeight: '36px'
+                    }
                   }}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </div>
@@ -1025,15 +1077,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             position: 'sticky',
             left: 0,
             width: '100%',
-            background: 'var(--mantine-color-dark-7)',
-            padding: 'var(--mantine-spacing-md) 0',
-            borderTop: '1px solid var(--mantine-color-dark-4)',
+            background: theme.colors.dark[7],
+            padding: `${theme.spacing.md} 0`,
+            borderTop: `1px solid ${theme.colors.dark[4]}`,
             zIndex: 2,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
             flexDirection: 'column',
-            gap: 'var(--mantine-spacing-xs)'
+            gap: theme.spacing.xs
           }}
         >
           <Pagination
@@ -1046,7 +1098,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             withControls
             styles={{
               control: {
-                '@media (max-width: 600px)': {
+                [`@media (max-width: ${theme.breakpoints.sm})`]: {
                   minWidth: '32px',
                   height: '32px',
                   padding: 0
