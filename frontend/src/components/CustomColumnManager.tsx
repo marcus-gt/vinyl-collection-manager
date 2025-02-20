@@ -201,10 +201,8 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         if (response.success) {
           setColumnsChanged(true);
           console.log('Color updated successfully');
-          // Immediately update local state
+          // Only update local state, don't trigger table refresh
           await loadColumns();
-          // Trigger table refresh
-          window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
         } else {
           console.error('Update failed:', response.error);
           // If the update failed, revert the local state
