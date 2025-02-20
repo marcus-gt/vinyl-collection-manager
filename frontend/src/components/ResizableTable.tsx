@@ -927,20 +927,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   <Table.Th
                     key={header.id}
                     colSpan={header.colSpan}
-                    style={{
-                      width: header.getSize(),
-                      position: 'relative',
-                      userSelect: 'none',
-                      height: '40px',
-                      maxHeight: '40px',
-                      '@media (max-width: 768px)': {
-                        height: '36px',
-                        maxHeight: '36px'
+                    styles={(theme) => ({
+                      th: {
+                        width: header.getSize(),
+                        position: 'relative',
+                        userSelect: 'none',
+                        height: '40px',
+                        maxHeight: '40px',
+                        [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                          height: '36px',
+                          maxHeight: '36px'
+                        }
                       }
-                    }}
+                    })}
                   >
                     {header.isPlaceholder ? null : (
-                      <div
+                      <Box
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -948,14 +950,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           position: 'relative',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          height: '40px',
-                          maxHeight: '40px',
-                          '@media (max-width: 768px)': {
-                            height: '36px',
-                            maxHeight: '36px'
-                          }
+                          textOverflow: 'ellipsis'
                         }}
+                        h={{ base: 36, sm: 40 }}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(
@@ -970,7 +967,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                             }[header.column.getIsSorted() as string] ?? ''}
                           </Text>
                         )}
-                      </div>
+                      </Box>
                     )}
                     {header.column.getCanResize() && (
                       <div
@@ -1011,18 +1008,20 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   <Table.Th
                     key={`${header.id}-filter`}
                     colSpan={header.colSpan}
-                    style={{
-                      width: header.getSize(),
-                      padding: '4px 12px',
-                      position: 'relative',
-                      height: '48px',
-                      maxHeight: '48px',
-                      '@media (max-width: 768px)': {
-                        padding: '4px 8px',
-                        height: '44px',
-                        maxHeight: '44px'
+                    styles={(theme) => ({
+                      th: {
+                        width: header.getSize(),
+                        padding: '4px 12px',
+                        position: 'relative',
+                        height: '48px',
+                        maxHeight: '48px',
+                        [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                          padding: '4px 8px',
+                          height: '44px',
+                          maxHeight: '44px'
+                        }
                       }
-                    }}
+                    })}
                   >
                     {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
                   </Table.Th>
@@ -1037,33 +1036,32 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
                 <Table.Td
                   key={cell.id}
-                  style={{
-                    width: cell.column.getSize(),
-                    maxWidth: cell.column.getSize(),
-                    overflow: 'hidden',
-                    height: '40px',
-                    maxHeight: '40px',
-                    '@media (max-width: 768px)': {
-                      height: '36px',
-                      maxHeight: '36px'
+                  styles={(theme) => ({
+                    td: {
+                      width: cell.column.getSize(),
+                      maxWidth: cell.column.getSize(),
+                      overflow: 'hidden',
+                      height: '40px',
+                      maxHeight: '40px',
+                      [`@media (max-width: ${theme.breakpoints.sm})`]: {
+                        height: '36px',
+                        maxHeight: '36px'
+                      }
                     }
-                  }}
+                  })}
                 >
-                  <div style={{ 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    height: '40px',
-                    maxHeight: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    '@media (max-width: 768px)': {
-                      height: '36px',
-                      maxHeight: '36px'
-                    }
-                  }}>
+                  <Box
+                    style={{ 
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    h={{ base: 36, sm: 40 }}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </div>
+                  </Box>
                 </Table.Td>
               ))}
             </Table.Tr>
