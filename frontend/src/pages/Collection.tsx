@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconPlus, IconRefresh } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconRefresh, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -1132,7 +1132,14 @@ function Collection() {
   return (
     <Container size="xl" py="xl" mt={60}>
       <Stack>
-        <Group justify="space-between" align="center" mb="md">
+        <Group justify="space-between" align="center" mb="md" style={{
+          borderBottom: '1px solid var(--mantine-color-dark-4)',
+          background: 'var(--mantine-color-dark-7)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          padding: 'var(--mantine-spacing-md)'
+        }}>
           <Title>Collection Overview</Title>
           <Group>
             <TextInput
@@ -1144,6 +1151,16 @@ function Collection() {
               }}
               style={{ width: 300 }}
               leftSection={<IconSearch size={16} />}
+              rightSection={
+                searchQuery ? (
+                  <ActionIcon size="sm" onClick={() => {
+                    setSearchQuery('');
+                    setPage(1);
+                  }}>
+                    <IconX size={16} />
+                  </ActionIcon>
+                ) : null
+              }
             />
             <Button
               variant="light"
@@ -1166,14 +1183,6 @@ function Collection() {
               disabled={userRecords.length === 0}
             >
               Export CSV
-            </Button>
-            <Button
-              variant="light"
-              leftSection={<IconRefresh size={16} />}
-              onClick={loadRecords}
-              loading={loading}
-            >
-              Refresh
             </Button>
           </Group>
         </Group>
@@ -1200,6 +1209,7 @@ function Collection() {
           opened={customColumnManagerOpened}
           onClose={() => {
             setCustomColumnManagerOpened(false);
+            loadCustomColumns();
           }}
         />
 
@@ -1207,6 +1217,7 @@ function Collection() {
           opened={addRecordsModalOpened}
           onClose={() => {
             setAddRecordsModalOpened(false);
+            loadRecords();
           }}
         />
 
@@ -1214,6 +1225,7 @@ function Collection() {
           opened={!!editingRecord}
           onClose={() => setEditingRecord(null)}
           title="Edit Notes"
+          size="md"
         >
           <Stack>
             {editingRecord && (
@@ -1226,12 +1238,18 @@ function Collection() {
               value={editingNotes}
               onChange={(e) => setEditingNotes(e.target.value)}
               placeholder="Add notes about this record..."
+              size="sm"
+              styles={{
+                input: {
+                  minHeight: '36px'
+                }
+              }}
             />
             <Group justify="flex-end">
-              <Button variant="light" onClick={() => setEditingRecord(null)}>
+              <Button variant="light" onClick={() => setEditingRecord(null)} size="sm">
                 Cancel
               </Button>
-              <Button onClick={handleUpdateNotes} loading={loading}>
+              <Button onClick={handleUpdateNotes} loading={loading} size="sm">
                 Save
               </Button>
             </Group>

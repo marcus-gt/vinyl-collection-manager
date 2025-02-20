@@ -34,7 +34,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const handleModalClose = () => {
     if (columnsChanged) {
       // Only trigger table refresh if columns were modified
-      window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
+      window.dispatchEvent(new CustomEvent('refresh-table-data'));
     }
     onClose();
   };
@@ -87,7 +87,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column updated successfully',
             color: 'green'
           });
-          await loadColumns();  // Update local state only
         }
       } else {
         // Create new column
@@ -99,9 +98,9 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column created successfully',
             color: 'green'
           });
-          await loadColumns();  // Update local state only
         }
       }
+      await loadColumns();
       resetForm();
     } catch (err) {
       notifications.show({
@@ -394,11 +393,11 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                   styles={{
                     input: {
                       minHeight: '36px',
-                      paddingRight: '80px' // Make room for the button
+                      paddingRight: '80px'
                     },
-                    section: {  // Changed from rightSection to section
-                      width: '70px', // Give more width to the button section
-                      right: '5px'  // Add some spacing from the right edge
+                    section: {
+                      width: '70px',
+                      right: '5px'
                     }
                   }}
                   rightSectionWidth={70}
@@ -409,7 +408,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                       onClick={handleAddOption}
                       disabled={!currentOption || options.includes(currentOption)}
                       style={{
-                        minWidth: '60px' // Ensure button has minimum width
+                        minWidth: '60px'
                       }}
                     >
                       Add
@@ -444,7 +443,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                                       textTransform: 'none',
                                       cursor: 'pointer',
                                       padding: '3px 8px',
-                                      paddingRight: 25 // Make room for the X button
+                                      paddingRight: 25
                                     }
                                   }}
                                 >
@@ -470,7 +469,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
                                       }}
                                       onClick={() => {
                                         if (!editingColumn) {
-                                          handleSubmit();  // Save current state
+                                          handleSubmit();
                                         }
                                         handleColorChange(opt, value);
                                       }}
