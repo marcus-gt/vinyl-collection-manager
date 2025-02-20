@@ -159,28 +159,43 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
         # Get the newly created record's ID
         new_record_id = response.data[0]['id']
         
-        # Get custom columns with default values
+        # Get custom columns and handle custom values
         custom_columns_response = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
         if custom_columns_response.data:
-            print("\nApplying default values from custom columns...")
+            print("\nProcessing custom values...")
             now = datetime.utcnow().isoformat()
+            
+            # Get the custom values sent from frontend
+            frontend_custom_values = record_data.get('customValues', {})
+            print(f"Custom values from frontend: {frontend_custom_values}")
             
             # Collect custom values to insert
             custom_values = []
             for column in custom_columns_response.data:
-                if column.get('default_value'):  # Only process columns with default values
-                    print(f"Processing column {column['name']} with default value: {column['default_value']}")
-                    custom_values.append({
-                        'record_id': new_record_id,
-                        'column_id': column['id'],
-                        'value': column['default_value'],
-                        'created_at': now,
-                        'updated_at': now
-                    })
+                column_id = column['id']
+                # Check if we have a value from the frontend
+                if column_id in frontend_custom_values:
+                    value = frontend_custom_values[column_id]
+                    print(f"Using frontend value for {column['name']}: {value}")
+                # If not, use default value if available
+                elif column.get('default_value'):
+                    value = column['default_value']
+                    print(f"Using default value for {column['name']}: {value}")
+                else:
+                    print(f"No value for {column['name']}, skipping")
+                    continue
+                
+                custom_values.append({
+                    'record_id': new_record_id,
+                    'column_id': column_id,
+                    'value': value,
+                    'created_at': now,
+                    'updated_at': now
+                })
             
             # Insert custom values if any exist
             if custom_values:
-                print(f"Inserting {len(custom_values)} custom values with defaults")
+                print(f"Inserting {len(custom_values)} custom values")
                 custom_values_response = client.table('custom_column_values').insert(custom_values).execute()
                 print(f"Custom values response: {custom_values_response.data}")
             
