@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconPlus } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -1191,6 +1191,19 @@ function Collection() {
                 }}
               >
                 Manage Columns
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleDownloadCSV}
+                leftSection={<IconDownload size={16} />}
+                disabled={userRecords.length === 0}
+                style={{
+                  '@media (max-width: 600px)': {
+                    flex: '1 1 auto'
+                  }
+                }}
+              >
+                Export CSV
               </Button>
             </Group>
           </Group>
