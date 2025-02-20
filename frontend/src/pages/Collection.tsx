@@ -1246,7 +1246,6 @@ function Collection() {
         opened={addRecordsModalOpened}
         onClose={() => {
           setAddRecordsModalOpened(false);
-          loadRecords();
         }}
       />
 
