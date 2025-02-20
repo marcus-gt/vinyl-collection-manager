@@ -15,8 +15,8 @@ function Layout() {
     navigate('/login');
   };
 
-  const handleDownloadCSV = () => {
-    window.dispatchEvent(new CustomEvent('download-csv'));
+  const handleExportCSV = () => {
+    window.dispatchEvent(new CustomEvent('export-collection-csv'));
   };
 
   const isCollectionPage = location.pathname === '/collection';
@@ -24,11 +24,7 @@ function Layout() {
   const NavLinks = () => (
     <>
       {isCollectionPage && (
-        <Button 
-          variant="light" 
-          leftSection={<IconDownload size={16} />}
-          onClick={handleDownloadCSV}
-        >
+        <Button variant="light" onClick={handleExportCSV} leftSection={<IconDownload size={16} />}>
           Export CSV
         </Button>
       )}
