@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX } from '@tabler/icons-react';
+import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconRefresh, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -1130,106 +1130,153 @@ function Collection() {
   }, [customColumns]);
 
   return (
-    <Container size="xl" py="xl" mt={60}>
-      <Stack>
-        <Group justify="space-between" align="center" mb="md">
-          <Title>Collection Overview</Title>
-          <Group>
+    <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box style={{ 
+        flex: 1, 
+        display: 'flex', 
+        flexDirection: 'column',
+        padding: 0,  // Remove padding
+        overflow: 'hidden'  // Prevent double scrollbars
+      }}>
+        <Group justify="space-between" align="center" style={{ 
+          padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
+          borderBottom: '1px solid var(--mantine-color-dark-4)',
+          background: 'var(--mantine-color-dark-7)',
+          gap: 'var(--mantine-spacing-xs)',
+          flexWrap: 'wrap',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100
+        }}>
+          <Group gap="xs" wrap="nowrap">
             <TextInput
               placeholder="Search records..."
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              style={{ width: 300 }}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              leftSection={<IconSearch size={16} />}
+              rightSection={
+                searchQuery && (
+                  <ActionIcon size="sm" variant="subtle" onClick={() => setSearchQuery('')}>
+                    <IconX size={16} />
+                  </ActionIcon>
+                )
+              }
+              style={{ minWidth: '200px' }}
             />
+            <Menu shadow="md">
+              <Menu.Target>
+                <Button variant="default" leftSection={<IconFilter size={16} />}>
+                  Columns
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>Toggle columns</Menu.Label>
+                {customColumns.map((column) => (
+                  <Menu.Item
+                    key={column.id}
+                    onClick={() => {
+                      // Implement column toggle logic here
+                    }}
+                    rightSection={
+                      <Checkbox
+                        checked={true} // Placeholder for column visibility
+                        onChange={() => {
+                          // Implement column toggle logic here
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    }
+                  >
+                    {column.name}
+                  </Menu.Item>
+                ))}
+              </Menu.Dropdown>
+            </Menu>
             <Button
-              variant="light"
-              onClick={() => setAddRecordsModalOpened(true)}
-            >
-              Add Records
-            </Button>
-            <Button
-              variant="light"
-              onClick={() => setCustomColumnManagerOpened(true)}
-            >
-              Manage Columns
-            </Button>
-            <Button
-              variant="light"
+              variant="default"
               leftSection={<IconDownload size={16} />}
               onClick={handleDownloadCSV}
-              disabled={userRecords.length === 0}
             >
               Export CSV
             </Button>
           </Group>
+          <Group gap="xs" wrap="nowrap">
+            <Button
+              variant="default"
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => {
+                // Implement refresh logic here
+              }}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="filled"
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setAddRecordsModalOpened(true)}
+            >
+              Add Record
+            </Button>
+          </Group>
         </Group>
 
-        {error && (
-          <Text c="red">{error}</Text>
-        )}
+        <Box style={{ 
+          flex: 1,
+          overflow: 'auto',
+          padding: 0  // Remove padding
+        }}>
+          <ResizableTable
+            data={userRecords}
+            columns={tableColumns}
+            sortState={sortStatus}
+            onSortChange={setSortStatus}
+            tableId="collection-table"
+            loading={loading}
+            recordsPerPage={PAGE_SIZE}
+            page={page}
+            onPageChange={setPage}
+            customColumns={customColumns}
+            searchQuery={searchQuery}
+          />
+        </Box>
+      </Box>
 
-        <ResizableTable
-          data={userRecords}
-          columns={tableColumns}
-          sortState={sortStatus}
-          onSortChange={setSortStatus}
-          tableId="collection-table"
-          loading={loading}
-          recordsPerPage={PAGE_SIZE}
-          page={page}
-          onPageChange={setPage}
-          customColumns={customColumns}
-          searchQuery={searchQuery}
-        />
+      <AddRecordsModal
+        opened={addRecordsModalOpened}
+        onClose={() => {
+          setAddRecordsModalOpened(false);
+          loadRecords();
+        }}
+      />
 
-        <CustomColumnManager
-          opened={customColumnManagerOpened}
-          onClose={() => {
-            setCustomColumnManagerOpened(false);
-            loadCustomColumns();
-          }}
-        />
-
-        <AddRecordsModal
-          opened={addRecordsModalOpened}
-          onClose={() => {
-            setAddRecordsModalOpened(false);
-            loadRecords();
-          }}
-        />
-
-        <Modal
-          opened={!!editingRecord}
-          onClose={() => setEditingRecord(null)}
-          title="Edit Notes"
-        >
-          <Stack>
-            {editingRecord && (
-              <Text size="sm" fw={500}>
-                {editingRecord.artist} - {editingRecord.album}
-              </Text>
-            )}
-            <TextInput
-              label="Notes"
-              value={editingNotes}
-              onChange={(e) => setEditingNotes(e.target.value)}
-              placeholder="Add notes about this record..."
-            />
-            <Group justify="flex-end">
-              <Button variant="light" onClick={() => setEditingRecord(null)}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateNotes} loading={loading}>
-                Save
-              </Button>
-            </Group>
-          </Stack>
-        </Modal>
-      </Stack>
-    </Container>
+      <Modal
+        opened={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        title="Edit Notes"
+      >
+        <Stack>
+          {editingRecord && (
+            <Text size="sm" fw={500}>
+              {editingRecord.artist} - {editingRecord.album}
+            </Text>
+          )}
+          <TextInput
+            label="Notes"
+            value={editingNotes}
+            onChange={(e) => setEditingNotes(e.target.value)}
+            placeholder="Add notes about this record..."
+          />
+          <Group justify="flex-end">
+            <Button variant="light" onClick={() => setEditingRecord(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateNotes} loading={loading}>
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </Box>
   );
 }
 
