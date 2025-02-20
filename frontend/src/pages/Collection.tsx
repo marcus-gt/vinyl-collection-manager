@@ -1250,7 +1250,6 @@ export function Collection() {
         opened={addRecordModalOpened}
         onClose={() => {
           setAddRecordModalOpened(false);
-          loadRecords();
         }}
       />
 

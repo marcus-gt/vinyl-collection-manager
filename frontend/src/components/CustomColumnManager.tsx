@@ -87,8 +87,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column updated successfully',
             color: 'green'
           });
-          // Immediately update local state
-          await loadColumns();
+          await loadColumns();  // Update local state only
         }
       } else {
         // Create new column
@@ -100,8 +99,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column created successfully',
             color: 'green'
           });
-          // Immediately update local state
-          await loadColumns();
+          await loadColumns();  // Update local state only
         }
       }
       resetForm();
@@ -132,8 +130,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           message: 'Column deleted successfully',
           color: 'green'
         });
-        // Immediately update local state
-        await loadColumns();
+        await loadColumns();  // Update local state only
       }
     } catch (err) {
       notifications.show({
@@ -195,8 +192,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         if (response.success) {
           setColumnsChanged(true);
           console.log('Color updated successfully');
-          // Immediately update local state
-          await loadColumns();
+          await loadColumns();  // Update local state only
         } else {
           console.error('Update failed:', response.error);
           // If the update failed, revert the local state
@@ -294,8 +290,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         const updateResults = await Promise.all(updates);
         console.log('Update results:', updateResults);
 
-        // Immediately update local state
-        await loadColumns();
+        await loadColumns();  // Update local state only
 
         notifications.show({
           title: 'Success',
