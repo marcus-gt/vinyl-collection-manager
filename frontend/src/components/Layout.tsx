@@ -1,11 +1,13 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Button, Group, Title, Burger, Drawer, Stack } from '@mantine/core';
+import { IconDownload } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 
 function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [opened, { toggle, close }] = useDisclosure(false);
 
   const handleLogout = async () => {
@@ -13,8 +15,23 @@ function Layout() {
     navigate('/login');
   };
 
+  const handleDownloadCSV = () => {
+    window.dispatchEvent(new CustomEvent('download-csv'));
+  };
+
+  const isCollectionPage = location.pathname === '/collection';
+
   const NavLinks = () => (
     <>
+      {isCollectionPage && (
+        <Button 
+          variant="light" 
+          leftSection={<IconDownload size={16} />}
+          onClick={handleDownloadCSV}
+        >
+          Export CSV
+        </Button>
+      )}
       <Button variant="light" onClick={() => { handleLogout(); close(); }}>
         Logout
       </Button>

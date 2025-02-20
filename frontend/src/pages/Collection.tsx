@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconDownload } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -80,28 +80,24 @@ function Collection() {
     loadRecords();
     loadCustomColumns();
 
+    // Set up event listeners
+    window.addEventListener('vinyl-collection-table-refresh', loadRecords);
+    window.addEventListener('download-csv', handleDownloadCSV);
+
     // Add event listeners for data updates
     const handleCustomValuesUpdate = () => {
       console.log('Custom values update event received');
       loadRecords();
     };
 
-    const handleTableRefresh = () => {
-      console.log('Table refresh event received, reloading records...');
-      loadRecords();
-      loadCustomColumns();
-      console.log('Records reload initiated');
-    };
-
     // Add event listeners
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
-    window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
 
-    // Cleanup function
     return () => {
       console.log('Removing event listeners');
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
-      window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
+      window.removeEventListener('vinyl-collection-table-refresh', loadRecords);
+      window.removeEventListener('download-csv', handleDownloadCSV);
     };
   }, []);
 
@@ -1101,20 +1097,20 @@ function Collection() {
           justifyContent: 'center', 
           alignItems: 'center'
         }}>
-                  <Tooltip label="Delete">
-                    <ActionIcon 
-                      color="red" 
-                      variant="light"
-                      size="sm"
+          <Tooltip label="Delete">
+            <ActionIcon 
+              color="red" 
+              variant="light"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 console.log('Delete clicked for record:', row.original);
                 handleDelete(row.original);
               }}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Tooltip>
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
         </Box>
       ),
     };
@@ -1123,115 +1119,60 @@ function Collection() {
   }, [customColumns]);
 
   return (
-    <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Box style={{ 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column',
-        padding: 0,
-        overflow: 'hidden'
-      }}>
-        <Group justify="space-between" align="center" style={{ 
-          padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
-          borderBottom: '1px solid var(--mantine-color-dark-4)',
-          background: 'var(--mantine-color-dark-7)',
-          gap: 'var(--mantine-spacing-xs)',
-          flexWrap: 'wrap',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100
-        }}>
-          <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
-            <TextInput
-              placeholder="Search records..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              style={{ 
-                minWidth: '200px',
-                flex: '1 1 auto',
-                '@media (max-width: 600px)': {
-                  minWidth: '100%'
-                }
-              }}
-              leftSection={<IconSearch size={16} />}
-              rightSection={
-                searchQuery ? (
-                  <ActionIcon size="sm" onClick={() => {
-                    setSearchQuery('');
-                    setPage(1);
-                  }}>
-                    <IconX size={16} />
-                  </ActionIcon>
-                ) : null
-              }
-            />
-            <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
-              <Button
-                variant="default"
-                onClick={() => setAddRecordsModalOpened(true)}
-                leftSection={<IconPlus size={16} />}
-                style={{
-                  '@media (max-width: 600px)': {
-                    flex: '1 1 auto'
-                  }
-                }}
-              >
-                Add Records
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => setCustomColumnManagerOpened(true)}
-                style={{
-                  '@media (max-width: 600px)': {
-                    flex: '1 1 auto'
-                  }
-                }}
-              >
-                Manage Columns
-              </Button>
-              <Button
-                variant="default"
-                onClick={handleDownloadCSV}
-                leftSection={<IconDownload size={16} />}
-                disabled={userRecords.length === 0}
-                style={{
-                  '@media (max-width: 600px)': {
-                    flex: '1 1 auto'
-                  }
-                }}
-              >
-                Export CSV
-              </Button>
-            </Group>
+    <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Stack gap="xs">
+        <Group justify="space-between" align="flex-start" wrap="wrap">
+          <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
+            <Button
+              onClick={() => setAddRecordsModalOpened(true)}
+              leftSection={<IconPlus size={16} />}
+              size="sm"
+            >
+              Add Records
+            </Button>
+            <Button
+              onClick={() => setCustomColumnManagerOpened(true)}
+              size="sm"
+            >
+              Manage Columns
+            </Button>
           </Group>
-        </Group>
-
-        <Box style={{ 
-          flex: 1,
-          overflow: 'auto',
-          padding: 0
-        }}>
-          {error && (
-            <Text c="red">{error}</Text>
-          )}
-
-          <ResizableTable
-            data={userRecords}
-            columns={tableColumns}
-            sortState={sortStatus}
-            onSortChange={setSortStatus}
-            tableId="collection-table"
-            loading={loading}
-            recordsPerPage={PAGE_SIZE}
-            page={page}
-            onPageChange={setPage}
-            customColumns={customColumns}
-            searchQuery={searchQuery}
+          <TextInput
+            placeholder="Search records..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            leftSection={<IconSearch size={16} />}
+            size="sm"
+            style={{
+              flex: '1 1 300px',
+              maxWidth: '400px'
+            }}
           />
-        </Box>
+        </Group>
+      </Stack>
+
+      <Box style={{ 
+        flex: 1,
+        overflow: 'auto',
+        padding: 0
+      }}>
+        {error && (
+          <Text c="red">{error}</Text>
+        )}
+
+        <ResizableTable
+          data={userRecords}
+          columns={tableColumns}
+          sortState={sortStatus}
+          onSortChange={setSortStatus}
+          tableId="collection-table"
+          loading={loading}
+          recordsPerPage={PAGE_SIZE}
+          page={page}
+          onPageChange={setPage}
+          customColumns={customColumns}
+          searchQuery={searchQuery}
+        />
       </Box>
 
       <CustomColumnManager
