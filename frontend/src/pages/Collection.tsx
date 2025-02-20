@@ -275,6 +275,17 @@ function Collection() {
   };
 
   const handleDownloadCSV = () => {
+    console.log('Starting CSV export with records:', userRecords);
+    
+    if (!userRecords.length) {
+      notifications.show({
+        title: 'No Records',
+        message: 'There are no records to export.',
+        color: 'yellow'
+      });
+      return;
+    }
+
     // Define standard headers
     const standardHeaders = [
       'Artist',
@@ -294,43 +305,61 @@ function Collection() {
     const customHeaders = customColumns.map(col => col.name);
     const headers = [...standardHeaders, ...customHeaders];
 
+    console.log('Headers:', headers);
+    console.log('Custom columns:', customColumns);
+
     // Convert records to CSV rows
     const rows = userRecords.map(record => {
+      console.log('Processing record:', record);
+      
       // Standard fields
       const standardFields = [
-        record.artist,
-        record.album,
-        record.year || '',
+        record.artist || '',
+        record.album || '',
+        record.year?.toString() || '',
         record.label || '',
-        record.genres?.join('; ') || '',
-        record.styles?.join('; ') || '',
-        record.musicians?.join('; ') || '',
+        (record.genres || []).join('; '),
+        (record.styles || []).join('; '),
+        (record.musicians || []).join('; '),
         record.created_at ? new Date(record.created_at).toLocaleString() : '',
-        record.current_release_year || '',
+        record.current_release_year?.toString() || '',
         record.master_url || '',
         record.current_release_url || ''
       ];
 
       // Custom fields
-      const customFields = customColumns.map(col => 
-        record.customValues?.[col.id] || ''
-      );
+      const customFields = customColumns.map(col => {
+        const value = record.customValues?.[col.id];
+        console.log(`Custom field ${col.name}:`, value);
+        return value || '';
+      });
 
-      return [...standardFields, ...customFields];
+      const row = [...standardFields, ...customFields];
+      console.log('Generated row:', row);
+      return row;
     });
+
+    console.log('Generated rows:', rows);
 
     // Combine headers and rows
     const csvContent = [
       headers.join(','),
       ...rows.map(row => 
-        row.map(cell => 
-          // Escape quotes and wrap in quotes if contains comma or newline
-          typeof cell === 'string' && (cell.includes(',') || cell.includes('\n') || cell.includes('"')) 
-            ? `"${cell.replace(/"/g, '""')}"` 
-            : cell
-        ).join(',')
+        row.map(cell => {
+          // Handle null or undefined
+          if (cell === null || cell === undefined) return '';
+          
+          // Convert to string and handle special characters
+          const str = String(cell);
+          if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }).join(',')
       )
     ].join('\n');
+
+    console.log('CSV Content:', csvContent);
 
     // Create blob and trigger save dialog
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
