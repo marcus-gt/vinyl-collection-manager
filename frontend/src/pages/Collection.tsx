@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconDownload } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -264,102 +264,6 @@ function Collection() {
     } finally {
       setLoading(false);
       console.log('Delete process completed');
-    }
-  };
-
-  const handleDownloadCSV = () => {
-    // Define standard headers
-    const standardHeaders = [
-      'Artist',
-      'Album',
-      'Original Year',
-      'Label',
-      'Genres',
-      'Styles',
-      'Musicians',
-      'Added',
-      'Scanned Release Year',
-      'Master URL',
-      'Release URL'
-    ];
-
-    // Add custom column headers
-    const customHeaders = customColumns.map(col => col.name);
-    const headers = [...standardHeaders, ...customHeaders];
-
-    // Convert records to CSV rows
-    const rows = userRecords.map(record => {
-      // Standard fields
-      const standardFields = [
-      record.artist,
-      record.album,
-      record.year || '',
-      record.label || '',
-      record.genres?.join('; ') || '',
-      record.styles?.join('; ') || '',
-      record.musicians?.join('; ') || '',
-      record.created_at ? new Date(record.created_at).toLocaleString() : '',
-      record.current_release_year || '',
-      record.master_url || '',
-      record.current_release_url || ''
-      ];
-
-      // Custom fields
-      const customFields = customColumns.map(col => 
-        record.customValues?.[col.id] || ''
-      );
-
-      return [...standardFields, ...customFields];
-    });
-
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => 
-        row.map(cell => 
-          // Escape quotes and wrap in quotes if contains comma or newline
-          typeof cell === 'string' && (cell.includes(',') || cell.includes('\n') || cell.includes('"')) 
-            ? `"${cell.replace(/"/g, '""')}"` 
-            : cell
-        ).join(',')
-      )
-    ].join('\n');
-
-    // Create blob and trigger save dialog
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const defaultFileName = `vinyl-collection-${new Date().toISOString().split('T')[0]}.csv`;
-    
-    const downloadFile = () => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = defaultFileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    };
-
-    // Try to use the modern File System Access API
-    if ('showSaveFilePicker' in window) {
-      (window as any).showSaveFilePicker({
-        suggestedName: defaultFileName,
-        types: [{
-          description: 'CSV File',
-          accept: { 'text/csv': ['.csv'] },
-        }],
-      })
-        .then((handle: any) => handle.createWritable())
-        .then((writable: any) => writable.write(blob).then(() => writable.close()))
-        .catch((err: Error) => {
-          // Fallback to traditional method if user cancels or there's an error
-          if (err.name !== 'AbortError') {
-            downloadFile();
-          }
-        });
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker
-      downloadFile();
     }
   };
 
