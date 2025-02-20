@@ -422,6 +422,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     console.log('=== Adding Record to Collection ===');
     console.log('Record data before adding:', record);
     console.log('added_from value:', record.added_from);
+    console.log('Custom values:', record.customValues);
 
     setLoading(true);
     setError(null);
@@ -441,7 +442,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         master_url: record.master_url || null,
         current_release_url: record.added_from === 'barcode' ? record.current_release_url : null,
         label: record.label,
-        added_from: record.added_from
+        added_from: record.added_from,
+        customValues: record.customValues  // Add the edited custom values
       };
 
       console.log('Adding record from search:', recordData);
