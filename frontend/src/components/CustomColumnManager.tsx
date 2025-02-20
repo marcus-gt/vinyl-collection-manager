@@ -34,7 +34,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const handleModalClose = () => {
     if (columnsChanged) {
       // Only trigger table refresh if columns were modified
-      window.dispatchEvent(new CustomEvent('refresh-table-data'));
+      window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
     }
     onClose();
   };
