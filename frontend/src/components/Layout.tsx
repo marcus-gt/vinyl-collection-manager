@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { AppShell, Button, Group, Title, Burger, Drawer, Stack } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
@@ -6,7 +6,6 @@ import { useDisclosure } from '@mantine/hooks';
 function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [opened, { toggle, close }] = useDisclosure(false);
 
   const handleLogout = async () => {
