@@ -1148,7 +1148,6 @@ function Collection() {
           top: 0,
           zIndex: 100
         }}>
-          <Title>Collection Overview</Title>
           <Group gap="xs" wrap="nowrap">
             <TextInput
               placeholder="Search records..."
