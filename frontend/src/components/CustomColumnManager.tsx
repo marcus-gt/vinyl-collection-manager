@@ -87,6 +87,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column updated successfully',
             color: 'green'
           });
+          // Immediately update local state
+          await loadColumns();
+          // Trigger table refresh
+          window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
         }
       } else {
         // Create new column
@@ -98,9 +102,12 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column created successfully',
             color: 'green'
           });
+          // Immediately update local state
+          await loadColumns();
+          // Trigger table refresh
+          window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
         }
       }
-      await loadColumns();
       resetForm();
     } catch (err) {
       notifications.show({
@@ -129,7 +136,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           message: 'Column deleted successfully',
           color: 'green'
         });
+        // Immediately update local state
         await loadColumns();
+        // Trigger table refresh
+        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
       }
     } catch (err) {
       notifications.show({
@@ -191,8 +201,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         if (response.success) {
           setColumnsChanged(true);
           console.log('Color updated successfully');
-          // Reload columns
+          // Immediately update local state
           await loadColumns();
+          // Trigger table refresh
+          window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
         } else {
           console.error('Update failed:', response.error);
           // If the update failed, revert the local state
@@ -290,8 +302,10 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         const updateResults = await Promise.all(updates);
         console.log('Update results:', updateResults);
 
-        // Refresh the columns
+        // Immediately update local state
         await loadColumns();
+        // Trigger table refresh
+        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
 
         notifications.show({
           title: 'Success',

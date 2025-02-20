@@ -1256,7 +1256,11 @@ export function Collection() {
 
       <CustomColumnManager
         opened={manageColumnsOpened}
-        onClose={() => setManageColumnsOpened(false)}
+        onClose={() => {
+          setManageColumnsOpened(false);
+          loadCustomColumns();
+          loadRecords();  // Also reload records to get updated custom values
+        }}
       />
 
       <Modal
