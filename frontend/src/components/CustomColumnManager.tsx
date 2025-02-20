@@ -89,8 +89,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           });
           // Immediately update local state
           await loadColumns();
-          // Trigger table refresh
-          window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
         }
       } else {
         // Create new column
@@ -104,8 +102,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
           });
           // Immediately update local state
           await loadColumns();
-          // Trigger table refresh
-          window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
         }
       }
       resetForm();
@@ -138,8 +134,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         });
         // Immediately update local state
         await loadColumns();
-        // Trigger table refresh
-        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
       }
     } catch (err) {
       notifications.show({
@@ -201,7 +195,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
         if (response.success) {
           setColumnsChanged(true);
           console.log('Color updated successfully');
-          // Only update local state, don't trigger table refresh
+          // Immediately update local state
           await loadColumns();
         } else {
           console.error('Update failed:', response.error);
@@ -302,8 +296,6 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
 
         // Immediately update local state
         await loadColumns();
-        // Trigger table refresh
-        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
 
         notifications.show({
           title: 'Success',
