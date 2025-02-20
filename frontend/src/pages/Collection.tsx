@@ -67,31 +67,11 @@ export function Collection() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [sortState, setSortState] = useState<SortingState>([]);
   const [page, setPage] = useState(1);
-  const [recordsPerPage] = useState(25);
-  const [notesModalOpened, setNotesModalOpened] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<VinylRecord | null>(null);
   const [notes, setNotes] = useState('');
-  const [exportModalOpened, setExportModalOpened] = useState(false);
-  const [exportData, setExportData] = useState<string[][]>([]);
-  const [exportHeaders, setExportHeaders] = useState<string[]>([]);
-  const [exportFilename, setExportFilename] = useState('');
-  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
-  const [exportModalStep, setExportModalStep] = useState<'select' | 'preview'>('select');
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [exportPreview, setExportPreview] = useState<string>('');
   const [addRecordModalOpened, setAddRecordModalOpened] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState<VinylRecord | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesError, setNotesError] = useState<string | null>(null);
-  const [notesLoading, setNotesLoading] = useState(false);
-  const [exportLoading, setExportLoading] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -131,7 +111,6 @@ export function Collection() {
 
   const loadRecords = async () => {
     setLoading(true);
-    setLoadingError(null);
     try {
       console.log('=== Loading Records and Custom Values ===');
       const response = await recordsApi.getAll();
@@ -169,11 +148,10 @@ export function Collection() {
         console.log('Records with custom values:', recordsWithCustomValues);
         setRecords(recordsWithCustomValues);
       } else {
-        setLoadingError(response.error || 'Failed to load records');
+        console.error(response.error || 'Failed to load records');
       }
     } catch (err) {
       console.error('Error loading records:', err);
-      setLoadingError(err instanceof Error ? err.message : 'Failed to load records');
     } finally {
       setLoading(false);
     }
@@ -194,7 +172,6 @@ export function Collection() {
     if (!selectedRecord?.id) return;
     
     setLoading(true);
-    setNotesError(null);
     try {
       const response = await recordsApi.updateNotes(selectedRecord.id, notes);
       if (response.success && response.data) {
@@ -210,10 +187,18 @@ export function Collection() {
           color: 'green'
         });
       } else {
-        setNotesError(response.error || 'Failed to update notes');
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to update notes',
+          color: 'red'
+        });
       }
     } catch (err) {
-      setNotesError(err instanceof Error ? err.message : 'Failed to update notes');
+      notifications.show({
+        title: 'Error',
+        message: err instanceof Error ? err.message : 'Failed to update notes',
+        color: 'red'
+      });
     } finally {
       setLoading(false);
     }
@@ -270,7 +255,6 @@ export function Collection() {
         }
       } else {
         console.error('Delete failed:', response.error);
-        setLoadingError(response.error || 'Failed to delete record');
         notifications.show({
           title: 'Error',
           message: response.error || 'Failed to delete record',
@@ -280,7 +264,6 @@ export function Collection() {
     } catch (err) {
       console.error('Error during delete:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
-      setLoadingError(errorMessage);
       notifications.show({
         title: 'Error',
         message: errorMessage,
