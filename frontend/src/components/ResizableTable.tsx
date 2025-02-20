@@ -900,8 +900,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       position: 'relative',
                       userSelect: 'none',
                       height: '32px',
-                      maxHeight: '32px',
-                      padding: '4px 8px'
+                      maxHeight: '32px'
                     }}
                   >
                     {header.isPlaceholder ? null : (
@@ -998,8 +997,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     maxWidth: cell.column.getSize(),
                     overflow: 'hidden',
                     height: '32px',
-                    maxHeight: '32px',
-                    padding: '4px 8px'
+                    maxHeight: '32px'
                   }}
                 >
                   <div style={{ 

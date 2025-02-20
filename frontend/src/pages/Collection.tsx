@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconPlus, IconFilter } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconPlus, IconRefresh } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -63,7 +63,7 @@ const customValuesService = {
   }
 };
 
-export function Collection() {
+function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
@@ -1167,6 +1167,14 @@ export function Collection() {
             >
               Export CSV
             </Button>
+            <Button
+              variant="light"
+              leftSection={<IconRefresh size={16} />}
+              onClick={loadRecords}
+              loading={loading}
+            >
+              Refresh
+            </Button>
           </Group>
         </Group>
 
@@ -1174,27 +1182,24 @@ export function Collection() {
           <Text c="red">{error}</Text>
         )}
 
-        <Box style={{ position: 'relative' }}>
-          <ResizableTable
-            data={userRecords}
-            columns={tableColumns}
-            sortState={sortStatus}
-            onSortChange={setSortStatus}
-            tableId="collection-table"
-            loading={loading}
-            recordsPerPage={PAGE_SIZE}
-            page={page}
-            onPageChange={setPage}
-            customColumns={customColumns}
-            searchQuery={searchQuery}
-          />
-        </Box>
+        <ResizableTable
+          data={userRecords}
+          columns={tableColumns}
+          sortState={sortStatus}
+          onSortChange={setSortStatus}
+          tableId="collection-table"
+          loading={loading}
+          recordsPerPage={PAGE_SIZE}
+          page={page}
+          onPageChange={setPage}
+          customColumns={customColumns}
+          searchQuery={searchQuery}
+        />
 
         <CustomColumnManager
           opened={customColumnManagerOpened}
           onClose={() => {
             setCustomColumnManagerOpened(false);
-            loadCustomColumns();
           }}
         />
 
@@ -1202,7 +1207,6 @@ export function Collection() {
           opened={addRecordsModalOpened}
           onClose={() => {
             setAddRecordsModalOpened(false);
-            loadRecords();
           }}
         />
 
@@ -1210,7 +1214,6 @@ export function Collection() {
           opened={!!editingRecord}
           onClose={() => setEditingRecord(null)}
           title="Edit Notes"
-          size="md"
         >
           <Stack>
             {editingRecord && (

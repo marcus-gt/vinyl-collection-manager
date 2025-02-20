@@ -34,7 +34,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
   const handleModalClose = () => {
     if (columnsChanged) {
       // Only trigger table refresh if columns were modified
-      window.dispatchEvent(new CustomEvent('refresh-table-data'));
+      window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
     }
     onClose();
   };
@@ -87,6 +87,7 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column updated successfully',
             color: 'green'
           });
+          await loadColumns();  // Update local state only
         }
       } else {
         // Create new column
@@ -98,9 +99,9 @@ export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProp
             message: 'Column created successfully',
             color: 'green'
           });
+          await loadColumns();  // Update local state only
         }
       }
-      await loadColumns();
       resetForm();
     } catch (err) {
       notifications.show({
