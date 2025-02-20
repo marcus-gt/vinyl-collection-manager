@@ -93,22 +93,15 @@ function Collection() {
       console.log('Records reload initiated');
     };
 
-    const handleExportCSV = () => {
-      console.log('Export CSV event received');
-      handleDownloadCSV();
-    };
-
     // Add event listeners
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
     window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
-    window.addEventListener('export-collection-csv', handleExportCSV);
 
     // Cleanup function
     return () => {
       console.log('Removing event listeners');
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
       window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
-      window.removeEventListener('export-collection-csv', handleExportCSV);
     };
   }, []);
 

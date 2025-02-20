@@ -19,19 +19,6 @@ function Layout() {
 
   const NavLinks = () => (
     <>
-      {isCollectionPage && (
-        <Button 
-          variant="light"
-          leftSection={<IconDownload size={16} />}
-          onClick={() => {
-            // Dispatch event that Collection component will listen for
-            window.dispatchEvent(new CustomEvent('export-collection-csv'));
-            close();
-          }}
-        >
-          Export CSV
-        </Button>
-      )}
       <Button variant="light" onClick={() => { handleLogout(); close(); }}>
         Logout
       </Button>
