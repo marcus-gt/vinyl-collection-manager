@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { records as recordsApi, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { AddRecordsModal } from '../components/AddRecordsModal';
+import { CustomColumnManager } from '../components/CustomColumnManager';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
@@ -72,6 +73,7 @@ export function Collection() {
   const [selectedRecord, setSelectedRecord] = useState<VinylRecord | null>(null);
   const [notes, setNotes] = useState('');
   const [addRecordModalOpened, setAddRecordModalOpened] = useState(false);
+  const [manageColumnsOpened, setManageColumnsOpened] = useState(false);
 
   useEffect(() => {
     loadRecords();
@@ -1172,6 +1174,10 @@ export function Collection() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>Toggle columns</Menu.Label>
+                <Menu.Item onClick={() => setManageColumnsOpened(true)}>
+                  Manage Custom Columns
+                </Menu.Item>
+                <Menu.Divider />
                 {customColumns.map((column) => (
                   <Menu.Item
                     key={column.id}
@@ -1246,6 +1252,11 @@ export function Collection() {
           setAddRecordModalOpened(false);
           loadRecords();
         }}
+      />
+
+      <CustomColumnManager
+        opened={manageColumnsOpened}
+        onClose={() => setManageColumnsOpened(false)}
       />
 
       <Modal
