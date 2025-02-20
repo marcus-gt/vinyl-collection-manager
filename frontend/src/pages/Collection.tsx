@@ -1,15 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
+import { Box, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Badge, Checkbox, Menu, TextInput } from '@mantine/core';
 import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconRefresh, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { records, customColumns as customColumnsApi } from '../services/api';
+import { records as recordsApi, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
-import { CustomColumnManager } from '../components/CustomColumnManager';
 import { AddRecordsModal } from '../components/AddRecordsModal';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
-import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
+import { SortingState, ColumnDef, Row, ColumnFiltersState } from '@tanstack/react-table';
 
 const PAGE_SIZE = 40;
 
@@ -63,18 +62,36 @@ const customValuesService = {
   }
 };
 
-function Collection() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
-  const [page, setPage] = useState(1);
+export function Collection() {
+  const [records, setRecords] = useState<VinylRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
-  const [editingNotes, setEditingNotes] = useState('');
-  const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
-  const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
-  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [sortState, setSortState] = useState<SortingState>([]);
+  const [page, setPage] = useState(1);
+  const [recordsPerPage] = useState(25);
+  const [notesModalOpened, setNotesModalOpened] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<VinylRecord | null>(null);
+  const [notes, setNotes] = useState('');
+  const [exportModalOpened, setExportModalOpened] = useState(false);
+  const [exportData, setExportData] = useState<string[][]>([]);
+  const [exportHeaders, setExportHeaders] = useState<string[]>([]);
+  const [exportFilename, setExportFilename] = useState('');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
+  const [exportModalStep, setExportModalStep] = useState<'select' | 'preview'>('select');
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [exportPreview, setExportPreview] = useState<string>('');
+  const [addRecordModalOpened, setAddRecordModalOpened] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<VinylRecord | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -114,10 +131,10 @@ function Collection() {
 
   const loadRecords = async () => {
     setLoading(true);
-    setError(null);
+    setLoadingError(null);
     try {
       console.log('=== Loading Records and Custom Values ===');
-      const response = await records.getAll();
+      const response = await recordsApi.getAll();
       
       if (response.success && response.data) {
         // First, get all record IDs
@@ -150,13 +167,13 @@ function Collection() {
         }));
 
         console.log('Records with custom values:', recordsWithCustomValues);
-        setUserRecords(recordsWithCustomValues);
+        setRecords(recordsWithCustomValues);
       } else {
-        setError(response.error || 'Failed to load records');
+        setLoadingError(response.error || 'Failed to load records');
       }
     } catch (err) {
       console.error('Error loading records:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load records');
+      setLoadingError(err instanceof Error ? err.message : 'Failed to load records');
     } finally {
       setLoading(false);
     }
@@ -174,28 +191,29 @@ function Collection() {
   };
 
   const handleUpdateNotes = async () => {
-    if (!editingRecord?.id) return;
+    if (!selectedRecord?.id) return;
     
     setLoading(true);
+    setNotesError(null);
     try {
-      const response = await records.updateNotes(editingRecord.id, editingNotes);
+      const response = await recordsApi.updateNotes(selectedRecord.id, notes);
       if (response.success && response.data) {
-        setUserRecords(prevRecords => 
+        setRecords(prevRecords => 
           prevRecords.map(record => 
-            record.id === editingRecord.id ? response.data! : record
+            record.id === selectedRecord.id ? response.data! : record
           )
         );
-        setEditingRecord(null);
+        setSelectedRecord(null);
         notifications.show({
           title: 'Success',
           message: 'Notes updated successfully',
           color: 'green'
         });
       } else {
-        setError(response.error || 'Failed to update notes');
+        setNotesError(response.error || 'Failed to update notes');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update notes');
+      setNotesError(err instanceof Error ? err.message : 'Failed to update notes');
     } finally {
       setLoading(false);
     }
@@ -218,25 +236,25 @@ function Collection() {
     setLoading(true);
     try {
       // First load fresh data to ensure we have the latest state
-      const currentData = await records.getAll();
+      const currentData = await recordsApi.getAll();
       console.log('Current data from server:', currentData);
       
       if (currentData.success && currentData.data) {
-        setUserRecords(currentData.data);
+        setRecords(currentData.data);
       }
 
       console.log('Calling delete API...');
-      const response = await records.delete(record.id);
+      const response = await recordsApi.delete(record.id);
       console.log('Delete API response:', response);
       
       if (response.success) {
         console.log('Delete successful, reloading data...');
         // Reload the full data after successful deletion
-        const refreshedData = await records.getAll();
+        const refreshedData = await recordsApi.getAll();
         console.log('Refreshed data:', refreshedData);
         
         if (refreshedData.success && refreshedData.data) {
-          setUserRecords(refreshedData.data);
+          setRecords(refreshedData.data);
           notifications.show({
             title: 'Success',
             message: 'Record deleted successfully',
@@ -252,7 +270,7 @@ function Collection() {
         }
       } else {
         console.error('Delete failed:', response.error);
-        setError(response.error || 'Failed to delete record');
+        setLoadingError(response.error || 'Failed to delete record');
         notifications.show({
           title: 'Error',
           message: response.error || 'Failed to delete record',
@@ -262,7 +280,7 @@ function Collection() {
     } catch (err) {
       console.error('Error during delete:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
-      setError(errorMessage);
+      setLoadingError(errorMessage);
       notifications.show({
         title: 'Error',
         message: errorMessage,
@@ -295,7 +313,7 @@ function Collection() {
     const headers = [...standardHeaders, ...customHeaders];
 
     // Convert records to CSV rows
-    const rows = userRecords.map(record => {
+    const rows = records.map(record => {
       // Standard fields
       const standardFields = [
       record.artist,
@@ -756,7 +774,7 @@ function Collection() {
             
             if (response.success) {
               // Update the record in the local state
-              setUserRecords(prevRecords =>
+              setRecords(prevRecords =>
                 prevRecords.map(r =>
                   r.id === row.original.id
                     ? {
@@ -1204,16 +1222,14 @@ function Collection() {
             <Button
               variant="default"
               leftSection={<IconRefresh size={16} />}
-              onClick={() => {
-                // Implement refresh logic here
-              }}
+              onClick={loadRecords}
             >
               Refresh
             </Button>
             <Button
               variant="filled"
               leftSection={<IconPlus size={16} />}
-              onClick={() => setAddRecordsModalOpened(true)}
+              onClick={() => setAddRecordModalOpened(true)}
             >
               Add Record
             </Button>
@@ -1226,10 +1242,10 @@ function Collection() {
           padding: 0  // Remove padding
         }}>
           <ResizableTable
-            data={userRecords}
+            data={records}
             columns={tableColumns}
-            sortState={sortStatus}
-            onSortChange={setSortStatus}
+            sortState={sortState}
+            onSortChange={setSortState}
             tableId="collection-table"
             loading={loading}
             recordsPerPage={PAGE_SIZE}
@@ -1242,32 +1258,32 @@ function Collection() {
       </Box>
 
       <AddRecordsModal
-        opened={addRecordsModalOpened}
+        opened={addRecordModalOpened}
         onClose={() => {
-          setAddRecordsModalOpened(false);
+          setAddRecordModalOpened(false);
           loadRecords();
         }}
       />
 
       <Modal
-        opened={!!editingRecord}
-        onClose={() => setEditingRecord(null)}
+        opened={!!selectedRecord}
+        onClose={() => setSelectedRecord(null)}
         title="Edit Notes"
       >
         <Stack>
-          {editingRecord && (
+          {selectedRecord && (
             <Text size="sm" fw={500}>
-              {editingRecord.artist} - {editingRecord.album}
+              {selectedRecord.artist} - {selectedRecord.album}
             </Text>
           )}
           <TextInput
             label="Notes"
-            value={editingNotes}
-            onChange={(e) => setEditingNotes(e.target.value)}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             placeholder="Add notes about this record..."
           />
           <Group justify="flex-end">
-            <Button variant="light" onClick={() => setEditingRecord(null)}>
+            <Button variant="light" onClick={() => setSelectedRecord(null)}>
               Cancel
             </Button>
             <Button onClick={handleUpdateNotes} loading={loading}>
