@@ -825,7 +825,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      gap: '1rem'
+      gap: 'var(--mantine-spacing-xs)'
     }}>
       <LoadingOverlay visible={loading} />
       <Table
@@ -836,7 +836,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           minWidth: Math.max(table.getCenterTotalSize(), 1200),
           borderCollapse: 'separate',
           borderSpacing: 0,
-          lineHeight: '32px',
           position: 'relative'
         }}
         styles={{
@@ -864,7 +863,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           td: {
             height: '32px',
             maxHeight: '32px',
-            padding: '0 8px',
+            padding: '4px 8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -876,7 +875,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           th: {
             height: '32px',
             maxHeight: '32px',
-            padding: '8px',
+            padding: '4px 8px',
             borderRight: '1px solid var(--mantine-color-dark-4)',
             position: 'relative',
             whiteSpace: 'nowrap',
@@ -901,7 +900,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       position: 'relative',
                       userSelect: 'none',
                       height: '32px',
-                      maxHeight: '32px'
+                      maxHeight: '32px',
+                      padding: '4px 8px'
                     }}
                   >
                     {header.isPlaceholder ? null : (
@@ -998,7 +998,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     maxWidth: cell.column.getSize(),
                     overflow: 'hidden',
                     height: '32px',
-                    maxHeight: '32px'
+                    maxHeight: '32px',
+                    padding: '4px 8px'
                   }}
                 >
                   <div style={{ 
@@ -1020,13 +1021,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       </Table>
       {allFilteredRows.length > 0 && (
         <Box 
-          mt="md" 
           style={{ 
             position: 'sticky',
             left: 0,
             width: '100%',
             background: 'var(--mantine-color-dark-7)',
-            padding: 'var(--mantine-spacing-md) 0',
+            padding: 'var(--mantine-spacing-xs) 0',
             borderTop: '1px solid var(--mantine-color-dark-4)',
             zIndex: 2,
             display: 'flex',

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconPlus, IconFilter } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -63,7 +63,7 @@ const customValuesService = {
   }
 };
 
-function Collection() {
+export function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
@@ -1143,16 +1143,19 @@ function Collection() {
                 setPage(1);
               }}
               style={{ width: 300 }}
+              leftSection={<IconSearch size={16} />}
             />
             <Button
               variant="light"
               onClick={() => setAddRecordsModalOpened(true)}
+              leftSection={<IconPlus size={16} />}
             >
               Add Records
             </Button>
             <Button
               variant="light"
               onClick={() => setCustomColumnManagerOpened(true)}
+              leftSection={<IconFilter size={16} />}
             >
               Manage Columns
             </Button>
@@ -1171,19 +1174,21 @@ function Collection() {
           <Text c="red">{error}</Text>
         )}
 
-        <ResizableTable
-          data={userRecords}
-          columns={tableColumns}
-          sortState={sortStatus}
-          onSortChange={setSortStatus}
-          tableId="collection-table"
-          loading={loading}
-          recordsPerPage={PAGE_SIZE}
-          page={page}
-          onPageChange={setPage}
-          customColumns={customColumns}
-          searchQuery={searchQuery}
-        />
+        <Box style={{ position: 'relative' }}>
+          <ResizableTable
+            data={userRecords}
+            columns={tableColumns}
+            sortState={sortStatus}
+            onSortChange={setSortStatus}
+            tableId="collection-table"
+            loading={loading}
+            recordsPerPage={PAGE_SIZE}
+            page={page}
+            onPageChange={setPage}
+            customColumns={customColumns}
+            searchQuery={searchQuery}
+          />
+        </Box>
 
         <CustomColumnManager
           opened={customColumnManagerOpened}
@@ -1205,6 +1210,7 @@ function Collection() {
           opened={!!editingRecord}
           onClose={() => setEditingRecord(null)}
           title="Edit Notes"
+          size="md"
         >
           <Stack>
             {editingRecord && (
