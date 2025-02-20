@@ -2,7 +2,6 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Button, Group, Title, Burger, Drawer, Stack } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
-import { IconDownload } from '@tabler/icons-react';
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -14,8 +13,6 @@ function Layout() {
     await logout();
     navigate('/login');
   };
-
-  const isCollectionPage = location.pathname === '/collection';
 
   const NavLinks = () => (
     <>
