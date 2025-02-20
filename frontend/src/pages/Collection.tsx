@@ -1130,18 +1130,26 @@ function Collection() {
   }, [customColumns]);
 
   return (
-    <Container size="xl" py="xl" mt={60}>
-      <Stack>
-        <Group justify="space-between" align="center" mb="md" style={{
+    <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <Box style={{ 
+        flex: 1, 
+        display: 'flex', 
+        flexDirection: 'column',
+        padding: 0,
+        overflow: 'hidden'
+      }}>
+        <Group justify="space-between" align="center" style={{ 
+          padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
           borderBottom: '1px solid var(--mantine-color-dark-4)',
           background: 'var(--mantine-color-dark-7)',
+          gap: 'var(--mantine-spacing-xs)',
+          flexWrap: 'wrap',
           position: 'sticky',
           top: 0,
-          zIndex: 100,
-          padding: 'var(--mantine-spacing-md)'
+          zIndex: 100
         }}>
           <Title>Collection Overview</Title>
-          <Group>
+          <Group gap="xs" wrap="nowrap">
             <TextInput
               placeholder="Search records..."
               value={searchQuery}
@@ -1149,7 +1157,7 @@ function Collection() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              style={{ width: 300 }}
+              style={{ minWidth: '200px' }}
               leftSection={<IconSearch size={16} />}
               rightSection={
                 searchQuery ? (
@@ -1163,21 +1171,21 @@ function Collection() {
               }
             />
             <Button
-              variant="light"
+              variant="default"
               onClick={() => setAddRecordsModalOpened(true)}
               leftSection={<IconPlus size={16} />}
             >
               Add Records
             </Button>
             <Button
-              variant="light"
+              variant="default"
               onClick={() => setCustomColumnManagerOpened(true)}
               leftSection={<IconFilter size={16} />}
             >
               Manage Columns
             </Button>
             <Button
-              variant="light"
+              variant="default"
               leftSection={<IconDownload size={16} />}
               onClick={handleDownloadCSV}
               disabled={userRecords.length === 0}
@@ -1187,76 +1195,82 @@ function Collection() {
           </Group>
         </Group>
 
-        {error && (
-          <Text c="red">{error}</Text>
-        )}
+        <Box style={{ 
+          flex: 1,
+          overflow: 'auto',
+          padding: 0
+        }}>
+          {error && (
+            <Text c="red">{error}</Text>
+          )}
 
-        <ResizableTable
-          data={userRecords}
-          columns={tableColumns}
-          sortState={sortStatus}
-          onSortChange={setSortStatus}
-          tableId="collection-table"
-          loading={loading}
-          recordsPerPage={PAGE_SIZE}
-          page={page}
-          onPageChange={setPage}
-          customColumns={customColumns}
-          searchQuery={searchQuery}
-        />
+          <ResizableTable
+            data={userRecords}
+            columns={tableColumns}
+            sortState={sortStatus}
+            onSortChange={setSortStatus}
+            tableId="collection-table"
+            loading={loading}
+            recordsPerPage={PAGE_SIZE}
+            page={page}
+            onPageChange={setPage}
+            customColumns={customColumns}
+            searchQuery={searchQuery}
+          />
+        </Box>
+      </Box>
 
-        <CustomColumnManager
-          opened={customColumnManagerOpened}
-          onClose={() => {
-            setCustomColumnManagerOpened(false);
-            loadCustomColumns();
-          }}
-        />
+      <CustomColumnManager
+        opened={customColumnManagerOpened}
+        onClose={() => {
+          setCustomColumnManagerOpened(false);
+          loadCustomColumns();
+        }}
+      />
 
-        <AddRecordsModal
-          opened={addRecordsModalOpened}
-          onClose={() => {
-            setAddRecordsModalOpened(false);
-            loadRecords();
-          }}
-        />
+      <AddRecordsModal
+        opened={addRecordsModalOpened}
+        onClose={() => {
+          setAddRecordsModalOpened(false);
+          loadRecords();
+        }}
+      />
 
-        <Modal
-          opened={!!editingRecord}
-          onClose={() => setEditingRecord(null)}
-          title="Edit Notes"
-          size="md"
-        >
-          <Stack>
-            {editingRecord && (
-              <Text size="sm" fw={500}>
-                {editingRecord.artist} - {editingRecord.album}
-              </Text>
-            )}
-            <TextInput
-              label="Notes"
-              value={editingNotes}
-              onChange={(e) => setEditingNotes(e.target.value)}
-              placeholder="Add notes about this record..."
-              size="sm"
-              styles={{
-                input: {
-                  minHeight: '36px'
-                }
-              }}
-            />
-            <Group justify="flex-end">
-              <Button variant="light" onClick={() => setEditingRecord(null)} size="sm">
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateNotes} loading={loading} size="sm">
-                Save
-              </Button>
-            </Group>
-          </Stack>
-        </Modal>
-      </Stack>
-    </Container>
+      <Modal
+        opened={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        title="Edit Notes"
+        size="md"
+      >
+        <Stack>
+          {editingRecord && (
+            <Text size="sm" fw={500}>
+              {editingRecord.artist} - {editingRecord.album}
+            </Text>
+          )}
+          <TextInput
+            label="Notes"
+            value={editingNotes}
+            onChange={(e) => setEditingNotes(e.target.value)}
+            placeholder="Add notes about this record..."
+            size="sm"
+            styles={{
+              input: {
+                minHeight: '36px'
+              }
+            }}
+          />
+          <Group justify="flex-end">
+            <Button variant="light" onClick={() => setEditingRecord(null)} size="sm">
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateNotes} loading={loading} size="sm">
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </Box>
   );
 }
 
