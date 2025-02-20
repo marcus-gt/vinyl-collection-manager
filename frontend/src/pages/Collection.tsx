@@ -73,7 +73,7 @@ export function Collection() {
   const [selectedRecord, setSelectedRecord] = useState<VinylRecord | null>(null);
   const [notes, setNotes] = useState('');
   const [addRecordModalOpened, setAddRecordModalOpened] = useState(false);
-  const [manageColumnsOpened, setManageColumnsOpened] = useState(false);
+  const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
 
   useEffect(() => {
     loadRecords();
@@ -1174,7 +1174,7 @@ export function Collection() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>Toggle columns</Menu.Label>
-                <Menu.Item onClick={() => setManageColumnsOpened(true)}>
+                <Menu.Item onClick={() => setCustomColumnManagerOpened(true)}>
                   Manage Custom Columns
                 </Menu.Item>
                 <Menu.Divider />
@@ -1255,11 +1255,9 @@ export function Collection() {
       />
 
       <CustomColumnManager
-        opened={manageColumnsOpened}
+        opened={customColumnManagerOpened}
         onClose={() => {
-          setManageColumnsOpened(false);
-          loadCustomColumns();
-          loadRecords();  // Also reload records to get updated custom values
+          setCustomColumnManagerOpened(false);
         }}
       />
 
