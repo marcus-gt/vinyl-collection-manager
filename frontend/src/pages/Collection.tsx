@@ -1141,7 +1141,7 @@ function Collection() {
           top: 0,
           zIndex: 100
         }}>
-          <Group gap="xs" wrap="nowrap">
+          <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
             <TextInput
               placeholder="Search records..."
               value={searchQuery}
@@ -1149,7 +1149,13 @@ function Collection() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              style={{ minWidth: '200px' }}
+              style={{ 
+                minWidth: '200px',
+                flex: '1 1 auto',
+                '@media (max-width: 600px)': {
+                  minWidth: '100%'
+                }
+              }}
               leftSection={<IconSearch size={16} />}
               rightSection={
                 searchQuery ? (
@@ -1162,28 +1168,31 @@ function Collection() {
                 ) : null
               }
             />
-            <Button
-              variant="default"
-              onClick={() => setAddRecordsModalOpened(true)}
-              leftSection={<IconPlus size={16} />}
-            >
-              Add Records
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setCustomColumnManagerOpened(true)}
-              leftSection={<IconFilter size={16} />}
-            >
-              Manage Columns
-            </Button>
-            <Button
-              variant="default"
-              leftSection={<IconDownload size={16} />}
-              onClick={handleDownloadCSV}
-              disabled={userRecords.length === 0}
-            >
-              Export CSV
-            </Button>
+            <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
+              <Button
+                variant="default"
+                onClick={() => setAddRecordsModalOpened(true)}
+                leftSection={<IconPlus size={16} />}
+                style={{
+                  '@media (max-width: 600px)': {
+                    flex: '1 1 auto'
+                  }
+                }}
+              >
+                Add Records
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => setCustomColumnManagerOpened(true)}
+                style={{
+                  '@media (max-width: 600px)': {
+                    flex: '1 1 auto'
+                  }
+                }}
+              >
+                Manage Columns
+              </Button>
+            </Group>
           </Group>
         </Group>
 
