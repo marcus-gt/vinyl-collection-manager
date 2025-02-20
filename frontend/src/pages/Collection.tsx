@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Container, Title, TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconRefresh, IconPlus } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconDownload, IconX, IconSearch, IconFilter, IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
