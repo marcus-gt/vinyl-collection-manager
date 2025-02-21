@@ -93,30 +93,23 @@ function Collection() {
       console.log('Records reload initiated');
     };
 
-    const handleExportCSV = async () => {
-      console.log('Export CSV event received');
-      
-      // If no records are loaded, load them first
-      if (userRecords.length === 0) {
-        console.log('No records loaded, loading records first...');
-        setLoading(true);
-        try {
-          await loadRecords();
-          await loadCustomColumns();
-        } catch (err) {
-          console.error('Failed to load records:', err);
-          notifications.show({
-            title: 'Error',
-            message: 'Failed to load records for export',
-            color: 'red'
-          });
-          return;
-        } finally {
-          setLoading(false);
-        }
-      }
+    // Add event listeners
+    window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
+    window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
 
-      // Check again if we have records after loading
+    return () => {
+      console.log('Removing event listeners');
+      window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
+      window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
+    };
+  }, []);
+
+  // Separate useEffect for CSV export to ensure it has access to current userRecords
+  useEffect(() => {
+    const handleExportCSV = () => {
+      console.log('Export CSV event received');
+      console.log('Current records:', userRecords);
+      
       if (!userRecords.length) {
         notifications.show({
           title: 'No Records',
@@ -126,22 +119,122 @@ function Collection() {
         return;
       }
 
-      handleDownloadCSV();
+      // Define standard headers
+      const standardHeaders = [
+        'Artist',
+        'Album',
+        'Original Year',
+        'Label',
+        'Genres',
+        'Styles',
+        'Musicians',
+        'Added',
+        'Scanned Release Year',
+        'Master URL',
+        'Release URL'
+      ];
+
+      // Add custom column headers
+      const customHeaders = customColumns.map(col => col.name);
+      const headers = [...standardHeaders, ...customHeaders];
+
+      console.log('Headers:', headers);
+      console.log('Custom columns:', customColumns);
+
+      // Convert records to CSV rows
+      const rows = userRecords.map(record => {
+        console.log('Processing record:', record);
+        
+        // Standard fields
+        const standardFields = [
+          record.artist || '',
+          record.album || '',
+          record.year?.toString() || '',
+          record.label || '',
+          (record.genres || []).join('; '),
+          (record.styles || []).join('; '),
+          (record.musicians || []).join('; '),
+          record.created_at ? new Date(record.created_at).toLocaleString() : '',
+          record.current_release_year?.toString() || '',
+          record.master_url || '',
+          record.current_release_url || ''
+        ];
+
+        // Custom fields
+        const customFields = customColumns.map(col => {
+          const value = record.customValues?.[col.id];
+          console.log(`Custom field ${col.name}:`, value);
+          return value || '';
+        });
+
+        const row = [...standardFields, ...customFields];
+        console.log('Generated row:', row);
+        return row;
+      });
+
+      console.log('Generated rows:', rows);
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => 
+          row.map(cell => {
+            // Handle null or undefined
+            if (cell === null || cell === undefined) return '';
+            
+            // Convert to string and handle special characters
+            const str = String(cell);
+            if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          }).join(',')
+        )
+      ].join('\n');
+
+      console.log('CSV Content:', csvContent);
+
+      // Create blob and trigger save dialog
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const defaultFileName = `vinyl-collection-${new Date().toISOString().split('T')[0]}.csv`;
+      
+      const downloadFile = () => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = defaultFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      };
+
+      // Try to use the modern File System Access API
+      if ('showSaveFilePicker' in window) {
+        (window as any).showSaveFilePicker({
+          suggestedName: defaultFileName,
+          types: [{
+            description: 'CSV File',
+            accept: { 'text/csv': ['.csv'] },
+          }],
+        })
+          .then((handle: any) => handle.createWritable())
+          .then((writable: any) => writable.write(blob).then(() => writable.close()))
+          .catch((err: Error) => {
+            // Fallback to traditional method if user cancels or there's an error
+            if (err.name !== 'AbortError') {
+              downloadFile();
+            }
+          });
+      } else {
+        // Fallback for browsers that don't support showSaveFilePicker
+        downloadFile();
+      }
     };
 
-    // Add event listeners
-    window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
-    window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
     window.addEventListener('export-collection-csv', handleExportCSV);
-
-    // Cleanup function
-    return () => {
-      console.log('Removing event listeners');
-      window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
-      window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
-      window.removeEventListener('export-collection-csv', handleExportCSV);
-    };
-  }, []);
+    return () => window.removeEventListener('export-collection-csv', handleExportCSV);
+  }, [userRecords, customColumns]); // Include dependencies
 
   const loadRecords = async () => {
     setLoading(true);
@@ -302,131 +395,6 @@ function Collection() {
     } finally {
       setLoading(false);
       console.log('Delete process completed');
-    }
-  };
-
-  const handleDownloadCSV = () => {
-    console.log('Starting CSV export with records:', userRecords);
-    
-    if (!userRecords.length) {
-      notifications.show({
-        title: 'No Records',
-        message: 'There are no records to export.',
-        color: 'yellow'
-      });
-      return;
-    }
-
-    // Define standard headers
-    const standardHeaders = [
-      'Artist',
-      'Album',
-      'Original Year',
-      'Label',
-      'Genres',
-      'Styles',
-      'Musicians',
-      'Added',
-      'Scanned Release Year',
-      'Master URL',
-      'Release URL'
-    ];
-
-    // Add custom column headers
-    const customHeaders = customColumns.map(col => col.name);
-    const headers = [...standardHeaders, ...customHeaders];
-
-    console.log('Headers:', headers);
-    console.log('Custom columns:', customColumns);
-
-    // Convert records to CSV rows
-    const rows = userRecords.map(record => {
-      console.log('Processing record:', record);
-      
-      // Standard fields
-      const standardFields = [
-        record.artist || '',
-        record.album || '',
-        record.year?.toString() || '',
-        record.label || '',
-        (record.genres || []).join('; '),
-        (record.styles || []).join('; '),
-        (record.musicians || []).join('; '),
-        record.created_at ? new Date(record.created_at).toLocaleString() : '',
-        record.current_release_year?.toString() || '',
-        record.master_url || '',
-        record.current_release_url || ''
-      ];
-
-      // Custom fields
-      const customFields = customColumns.map(col => {
-        const value = record.customValues?.[col.id];
-        console.log(`Custom field ${col.name}:`, value);
-        return value || '';
-      });
-
-      const row = [...standardFields, ...customFields];
-      console.log('Generated row:', row);
-      return row;
-    });
-
-    console.log('Generated rows:', rows);
-
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => 
-        row.map(cell => {
-          // Handle null or undefined
-          if (cell === null || cell === undefined) return '';
-          
-          // Convert to string and handle special characters
-          const str = String(cell);
-          if (str.includes(',') || str.includes('\n') || str.includes('"')) {
-            return `"${str.replace(/"/g, '""')}"`;
-          }
-          return str;
-        }).join(',')
-      )
-    ].join('\n');
-
-    console.log('CSV Content:', csvContent);
-
-    // Create blob and trigger save dialog
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const defaultFileName = `vinyl-collection-${new Date().toISOString().split('T')[0]}.csv`;
-    
-    const downloadFile = () => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = defaultFileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    };
-
-    // Try to use the modern File System Access API
-    if ('showSaveFilePicker' in window) {
-      (window as any).showSaveFilePicker({
-        suggestedName: defaultFileName,
-        types: [{
-          description: 'CSV File',
-          accept: { 'text/csv': ['.csv'] },
-        }],
-      })
-        .then((handle: any) => handle.createWritable())
-        .then((writable: any) => writable.write(blob).then(() => writable.close()))
-        .catch((err: Error) => {
-          // Fallback to traditional method if user cancels or there's an error
-          if (err.name !== 'AbortError') {
-            downloadFile();
-          }
-        });
-    } else {
-      // Fallback for browsers that don't support showSaveFilePicker
-      downloadFile();
     }
   };
 
