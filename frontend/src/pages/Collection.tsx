@@ -93,8 +93,39 @@ function Collection() {
       console.log('Records reload initiated');
     };
 
-    const handleExportCSV = () => {
+    const handleExportCSV = async () => {
       console.log('Export CSV event received');
+      
+      // If no records are loaded, load them first
+      if (userRecords.length === 0) {
+        console.log('No records loaded, loading records first...');
+        setLoading(true);
+        try {
+          await loadRecords();
+          await loadCustomColumns();
+        } catch (err) {
+          console.error('Failed to load records:', err);
+          notifications.show({
+            title: 'Error',
+            message: 'Failed to load records for export',
+            color: 'red'
+          });
+          return;
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      // Check again if we have records after loading
+      if (!userRecords.length) {
+        notifications.show({
+          title: 'No Records',
+          message: 'There are no records to export.',
+          color: 'yellow'
+        });
+        return;
+      }
+
       handleDownloadCSV();
     };
 
