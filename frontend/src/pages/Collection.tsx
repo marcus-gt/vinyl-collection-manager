@@ -602,7 +602,8 @@ function Collection() {
                   'Spotify List Manual',
                   'Spotify List Auto',
                   'Barcode',
-                  'Discogs'
+                  'Discogs',
+                  'CSV Import'
                 ],
                 valueMap: {
                   'manual': 'Manual',
@@ -610,7 +611,8 @@ function Collection() {
                   'spotify_list': 'Spotify List Manual',
                   'spotify_list_sub': 'Spotify List Auto',
                   'barcode': 'Barcode',
-                  'discogs_url': 'Discogs'
+                  'discogs_url': 'Discogs',
+                  'csv_import': 'CSV Import'
                 },
                 labelMap: {
                   'Manual': 'manual',
@@ -618,7 +620,8 @@ function Collection() {
                   'Spotify List Manual': 'spotify_list',
                   'Spotify List Auto': 'spotify_list_sub',
                   'Barcode': 'barcode',
-                  'Discogs': 'discogs_url'
+                  'Discogs': 'discogs_url',
+                  'CSV Import': 'csv_import'
                 },
                 option_colors: {
                   'Manual': 'gray',
@@ -626,7 +629,8 @@ function Collection() {
                   'Spotify List Manual': 'green',
                   'Spotify List Auto': 'green',
                   'Barcode': 'blue',
-                  'Discogs': 'orange'
+                  'Discogs': 'orange',
+                  'CSV Import': 'violet'
                 }
               },
               filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
@@ -638,7 +642,8 @@ function Collection() {
                   'Spotify List Manual': 'spotify_list',
                   'Spotify List Auto': 'spotify_list_sub',
                   'Barcode': 'barcode',
-                  'Discogs': 'discogs_url'
+                  'Discogs': 'discogs_url',
+                  'CSV Import': 'csv_import'
                 };
                 const internalValue = labelMap[filterValue];
                 console.log('Filter comparison:', { cellValue, filterValue, internalValue, labelMap });
@@ -653,7 +658,8 @@ function Collection() {
                   'spotify_list': 'Spotify List Manual',
                   'spotify_list_sub': 'Spotify List Auto',
                   'barcode': 'Barcode',
-                  'discogs_url': 'Discogs'
+                  'discogs_url': 'Discogs',
+                  'csv_import': 'CSV Import'
                 };
                 const colorMap: Record<string, string> = {
                   'manual': 'gray',
@@ -661,7 +667,8 @@ function Collection() {
                   'spotify_list': 'green',
                   'spotify_list_sub': 'green',
                   'barcode': 'blue',
-                  'discogs_url': 'orange'
+                  'discogs_url': 'orange',
+                  'csv_import': 'violet'
                 };
                 
                 const displayText = source ? displayMap[source] || source : '-';
