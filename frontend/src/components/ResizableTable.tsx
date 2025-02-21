@@ -26,6 +26,7 @@ import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import minMax from 'dayjs/plugin/minMax';
+import { MyCustomPagination } from './MyCustomPagination';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -1036,23 +1037,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             gap: 'var(--mantine-spacing-xs)'
           }}
         >
-          <Pagination
-            value={page}
+          <MyCustomPagination
+            page={page}
             onChange={onPageChange}
             total={Math.max(1, Math.ceil(totalRecords / recordsPerPage))}
             siblings={1}
             boundaries={1}
-            withEdges
-            withControls
-            styles={{
-              control: {
-                '@media (max-width: 600px)': {
-                  minWidth: '32px',
-                  height: '32px',
-                  padding: 0
-                }
-              }
-            }}
           />
           <Text size="sm" c="dimmed">
             Showing {paginatedRows.length} of {totalRecords} records
