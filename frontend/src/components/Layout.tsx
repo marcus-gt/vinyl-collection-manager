@@ -149,17 +149,24 @@ function Layout() {
     <>
       <AppShell
         header={{ height: 60 }}
-        padding={{ base: 'xs', sm: 'md' }}
         styles={{
-          header: {
-            padding: 0
+          root: {
+            position: 'relative'
           },
           main: {
+            marginTop: 60,
             height: 'calc(100vh - 60px)',
             overflow: 'hidden',
-            margin: 0,
-            padding: 0,
-            paddingTop: 0
+            padding: 0
+          },
+          header: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            backgroundColor: 'var(--mantine-color-dark-7)',
+            borderBottom: '1px solid var(--mantine-color-dark-4)'
           }
         }}
       >
@@ -191,22 +198,22 @@ function Layout() {
           </Group>
         </AppShell.Header>
 
-        <Drawer
-          opened={opened}
-          onClose={close}
-          size="100%"
-          padding="md"
-          hiddenFrom="sm"
-        >
-          <Stack>
-            <NavLinks />
-          </Stack>
-        </Drawer>
-
         <AppShell.Main>
           <Outlet />
         </AppShell.Main>
       </AppShell>
+
+      <Drawer
+        opened={opened}
+        onClose={close}
+        size="100%"
+        padding="md"
+        hiddenFrom="sm"
+      >
+        <Stack>
+          <NavLinks />
+        </Stack>
+      </Drawer>
 
       <Modal
         opened={importModalOpened}
