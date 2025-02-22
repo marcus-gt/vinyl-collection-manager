@@ -826,16 +826,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       display: 'flex',
       flexDirection: 'column',
       gap: 'var(--mantine-spacing-xs)',
-      height: '100%'
+      height: '100%',
+      overflow: 'hidden'
     }}>
       <LoadingOverlay visible={loading} />
       <Box style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
+        flex: '1',
+        overflow: 'auto',
+        position: 'relative'
       }}>
         <Table
           striped
@@ -845,10 +843,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             minWidth: Math.max(table.getCenterTotalSize(), 1200),
             borderCollapse: 'separate',
             borderSpacing: 0,
-            position: 'relative',
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column'
+            position: 'relative'
           }}
           styles={{
             table: {
@@ -857,18 +852,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               minWidth: '100%'
             },
             thead: {
-              backgroundColor: 'var(--mantine-color-dark-7)',
               position: 'sticky',
               top: 0,
               zIndex: 10,
-              boxShadow: '0 1px 0 var(--mantine-color-dark-4)'
+              backgroundColor: 'var(--mantine-color-dark-7)'
             },
             tbody: {
               width: '100%',
               position: 'relative',
-              zIndex: 1,
-              flex: 1,
-              overflowY: 'auto'
+              zIndex: 1
             },
             tr: {
               height: '32px',
@@ -892,11 +884,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               maxHeight: '32px',
               padding: '4px 8px',
               borderRight: '1px solid var(--mantine-color-dark-4)',
-              position: 'relative',
+              position: 'sticky',
+              top: 0,
+              backgroundColor: 'var(--mantine-color-dark-7)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              backgroundColor: 'var(--mantine-color-dark-7)',
               '&:last-child': {
                 borderRight: 'none'
               }
@@ -906,14 +899,24 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           <Table.Thead>
             {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
               <React.Fragment key={headerGroup.id}>
-                <Table.Tr>
+                <Table.Tr
+                  style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
+                    backgroundColor: 'var(--mantine-color-dark-7)'
+                  }}
+                >
                   {headerGroup.headers.map((header: Header<T, unknown>) => (
                     <Table.Th
                       key={header.id}
                       colSpan={header.colSpan}
                       style={{
                         width: header.getSize(),
-                        position: 'relative',
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 2,
+                        backgroundColor: 'var(--mantine-color-dark-7)',
                         userSelect: 'none',
                         height: '32px',
                         maxHeight: '32px',
@@ -983,18 +986,27 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     </Table.Th>
                   ))}
                 </Table.Tr>
-                <Table.Tr>
+                <Table.Tr
+                  style={{
+                    position: 'sticky',
+                    top: '32px',
+                    zIndex: 2,
+                    backgroundColor: 'var(--mantine-color-dark-7)'
+                  }}
+                >
                   {headerGroup.headers.map((header: Header<T, unknown>) => (
                     <Table.Th
                       key={`${header.id}-filter`}
                       colSpan={header.colSpan}
                       style={{
                         width: header.getSize(),
+                        position: 'sticky',
+                        top: '32px',
+                        zIndex: 2,
+                        backgroundColor: 'var(--mantine-color-dark-7)',
                         padding: '4px 8px',
-                        position: 'relative',
                         height: '40px',
-                        maxHeight: '40px',
-                        backgroundColor: 'var(--mantine-color-dark-7)'
+                        maxHeight: '40px'
                       }}
                     >
                       {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
@@ -1004,52 +1016,43 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               </React.Fragment>
             ))}
           </Table.Thead>
-          <Box style={{ 
-            overflowY: 'auto',
-            flex: 1,
-            width: '100%',
-            position: 'relative'
-          }}>
-            <Table.Tbody>
-              {paginatedRows.map((row: Row<T>) => (
-                <Table.Tr key={row.id}>
-                  {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
-                    <Table.Td
-                      key={cell.id}
-                      style={{
-                        width: cell.column.getSize(),
-                        maxWidth: cell.column.getSize(),
-                        overflow: 'hidden',
-                        height: '32px',
-                        maxHeight: '32px',
-                        padding: '4px 8px'
-                      }}
-                    >
-                      <div style={{ 
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        height: '32px',
-                        maxHeight: '32px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </div>
-                    </Table.Td>
-                  ))}
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Box>
+          <Table.Tbody>
+            {paginatedRows.map((row: Row<T>) => (
+              <Table.Tr key={row.id}>
+                {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
+                  <Table.Td
+                    key={cell.id}
+                    style={{
+                      width: cell.column.getSize(),
+                      maxWidth: cell.column.getSize(),
+                      overflow: 'hidden',
+                      height: '32px',
+                      maxHeight: '32px',
+                      padding: '4px 8px'
+                    }}
+                  >
+                    <div style={{ 
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      height: '32px',
+                      maxHeight: '32px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </div>
+                  </Table.Td>
+                ))}
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
         </Table>
       </Box>
       {allFilteredRows.length > 0 && (
         <Box 
           style={{ 
-            position: 'sticky',
-            left: 0,
-            bottom: 0,
+            flex: '0 0 auto',
             width: '100%',
             background: 'var(--mantine-color-dark-7)',
             padding: 'var(--mantine-spacing-xs) 0',
