@@ -148,17 +148,22 @@ function Layout() {
   return (
     <>
       <AppShell
-        header={{ height: 60 }}
+        header={{ 
+          height: { base: 80, sm: 60 }  // Taller on mobile
+        }}
         styles={{
           root: {
             height: '100vh'
           },
           main: {
-            marginTop: 60,
-            height: 'calc(100vh - 60px)',
-            overflowY: 'auto',
+            marginTop: '60px',  // Default for larger screens
+            '@media (max-width: 48em)': {  // sm breakpoint = 48em
+              marginTop: '80px',  // Taller on mobile
+            },
+            height: '100%',
+            padding: 0,
             margin: 0,
-            padding: 0
+            overflowY: 'auto'
           },
           header: {
             position: 'fixed',
@@ -167,7 +172,10 @@ function Layout() {
             right: 0,
             zIndex: 100,
             backgroundColor: 'var(--mantine-color-dark-7)',
-            borderBottom: '1px solid var(--mantine-color-dark-4)'
+            borderBottom: '1px solid var(--mantine-color-dark-4)',
+            '@media (max-width: 48em)': {  // sm breakpoint = 48em
+              minHeight: '80px'  // Match the header height
+            }
           }
         }}
       >
@@ -177,6 +185,7 @@ function Layout() {
             h="100%" 
             px={{ base: 'xs', sm: 'md' }}
             align="center"
+            wrap="wrap"
           >
             <Title 
               order={1} 
