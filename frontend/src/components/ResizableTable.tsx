@@ -822,242 +822,219 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     <Box style={{ 
       width: '100%',
       minWidth: '100%',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 'var(--mantine-spacing-xs)',
-      height: '100%',
-      overflow: 'hidden'
+      position: 'relative'
     }}>
       <LoadingOverlay visible={loading} />
-      <Box style={{
-        flex: '1',
-        overflow: 'auto',
-        position: 'relative'
-      }}>
-        <Table
-          striped
-          highlightOnHover
-          style={{
+      <Table
+        striped
+        highlightOnHover
+        style={{
+          width: '100%',
+          minWidth: Math.max(table.getCenterTotalSize(), 1200),
+          borderCollapse: 'separate',
+          borderSpacing: 0
+        }}
+        styles={{
+          table: {
+            tableLayout: 'fixed',
             width: '100%',
-            minWidth: Math.max(table.getCenterTotalSize(), 1200),
-            borderCollapse: 'separate',
-            borderSpacing: 0,
-            position: 'relative'
-          }}
-          styles={{
-            table: {
-              tableLayout: 'fixed',
-              width: '100%',
-              minWidth: '100%'
-            },
-            thead: {
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
-              backgroundColor: 'var(--mantine-color-dark-7)'
-            },
-            tbody: {
-              width: '100%',
-              position: 'relative',
-              zIndex: 1
-            },
-            tr: {
-              height: '32px',
-              maxHeight: '32px',
-              position: 'relative'
-            },
-            td: {
-              height: '32px',
-              maxHeight: '32px',
-              padding: '4px 8px',
-              borderRight: '1px solid var(--mantine-color-dark-4)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              '&:last-child': {
-                borderRight: 'none'
-              }
-            },
-            th: {
-              height: '32px',
-              maxHeight: '32px',
-              padding: '4px 8px',
-              borderRight: '1px solid var(--mantine-color-dark-4)',
-              position: 'sticky',
-              top: 0,
-              backgroundColor: 'var(--mantine-color-dark-7)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              '&:last-child': {
-                borderRight: 'none'
-              }
+            minWidth: '100%'
+          },
+          thead: {
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            backgroundColor: 'var(--mantine-color-dark-7)'
+          },
+          tbody: {
+            width: '100%'
+          },
+          tr: {
+            height: '32px',
+            maxHeight: '32px'
+          },
+          td: {
+            height: '32px',
+            maxHeight: '32px',
+            padding: '4px 8px',
+            borderRight: '1px solid var(--mantine-color-dark-4)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            '&:last-child': {
+              borderRight: 'none'
             }
-          }}
-        >
-          <Table.Thead>
-            {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
-              <React.Fragment key={headerGroup.id}>
-                <Table.Tr
-                  style={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 2,
-                    backgroundColor: 'var(--mantine-color-dark-7)'
-                  }}
-                >
-                  {headerGroup.headers.map((header: Header<T, unknown>) => (
-                    <Table.Th
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      style={{
-                        width: header.getSize(),
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 2,
-                        backgroundColor: 'var(--mantine-color-dark-7)',
-                        userSelect: 'none',
-                        height: '32px',
-                        maxHeight: '32px',
-                        padding: '4px 8px'
-                      }}
-                    >
-                      {header.isPlaceholder ? null : (
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: header.column.getCanSort() ? 'pointer' : 'default',
-                            position: 'relative',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            height: '32px',
-                            maxHeight: '32px'
-                          }}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          {header.column.getCanSort() && (
-                            <Text ml="xs" c="dimmed">
-                              {{
-                                asc: '↑',
-                                desc: '↓'
-                              }[header.column.getIsSorted() as string] ?? ''}
-                            </Text>
-                          )}
-                        </div>
-                      )}
-                      {header.column.getCanResize() && (
-                        <div
-                          onMouseDown={header.getResizeHandler()}
-                          onTouchStart={header.getResizeHandler()}
-                          className="resizer"
-                          style={{
-                            position: 'absolute',
-                            right: 0,
-                            top: 0,
-                            height: '100%',
-                            width: '4px',
-                            background: 'var(--mantine-color-dark-4)',
-                            cursor: 'col-resize',
-                            userSelect: 'none',
-                            touchAction: 'none',
-                            opacity: header.column.getIsResizing() ? 1 : 0,
-                            transition: 'opacity 0.2s',
-                            zIndex: 3
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.target as HTMLElement).style.opacity = '1';
-                            (e.target as HTMLElement).style.background = 'var(--mantine-color-blue-5)';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!header.column.getIsResizing()) {
-                              (e.target as HTMLElement).style.opacity = '0';
-                              (e.target as HTMLElement).style.background = 'var(--mantine-color-dark-4)';
-                            }
-                          }}
-                        />
-                      )}
-                    </Table.Th>
-                  ))}
-                </Table.Tr>
-                <Table.Tr
-                  style={{
-                    position: 'sticky',
-                    top: '32px',
-                    zIndex: 2,
-                    backgroundColor: 'var(--mantine-color-dark-7)'
-                  }}
-                >
-                  {headerGroup.headers.map((header: Header<T, unknown>) => (
-                    <Table.Th
-                      key={`${header.id}-filter`}
-                      colSpan={header.colSpan}
-                      style={{
-                        width: header.getSize(),
-                        position: 'sticky',
-                        top: '32px',
-                        zIndex: 2,
-                        backgroundColor: 'var(--mantine-color-dark-7)',
-                        padding: '4px 8px',
-                        height: '40px',
-                        maxHeight: '40px'
-                      }}
-                    >
-                      {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
-                    </Table.Th>
-                  ))}
-                </Table.Tr>
-              </React.Fragment>
-            ))}
-          </Table.Thead>
-          <Table.Tbody>
-            {paginatedRows.map((row: Row<T>) => (
-              <Table.Tr key={row.id}>
-                {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
-                  <Table.Td
-                    key={cell.id}
+          },
+          th: {
+            height: '32px',
+            maxHeight: '32px',
+            padding: '4px 8px',
+            borderRight: '1px solid var(--mantine-color-dark-4)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            '&:last-child': {
+              borderRight: 'none'
+            }
+          }
+        }}
+      >
+        <Table.Thead>
+          {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
+            <React.Fragment key={headerGroup.id}>
+              <Table.Tr
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                  backgroundColor: 'var(--mantine-color-dark-7)'
+                }}
+              >
+                {headerGroup.headers.map((header: Header<T, unknown>) => (
+                  <Table.Th
+                    key={header.id}
+                    colSpan={header.colSpan}
                     style={{
-                      width: cell.column.getSize(),
-                      maxWidth: cell.column.getSize(),
-                      overflow: 'hidden',
-                      height: '32px',
-                      maxHeight: '32px',
-                      padding: '4px 8px'
+                      width: header.getSize(),
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 2,
+                      backgroundColor: 'var(--mantine-color-dark-7)',
+                      userSelect: 'none'
                     }}
                   >
-                    <div style={{ 
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      height: '32px',
-                      maxHeight: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </div>
-                  </Table.Td>
+                    {header.isPlaceholder ? null : (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                          position: 'relative',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          height: '32px',
+                          maxHeight: '32px'
+                        }}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                        {header.column.getCanSort() && (
+                          <Text ml="xs" c="dimmed">
+                            {{
+                              asc: '↑',
+                              desc: '↓'
+                            }[header.column.getIsSorted() as string] ?? ''}
+                          </Text>
+                        )}
+                      </div>
+                    )}
+                    {header.column.getCanResize() && (
+                      <div
+                        onMouseDown={header.getResizeHandler()}
+                        onTouchStart={header.getResizeHandler()}
+                        className="resizer"
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          height: '100%',
+                          width: '4px',
+                          background: 'var(--mantine-color-dark-4)',
+                          cursor: 'col-resize',
+                          userSelect: 'none',
+                          touchAction: 'none',
+                          opacity: header.column.getIsResizing() ? 1 : 0,
+                          transition: 'opacity 0.2s',
+                          zIndex: 3
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.target as HTMLElement).style.opacity = '1';
+                          (e.target as HTMLElement).style.background = 'var(--mantine-color-blue-5)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!header.column.getIsResizing()) {
+                            (e.target as HTMLElement).style.opacity = '0';
+                            (e.target as HTMLElement).style.background = 'var(--mantine-color-dark-4)';
+                          }
+                        }}
+                      />
+                    )}
+                  </Table.Th>
                 ))}
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Box>
+              <Table.Tr
+                style={{
+                  position: 'sticky',
+                  top: '32px',
+                  zIndex: 2,
+                  backgroundColor: 'var(--mantine-color-dark-7)'
+                }}
+              >
+                {headerGroup.headers.map((header: Header<T, unknown>) => (
+                  <Table.Th
+                    key={`${header.id}-filter`}
+                    colSpan={header.colSpan}
+                    style={{
+                      width: header.getSize(),
+                      position: 'sticky',
+                      top: '32px',
+                      zIndex: 2,
+                      backgroundColor: 'var(--mantine-color-dark-7)',
+                      padding: '4px 8px',
+                      height: '40px',
+                      maxHeight: '40px'
+                    }}
+                  >
+                    {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
+                  </Table.Th>
+                ))}
+              </Table.Tr>
+            </React.Fragment>
+          ))}
+        </Table.Thead>
+        <Table.Tbody>
+          {paginatedRows.map((row: Row<T>) => (
+            <Table.Tr key={row.id}>
+              {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
+                <Table.Td
+                  key={cell.id}
+                  style={{
+                    width: cell.column.getSize(),
+                    maxWidth: cell.column.getSize(),
+                    overflow: 'hidden',
+                    height: '32px',
+                    maxHeight: '32px',
+                    padding: '4px 8px'
+                  }}
+                >
+                  <div style={{ 
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    height: '32px',
+                    maxHeight: '32px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </div>
+                </Table.Td>
+              ))}
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
       {allFilteredRows.length > 0 && (
         <Box 
           style={{ 
-            flex: '0 0 auto',
             width: '100%',
             background: 'var(--mantine-color-dark-7)',
             padding: 'var(--mantine-spacing-xs) 0',
             borderTop: '1px solid var(--mantine-color-dark-4)',
-            zIndex: 2,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',

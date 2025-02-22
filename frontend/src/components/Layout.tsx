@@ -151,12 +151,13 @@ function Layout() {
         header={{ height: 60 }}
         styles={{
           root: {
-            position: 'relative'
+            height: '100vh'
           },
           main: {
             marginTop: 60,
             height: 'calc(100vh - 60px)',
-            overflow: 'hidden',
+            overflowY: 'auto',
+            margin: 0,
             padding: 0
           },
           header: {
