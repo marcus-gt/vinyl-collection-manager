@@ -1169,103 +1169,98 @@ function Collection() {
       height: 'calc(100vh - var(--app-shell-header-height))', 
       display: 'flex', 
       flexDirection: 'column',
-      position: 'relative'
+      position: 'relative',
+      overflow: 'hidden' // Prevent scrolling at this level
     }}>
-      <Box style={{ 
-        flex: 1, 
-        display: 'flex', 
-        flexDirection: 'column',
-        padding: 0,
-        overflow: 'hidden'
+      {/* Fixed header section */}
+      <Group justify="space-between" align="center" style={{ 
+        padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
+        borderBottom: '1px solid var(--mantine-color-dark-4)',
+        background: 'var(--mantine-color-dark-7)',
+        gap: 'var(--mantine-spacing-xs)',
+        flexWrap: 'wrap',
+        position: 'sticky',
+        top: 0,
+        zIndex: 2
       }}>
-        <Group justify="space-between" align="center" style={{ 
-          padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
-          borderBottom: '1px solid var(--mantine-color-dark-4)',
-          background: 'var(--mantine-color-dark-7)',
-          gap: 'var(--mantine-spacing-xs)',
-          flexWrap: 'wrap',
-          position: 'sticky',
-          top: 0,
-          zIndex: 2
-        }}>
-          <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
-            <TextInput
-              placeholder="Search records..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-              style={{ 
-                minWidth: '200px',
-                flex: '1 1 auto',
+        <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
+          <TextInput
+            placeholder="Search records..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            style={{ 
+              minWidth: '200px',
+              flex: '1 1 auto',
+              '@media (max-width: 600px)': {
+                minWidth: '100%'
+              }
+            }}
+            leftSection={<IconSearch size={16} />}
+            rightSection={
+              searchQuery ? (
+                <ActionIcon size="sm" onClick={() => {
+                  setSearchQuery('');
+                  setPage(1);
+                }}>
+                  <IconX size={16} />
+                </ActionIcon>
+              ) : null
+            }
+          />
+          <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
+            <Button
+              variant="default"
+              onClick={() => setAddRecordsModalOpened(true)}
+              leftSection={<IconPlus size={16} />}
+              style={{
                 '@media (max-width: 600px)': {
-                  minWidth: '100%'
+                  flex: '1 1 auto'
                 }
               }}
-              leftSection={<IconSearch size={16} />}
-              rightSection={
-                searchQuery ? (
-                  <ActionIcon size="sm" onClick={() => {
-                    setSearchQuery('');
-                    setPage(1);
-                  }}>
-                    <IconX size={16} />
-                  </ActionIcon>
-                ) : null
-              }
-            />
-            <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
-              <Button
-                variant="default"
-                onClick={() => setAddRecordsModalOpened(true)}
-                leftSection={<IconPlus size={16} />}
-                style={{
-                  '@media (max-width: 600px)': {
-                    flex: '1 1 auto'
-                  }
-                }}
-              >
-                Add Records
-              </Button>
-              <Button
-                variant="default"
-                onClick={() => setCustomColumnManagerOpened(true)}
-                style={{
-                  '@media (max-width: 600px)': {
-                    flex: '1 1 auto'
-                  }
-                }}
-              >
-                Manage Columns
-              </Button>
-            </Group>
+            >
+              Add Records
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => setCustomColumnManagerOpened(true)}
+              style={{
+                '@media (max-width: 600px)': {
+                  flex: '1 1 auto'
+                }
+              }}
+            >
+              Manage Columns
+            </Button>
           </Group>
         </Group>
+      </Group>
 
-        <Box style={{ 
-          flex: 1,
-          overflow: 'auto',
-          padding: 0
-        }}>
-          {error && (
-            <Text c="red">{error}</Text>
-          )}
+      {/* Scrollable content section */}
+      <Box style={{ 
+        flex: 1,
+        overflow: 'auto', // Only this container should scroll
+        padding: 0
+      }}>
+        {error && (
+          <Text c="red">{error}</Text>
+        )}
 
-          <ResizableTable
-            data={userRecords}
-            columns={tableColumns}
-            sortState={sortStatus}
-            onSortChange={setSortStatus}
-            tableId="collection-table"
-            loading={loading}
-            recordsPerPage={PAGE_SIZE}
-            page={page}
-            onPageChange={setPage}
-            customColumns={customColumns}
-            searchQuery={searchQuery}
-          />
-        </Box>
+        <ResizableTable
+          data={userRecords}
+          columns={tableColumns}
+          sortState={sortStatus}
+          onSortChange={setSortStatus}
+          tableId="collection-table"
+          loading={loading}
+          recordsPerPage={PAGE_SIZE}
+          page={page}
+          onPageChange={setPage}
+          customColumns={customColumns}
+          searchQuery={searchQuery}
+        />
       </Box>
 
       <CustomColumnManager
