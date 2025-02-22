@@ -1166,80 +1166,80 @@ function Collection() {
 
   return (
     <Box style={{ 
-      height: 'calc(100vh - var(--app-shell-header-height))', 
-      display: 'flex', 
+      width: '100%',
+      height: '100%',
+      display: 'flex',
       flexDirection: 'column',
-      position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Fixed header section */}
-      <Group justify="space-between" align="center" style={{ 
-        padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
-        borderBottom: '1px solid var(--mantine-color-dark-4)',
-        background: 'var(--mantine-color-dark-7)',
-        gap: 'var(--mantine-spacing-xs)',
-        flexWrap: 'wrap'
-      }}>
-        <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
-          <TextInput
-            placeholder="Search records..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
-            }}
-            style={{ 
-              minWidth: '200px',
-              flex: '1 1 auto',
-              '@media (max-width: 600px)': {
-                minWidth: '100%'
+      {/* Fixed search bar and buttons */}
+      <Box style={{ flex: '0 0 auto' }}>
+        <Group justify="space-between" align="center" style={{ 
+          padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-md)',
+          borderBottom: '1px solid var(--mantine-color-dark-4)',
+          background: 'var(--mantine-color-dark-7)',
+          gap: 'var(--mantine-spacing-xs)'
+        }}>
+          <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
+            <TextInput
+              placeholder="Search records..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              style={{ 
+                minWidth: '200px',
+                flex: '1 1 auto',
+                '@media (max-width: 600px)': {
+                  minWidth: '100%'
+                }
+              }}
+              leftSection={<IconSearch size={16} />}
+              rightSection={
+                searchQuery ? (
+                  <ActionIcon size="sm" onClick={() => {
+                    setSearchQuery('');
+                    setPage(1);
+                  }}>
+                    <IconX size={16} />
+                  </ActionIcon>
+                ) : null
               }
-            }}
-            leftSection={<IconSearch size={16} />}
-            rightSection={
-              searchQuery ? (
-                <ActionIcon size="sm" onClick={() => {
-                  setSearchQuery('');
-                  setPage(1);
-                }}>
-                  <IconX size={16} />
-                </ActionIcon>
-              ) : null
-            }
-          />
-          <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
-            <Button
-              variant="default"
-              onClick={() => setAddRecordsModalOpened(true)}
-              leftSection={<IconPlus size={16} />}
-              style={{
-                '@media (max-width: 600px)': {
-                  flex: '1 1 auto'
-                }
-              }}
-            >
-              Add Records
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setCustomColumnManagerOpened(true)}
-              style={{
-                '@media (max-width: 600px)': {
-                  flex: '1 1 auto'
-                }
-              }}
-            >
-              Manage Columns
-            </Button>
+            />
+            <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
+              <Button
+                variant="default"
+                onClick={() => setAddRecordsModalOpened(true)}
+                leftSection={<IconPlus size={16} />}
+                style={{
+                  '@media (max-width: 600px)': {
+                    flex: '1 1 auto'
+                  }
+                }}
+              >
+                Add Records
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => setCustomColumnManagerOpened(true)}
+                style={{
+                  '@media (max-width: 600px)': {
+                    flex: '1 1 auto'
+                  }
+                }}
+              >
+                Manage Columns
+              </Button>
+            </Group>
           </Group>
         </Group>
-      </Group>
+      </Box>
 
-      {/* Content container (non-scrollable) */}
+      {/* The scrollable table container */}
       <Box style={{ 
-        flex: 1,
-        overflow: 'hidden',
-        padding: 0,
+        flex: '1 1 auto',
+        overflow: 'auto',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -1247,7 +1247,6 @@ function Collection() {
           <Text c="red">{error}</Text>
         )}
 
-        {/* Table will handle its own scrolling */}
         <ResizableTable
           data={userRecords}
           columns={tableColumns}

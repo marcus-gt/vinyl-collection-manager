@@ -155,7 +155,11 @@ function Layout() {
             padding: 0
           },
           main: {
-            paddingTop: 'calc(var(--app-shell-header-height) + var(--mantine-spacing-xs))'
+            height: 'calc(100vh - 60px)',
+            overflow: 'hidden',
+            margin: 0,
+            padding: 0,
+            paddingTop: 0
           }
         }}
       >

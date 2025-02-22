@@ -820,13 +820,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   return (
     <Box style={{ 
-      overflow: 'auto',
       width: '100%',
       minWidth: '100%',
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      gap: 'var(--mantine-spacing-xs)'
+      gap: 'var(--mantine-spacing-xs)',
+      overflowX: 'auto',
+      overflowY: 'visible'
     }}>
       <LoadingOverlay visible={loading} />
       <Table
