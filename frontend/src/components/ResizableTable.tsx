@@ -826,8 +826,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      gap: 'var(--mantine-spacing-xs)',
-      height: 'calc(100vh - 200px)'  // Give it a fixed height to enable scrolling
+      gap: 'var(--mantine-spacing-xs)'
     }}>
       <LoadingOverlay visible={loading} />
       <Table
@@ -849,18 +848,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           thead: {
             height: 'auto',
             width: '100%',
-            position: 'sticky',
-            top: 0,
-            backgroundColor: 'var(--mantine-color-dark-7)',
-            zIndex: 10,
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              borderBottom: '1px solid var(--mantine-color-dark-4)'
-            }
+            position: 'relative',
+            zIndex: 10
           },
           tbody: {
             width: '100%',
@@ -880,7 +869,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            backgroundColor: 'var(--mantine-color-dark-7)',
             '&:last-child': {
               borderRight: 'none'
             }
@@ -894,7 +882,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            backgroundColor: 'var(--mantine-color-dark-7)',
             '&:last-child': {
               borderRight: 'none'
             }

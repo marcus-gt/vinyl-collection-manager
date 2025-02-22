@@ -1165,7 +1165,12 @@ function Collection() {
   }, [customColumns]);
 
   return (
-    <Box style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box style={{ 
+      height: 'calc(100vh - var(--app-shell-header-height))', 
+      display: 'flex', 
+      flexDirection: 'column',
+      position: 'relative'
+    }}>
       <Box style={{ 
         flex: 1, 
         display: 'flex', 
@@ -1181,7 +1186,7 @@ function Collection() {
           flexWrap: 'wrap',
           position: 'sticky',
           top: 0,
-          zIndex: 100
+          zIndex: 2
         }}>
           <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
             <TextInput
