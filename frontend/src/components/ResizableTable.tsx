@@ -826,206 +826,230 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       display: 'flex',
       flexDirection: 'column',
       gap: 'var(--mantine-spacing-xs)',
-      overflowX: 'auto',
-      overflowY: 'visible'
+      height: '100%'
     }}>
       <LoadingOverlay visible={loading} />
-      <Table
-        striped
-        highlightOnHover
-        style={{
-          width: '100%',
-          minWidth: Math.max(table.getCenterTotalSize(), 1200),
-          borderCollapse: 'separate',
-          borderSpacing: 0,
-          position: 'relative'
-        }}
-        styles={{
-          table: {
-            tableLayout: 'fixed',
+      <Box style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        <Table
+          striped
+          highlightOnHover
+          style={{
             width: '100%',
-            minWidth: '100%'
-          },
-          thead: {
-            height: 'auto',
-            width: '100%',
+            minWidth: Math.max(table.getCenterTotalSize(), 1200),
+            borderCollapse: 'separate',
+            borderSpacing: 0,
             position: 'relative',
-            zIndex: 10
-          },
-          tbody: {
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+          styles={{
+            table: {
+              tableLayout: 'fixed',
+              width: '100%',
+              minWidth: '100%'
+            },
+            thead: {
+              backgroundColor: 'var(--mantine-color-dark-7)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              boxShadow: '0 1px 0 var(--mantine-color-dark-4)'
+            },
+            tbody: {
+              width: '100%',
+              position: 'relative',
+              zIndex: 1,
+              flex: 1,
+              overflowY: 'auto'
+            },
+            tr: {
+              height: '32px',
+              maxHeight: '32px',
+              position: 'relative'
+            },
+            td: {
+              height: '32px',
+              maxHeight: '32px',
+              padding: '4px 8px',
+              borderRight: '1px solid var(--mantine-color-dark-4)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              '&:last-child': {
+                borderRight: 'none'
+              }
+            },
+            th: {
+              height: '32px',
+              maxHeight: '32px',
+              padding: '4px 8px',
+              borderRight: '1px solid var(--mantine-color-dark-4)',
+              position: 'relative',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              backgroundColor: 'var(--mantine-color-dark-7)',
+              '&:last-child': {
+                borderRight: 'none'
+              }
+            }
+          }}
+        >
+          <Table.Thead>
+            {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
+              <React.Fragment key={headerGroup.id}>
+                <Table.Tr>
+                  {headerGroup.headers.map((header: Header<T, unknown>) => (
+                    <Table.Th
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      style={{
+                        width: header.getSize(),
+                        position: 'relative',
+                        userSelect: 'none',
+                        height: '32px',
+                        maxHeight: '32px',
+                        padding: '4px 8px'
+                      }}
+                    >
+                      {header.isPlaceholder ? null : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                            position: 'relative',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            height: '32px',
+                            maxHeight: '32px'
+                          }}
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                          {header.column.getCanSort() && (
+                            <Text ml="xs" c="dimmed">
+                              {{
+                                asc: '↑',
+                                desc: '↓'
+                              }[header.column.getIsSorted() as string] ?? ''}
+                            </Text>
+                          )}
+                        </div>
+                      )}
+                      {header.column.getCanResize() && (
+                        <div
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          className="resizer"
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            height: '100%',
+                            width: '4px',
+                            background: 'var(--mantine-color-dark-4)',
+                            cursor: 'col-resize',
+                            userSelect: 'none',
+                            touchAction: 'none',
+                            opacity: header.column.getIsResizing() ? 1 : 0,
+                            transition: 'opacity 0.2s',
+                            zIndex: 3
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.target as HTMLElement).style.opacity = '1';
+                            (e.target as HTMLElement).style.background = 'var(--mantine-color-blue-5)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!header.column.getIsResizing()) {
+                              (e.target as HTMLElement).style.opacity = '0';
+                              (e.target as HTMLElement).style.background = 'var(--mantine-color-dark-4)';
+                            }
+                          }}
+                        />
+                      )}
+                    </Table.Th>
+                  ))}
+                </Table.Tr>
+                <Table.Tr>
+                  {headerGroup.headers.map((header: Header<T, unknown>) => (
+                    <Table.Th
+                      key={`${header.id}-filter`}
+                      colSpan={header.colSpan}
+                      style={{
+                        width: header.getSize(),
+                        padding: '4px 8px',
+                        position: 'relative',
+                        height: '40px',
+                        maxHeight: '40px',
+                        backgroundColor: 'var(--mantine-color-dark-7)'
+                      }}
+                    >
+                      {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
+                    </Table.Th>
+                  ))}
+                </Table.Tr>
+              </React.Fragment>
+            ))}
+          </Table.Thead>
+          <Box style={{ 
+            overflowY: 'auto',
+            flex: 1,
             width: '100%',
-            position: 'relative',
-            zIndex: 1
-          },
-          tr: {
-            height: '32px',
-            maxHeight: '32px',
             position: 'relative'
-          },
-          td: {
-            height: '32px',
-            maxHeight: '32px',
-            padding: '4px 8px',
-            borderRight: '1px solid var(--mantine-color-dark-4)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            '&:last-child': {
-              borderRight: 'none'
-            }
-          },
-          th: {
-            height: '32px',
-            maxHeight: '32px',
-            padding: '4px 8px',
-            borderRight: '1px solid var(--mantine-color-dark-4)',
-            position: 'relative',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            '&:last-child': {
-              borderRight: 'none'
-            }
-          }
-        }}
-      >
-        <Table.Thead>
-          {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
-            <React.Fragment key={headerGroup.id}>
-              <Table.Tr>
-                {headerGroup.headers.map((header: Header<T, unknown>) => (
-                  <Table.Th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    style={{
-                      width: header.getSize(),
-                      position: 'relative',
-                      userSelect: 'none',
-                      height: '32px',
-                      maxHeight: '32px',
-                      padding: '4px 8px'
-                    }}
-                  >
-                    {header.isPlaceholder ? null : (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: header.column.getCanSort() ? 'pointer' : 'default',
-                          position: 'relative',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          height: '32px',
-                          maxHeight: '32px'
-                        }}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {header.column.getCanSort() && (
-                          <Text ml="xs" c="dimmed">
-                            {{
-                              asc: '↑',
-                              desc: '↓'
-                            }[header.column.getIsSorted() as string] ?? ''}
-                          </Text>
-                        )}
+          }}>
+            <Table.Tbody>
+              {paginatedRows.map((row: Row<T>) => (
+                <Table.Tr key={row.id}>
+                  {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
+                    <Table.Td
+                      key={cell.id}
+                      style={{
+                        width: cell.column.getSize(),
+                        maxWidth: cell.column.getSize(),
+                        overflow: 'hidden',
+                        height: '32px',
+                        maxHeight: '32px',
+                        padding: '4px 8px'
+                      }}
+                    >
+                      <div style={{ 
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        height: '32px',
+                        maxHeight: '32px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </div>
-                    )}
-                    {header.column.getCanResize() && (
-                      <div
-                        onMouseDown={header.getResizeHandler()}
-                        onTouchStart={header.getResizeHandler()}
-                        className="resizer"
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: 0,
-                          height: '100%',
-                          width: '4px',
-                          background: 'var(--mantine-color-dark-4)',
-                          cursor: 'col-resize',
-                          userSelect: 'none',
-                          touchAction: 'none',
-                          opacity: header.column.getIsResizing() ? 1 : 0,
-                          transition: 'opacity 0.2s',
-                          zIndex: 3
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.target as HTMLElement).style.opacity = '1';
-                          (e.target as HTMLElement).style.background = 'var(--mantine-color-blue-5)';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!header.column.getIsResizing()) {
-                            (e.target as HTMLElement).style.opacity = '0';
-                            (e.target as HTMLElement).style.background = 'var(--mantine-color-dark-4)';
-                          }
-                        }}
-                      />
-                    )}
-                  </Table.Th>
-                ))}
-              </Table.Tr>
-              <Table.Tr>
-                {headerGroup.headers.map((header: Header<T, unknown>) => (
-                  <Table.Th
-                    key={`${header.id}-filter`}
-                    colSpan={header.colSpan}
-                    style={{
-                      width: header.getSize(),
-                      padding: '4px 8px',
-                      position: 'relative',
-                      height: '40px',
-                      maxHeight: '40px'
-                    }}
-                  >
-                    {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
-                  </Table.Th>
-                ))}
-              </Table.Tr>
-            </React.Fragment>
-          ))}
-        </Table.Thead>
-        <Table.Tbody>
-          {paginatedRows.map((row: Row<T>) => (
-            <Table.Tr key={row.id}>
-              {row.getVisibleCells().map((cell: Cell<T, unknown>) => (
-                <Table.Td
-                  key={cell.id}
-                  style={{
-                    width: cell.column.getSize(),
-                    maxWidth: cell.column.getSize(),
-                    overflow: 'hidden',
-                    height: '32px',
-                    maxHeight: '32px',
-                    padding: '4px 8px'
-                  }}
-                >
-                  <div style={{ 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    height: '32px',
-                    maxHeight: '32px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </div>
-                </Table.Td>
+                    </Table.Td>
+                  ))}
+                </Table.Tr>
               ))}
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+            </Table.Tbody>
+          </Box>
+        </Table>
+      </Box>
       {allFilteredRows.length > 0 && (
         <Box 
           style={{ 
             position: 'sticky',
             left: 0,
+            bottom: 0,
             width: '100%',
             background: 'var(--mantine-color-dark-7)',
             padding: 'var(--mantine-spacing-xs) 0',
