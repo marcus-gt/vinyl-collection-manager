@@ -1170,7 +1170,7 @@ function Collection() {
       display: 'flex', 
       flexDirection: 'column',
       position: 'relative',
-      overflow: 'hidden' // Prevent scrolling at this level
+      overflow: 'hidden'
     }}>
       {/* Fixed header section */}
       <Group justify="space-between" align="center" style={{ 
@@ -1178,10 +1178,7 @@ function Collection() {
         borderBottom: '1px solid var(--mantine-color-dark-4)',
         background: 'var(--mantine-color-dark-7)',
         gap: 'var(--mantine-spacing-xs)',
-        flexWrap: 'wrap',
-        position: 'sticky',
-        top: 0,
-        zIndex: 2
+        flexWrap: 'wrap'
       }}>
         <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
           <TextInput
@@ -1238,16 +1235,19 @@ function Collection() {
         </Group>
       </Group>
 
-      {/* Scrollable content section */}
+      {/* Content container (non-scrollable) */}
       <Box style={{ 
         flex: 1,
-        overflow: 'auto', // Only this container should scroll
-        padding: 0
+        overflow: 'hidden',
+        padding: 0,
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         {error && (
           <Text c="red">{error}</Text>
         )}
 
+        {/* Table will handle its own scrolling */}
         <ResizableTable
           data={userRecords}
           columns={tableColumns}
