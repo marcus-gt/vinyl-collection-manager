@@ -114,7 +114,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   // Use useMediaQuery from @mantine/hooks
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
-  const headerHeight = isMobile ? 80 : 60;
   const columnHeaderHeight = 32;
   const filterRowHeight = 40;
 
@@ -840,7 +839,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           borderCollapse: 'separate',
           borderSpacing: 0
         }}
-        styles={(theme) => ({
+        styles={{
           table: {
             tableLayout: 'fixed',
             width: '100%',
@@ -883,7 +882,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               borderRight: 'none'
             }
           }
-        })}
+        }}
       >
         <Table.Thead>
           {table.getHeaderGroups().map((headerGroup: HeaderGroup<T>) => (
@@ -891,11 +890,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: 80, // Default for mobile
+                  top: isMobile ? 80 : 60,
                   zIndex: 2,
                   backgroundColor: 'var(--mantine-color-dark-7)',
                   [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                    top: 60 // For desktop
+                    top: 60
                   }
                 }}
               >
@@ -906,14 +905,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: 80, // Default for mobile
+                      top: isMobile ? 80 : 60,
                       zIndex: 2,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       userSelect: 'none',
                       height: `${columnHeaderHeight}px`,
                       maxHeight: `${columnHeaderHeight}px`,
                       [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                        top: 60 // For desktop
+                        top: 60
                       }
                     }}
                   >
@@ -983,11 +982,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: 80 + columnHeaderHeight, // Default for mobile
+                  top: isMobile ? 80 + columnHeaderHeight : 60 + columnHeaderHeight,
                   zIndex: 2,
                   backgroundColor: 'var(--mantine-color-dark-7)',
                   [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                    top: 60 + columnHeaderHeight // For desktop
+                    top: 60 + columnHeaderHeight
                   }
                 }}
               >
@@ -998,14 +997,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: 80 + columnHeaderHeight, // Default for mobile
+                      top: isMobile ? 80 + columnHeaderHeight : 60 + columnHeaderHeight,
                       zIndex: 2,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
                       height: `${filterRowHeight}px`,
                       maxHeight: `${filterRowHeight}px`,
                       [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                        top: 60 + columnHeaderHeight // For desktop
+                        top: 60 + columnHeaderHeight
                       }
                     }}
                   >

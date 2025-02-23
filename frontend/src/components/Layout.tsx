@@ -1,8 +1,8 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress } from '@mantine/core';
+import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress, rem } from '@mantine/core';
 import { IconDownload, IconUpload } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useDisclosure } from '@mantine/hooks';
+import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records } from '../services/api';
@@ -149,23 +149,20 @@ function Layout() {
     <>
       <AppShell
         header={{
-          height: 80,      // Start at 80px for mobile
-          fixed: true      // The header is pinned
+          height: { base: 80, sm: 60 },
+          collapsed: false
         }}
         styles={(theme) => ({
-          // The <AppShell.Main> container is the single scrollable area:
           main: {
-            // Push this content below the header. On small screens, 80px:
-            paddingTop: 80,
-            height: 'calc(100vh - 80px)',
+            paddingTop: rem(80),
+            height: `calc(100vh - ${rem(80)})`,
             overflowY: 'auto',
             margin: 0,
             padding: 0,
 
-            // On screens larger than "sm", use 60px
-            [theme.fn.largerThan('sm')]: {
-              paddingTop: 60,
-              height: 'calc(100vh - 60px)'
+            [`@media (min-width: ${theme.breakpoints.sm})`]: {
+              paddingTop: rem(60),
+              height: `calc(100vh - ${rem(60)})`
             }
           },
 
@@ -179,11 +176,9 @@ function Layout() {
             backgroundColor: 'var(--mantine-color-dark-7)',
             borderBottom: '1px solid var(--mantine-color-dark-4)',
 
-            // 80px tall on smaller screens
-            height: 80,
-            [theme.fn.largerThan('sm')]: {
-              // 60px on desktop
-              height: 60
+            height: rem(80),
+            [`@media (min-width: ${theme.breakpoints.sm})`]: {
+              height: rem(60)
             }
           }
         })}

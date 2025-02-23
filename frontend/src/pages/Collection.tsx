@@ -63,6 +63,14 @@ const customValuesService = {
   }
 };
 
+// Add the missing prop types to CustomColumnManagerProps
+interface CustomColumnManagerProps {
+  opened: boolean;
+  onClose: () => void;
+  customColumns?: CustomColumn[];
+  onCustomColumnsChange?: (newColumns: CustomColumn[]) => void;
+}
+
 function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1170,8 +1178,7 @@ function Collection() {
         padding: 'var(--mantine-spacing-md)',
       }}
     >
-      {/* This row will scroll off the top behind the fixed header */}
-      <Group position="apart" mb="md">
+      <Group justify="space-between" mb="md">
         <TextInput
           placeholder="Search records..."
           value={searchQuery}
@@ -1222,7 +1229,7 @@ function Collection() {
         opened={customColumnManagerOpened}
         onClose={() => setCustomColumnManagerOpened(false)}
         customColumns={customColumns}
-        onCustomColumnsChange={(newColumns) => {
+        onCustomColumnsChange={(newColumns: CustomColumn[]) => {
           setCustomColumns(newColumns);
           loadCustomColumns();
         }}
