@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus } from '@tabler/icons-react';
+import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
@@ -1167,68 +1167,40 @@ function Collection() {
   return (
     <Box
       style={{
-        padding: 'var(--mantine-spacing-md)'
+        padding: 'var(--mantine-spacing-md)',
       }}
     >
-      {/* Search bar and modal buttons (scrolled away as user scrolls) */}
-      <Group justify="space-between" mb="md">
-        <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
-          <TextInput
-            placeholder="Search records..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
-            }}
-            style={{ 
-              minWidth: '200px',
-              flex: '1 1 auto',
-              '@media (max-width: 600px)': {
-                minWidth: '100%'
-              }
-            }}
-            leftSection={<IconSearch size={16} />}
-            rightSection={
-              searchQuery ? (
-                <ActionIcon size="sm" onClick={() => {
-                  setSearchQuery('');
-                  setPage(1);
-                }}>
-                  <IconX size={16} />
-                </ActionIcon>
-              ) : null
-            }
-          />
-          <Group gap="xs" wrap="wrap" style={{ flex: '0 1 auto' }}>
-            <Button
-              variant="default"
-              onClick={() => setAddRecordsModalOpened(true)}
-              leftSection={<IconPlus size={16} />}
-              style={{
-                '@media (max-width: 600px)': {
-                  flex: '1 1 auto'
-                }
-              }}
-            >
-              Add Records
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setCustomColumnManagerOpened(true)}
-              style={{
-                '@media (max-width: 600px)': {
-                  flex: '1 1 auto'
-                }
-              }}
-            >
-              Manage Columns
-            </Button>
-          </Group>
+      {/* This row will scroll off the top behind the fixed header */}
+      <Group position="apart" mb="md">
+        <TextInput
+          placeholder="Search records..."
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.currentTarget.value)}
+          leftSection={<IconSearch size={14} />}
+          style={{ minWidth: '300px' }}
+        />
+        <Group>
+          <Button
+            variant="default"
+            onClick={() => setAddRecordsModalOpened(true)}
+            leftSection={<IconPlus size={14} />}
+          >
+            Add Records
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => setCustomColumnManagerOpened(true)}
+            leftSection={<IconColumns size={14} />}
+          >
+            Manage Columns
+          </Button>
         </Group>
       </Group>
 
       {error && (
-        <Text c="red" mb="md">{error}</Text>
+        <Text c="red" mb="md">
+          {error}
+        </Text>
       )}
 
       <ResizableTable
@@ -1236,7 +1208,7 @@ function Collection() {
         columns={tableColumns}
         sortState={sortStatus}
         onSortChange={setSortStatus}
-        tableId="collection-table"
+        tableId="vinyl-collection"
         loading={loading}
         recordsPerPage={PAGE_SIZE}
         page={page}
@@ -1245,19 +1217,19 @@ function Collection() {
         searchQuery={searchQuery}
       />
 
+      {/* Modals */}
       <CustomColumnManager
         opened={customColumnManagerOpened}
-        onClose={() => {
-          setCustomColumnManagerOpened(false);
+        onClose={() => setCustomColumnManagerOpened(false)}
+        customColumns={customColumns}
+        onCustomColumnsChange={(newColumns) => {
+          setCustomColumns(newColumns);
           loadCustomColumns();
         }}
       />
-
       <AddRecordsModal
         opened={addRecordsModalOpened}
-        onClose={() => {
-          setAddRecordsModalOpened(false);
-        }}
+        onClose={() => setAddRecordsModalOpened(false)}
       />
 
       <Modal

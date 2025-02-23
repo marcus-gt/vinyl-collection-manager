@@ -148,28 +148,45 @@ function Layout() {
   return (
     <>
       <AppShell
-        header={{ height: 60 }}
-        styles={{
-          root: {
-            height: '100vh'
-          },
+        header={{
+          height: 80,      // Start at 80px for mobile
+          fixed: true      // The header is pinned
+        }}
+        styles={(theme) => ({
+          // The <AppShell.Main> container is the single scrollable area:
           main: {
-            marginTop: 60,
-            height: 'calc(100vh - 60px)',
+            // Push this content below the header. On small screens, 80px:
+            paddingTop: 80,
+            height: 'calc(100vh - 80px)',
             overflowY: 'auto',
             margin: 0,
-            padding: 0
+            padding: 0,
+
+            // On screens larger than "sm", use 60px
+            [theme.fn.largerThan('sm')]: {
+              paddingTop: 60,
+              height: 'calc(100vh - 60px)'
+            }
           },
+
           header: {
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             zIndex: 100,
+
             backgroundColor: 'var(--mantine-color-dark-7)',
-            borderBottom: '1px solid var(--mantine-color-dark-4)'
+            borderBottom: '1px solid var(--mantine-color-dark-4)',
+
+            // 80px tall on smaller screens
+            height: 80,
+            [theme.fn.largerThan('sm')]: {
+              // 60px on desktop
+              height: 60
+            }
           }
-        }}
+        })}
       >
         <AppShell.Header>
           <Group 
