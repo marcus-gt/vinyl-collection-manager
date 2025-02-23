@@ -895,11 +895,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   style={{
                     position: 'sticky',
                     top: isMobile ? 80 : 60,
-                    zIndex: 2,
+                    zIndex: 11,
                     backgroundColor: 'var(--mantine-color-dark-7)',
-                    [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                      top: 60
-                    }
+                    borderBottom: '1px solid var(--mantine-color-dark-4)'
                   }}
                 >
                   {headerGroup.headers.map((header: Header<T, unknown>) => (
@@ -908,16 +906,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       colSpan={header.colSpan}
                       style={{
                         width: header.getSize(),
-                        position: 'sticky',
-                        top: isMobile ? 80 : 60,
-                        zIndex: 2,
+                        position: 'relative',
                         backgroundColor: 'var(--mantine-color-dark-7)',
                         userSelect: 'none',
                         height: `${columnHeaderHeight}px`,
-                        maxHeight: `${columnHeaderHeight}px`,
-                        [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                          top: 60
-                        }
+                        maxHeight: `${columnHeaderHeight}px`
                       }}
                     >
                       {header.isPlaceholder ? null : (
@@ -987,11 +980,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   style={{
                     position: 'sticky',
                     top: isMobile ? 112 : 92,
-                    zIndex: 2,
+                    zIndex: 11,
                     backgroundColor: 'var(--mantine-color-dark-7)',
-                    [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                      top: 92
-                    }
+                    borderBottom: '1px solid var(--mantine-color-dark-4)'
                   }}
                 >
                   {headerGroup.headers.map((header: Header<T, unknown>) => (
@@ -1000,16 +991,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       colSpan={header.colSpan}
                       style={{
                         width: header.getSize(),
-                        position: 'sticky',
-                        top: isMobile ? 112 : 92,
-                        zIndex: 2,
+                        position: 'relative',
                         backgroundColor: 'var(--mantine-color-dark-7)',
                         padding: '4px 8px',
                         height: `${filterRowHeight}px`,
-                        maxHeight: `${filterRowHeight}px`,
-                        [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                          top: 92
-                        }
+                        maxHeight: `${filterRowHeight}px`
                       }}
                     >
                       {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
