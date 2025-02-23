@@ -130,7 +130,14 @@ export const auth = {
   },
 };
 
-export const records = {
+interface RecordsService {
+  getAll: () => Promise<ApiResponse<VinylRecord[]>>;
+  add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
+  delete: (id: string) => Promise<ApiResponse<void>>;
+  updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
+}
+
+export const records: RecordsService = {
   getAll: async (): Promise<ApiResponse<VinylRecord[]>> => {
     try {
       const response = await fetch('/api/records', {

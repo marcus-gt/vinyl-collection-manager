@@ -6,7 +6,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records } from '../services/api';
-import type { VinylRecord } from '../types';
+import type { VinylRecord, ApiResponse } from '../types';
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -95,7 +95,7 @@ function Layout() {
             });
 
             // Add record
-            const response = await records.create(record);
+            const response = await records.add(record);
             if (response.success) {
               successCount++;
             } else {
