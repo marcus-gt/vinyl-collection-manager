@@ -195,11 +195,11 @@ function Layout() {
 
         <AppShell.Main
           style={{
-            minHeight: '100vh',
-            paddingTop: 'var(--app-shell-header-height)',
-            backgroundColor: 'var(--mantine-color-dark-8)',
             width: '100%',
-            maxWidth: '100%'
+            maxWidth: '100%',
+            backgroundColor: 'var(--mantine-color-dark-8)',
+            paddingTop: 'var(--app-shell-header-height)',
+            minHeight: '100vh'
           }}
         >
           <Outlet />
