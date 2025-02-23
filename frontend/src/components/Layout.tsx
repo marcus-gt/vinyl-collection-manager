@@ -195,8 +195,7 @@ function Layout() {
 
         <AppShell.Main
           style={{
-            minHeight: 'calc(100vh - var(--app-shell-header-height))',
-            paddingTop: 'var(--app-shell-header-height)',
+            minHeight: '100vh',
             backgroundColor: 'var(--mantine-color-dark-8)',
             overflowY: 'auto',
             overflowX: 'hidden'
