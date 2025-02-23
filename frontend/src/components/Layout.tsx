@@ -34,98 +34,110 @@ function Layout() {
     setProgress(0);
 
     try {
-      const text = await csvFile.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+          throw new Error('Failed to read CSV file');
+        }
 
-      // Validate headers
-      const requiredHeaders = [
-        'Artist', 'Album', 'Original Year', 'Label', 'Genres', 'Styles',
-        'Musicians', 'Added', 'Scanned Release Year', 'Master URL', 'Release URL'
-      ];
+        // Parse CSV
+        const lines = text.split('\n');
+        const headers = lines[0].split(',');
+        const records = lines.slice(1).filter(line => line.trim());
+        const totalRecords = records.length;
 
-      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-      if (missingHeaders.length > 0) {
-        throw new Error(`Invalid CSV format. Missing headers: ${missingHeaders.join(', ')}`);
-      }
+        let successCount = 0;
+        let failureCount = 0;
 
-      // Process records
-      const recordsToImport: VinylRecord[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
+        for (let i = 0; i < records.length; i++) {
+          try {
+            // Update progress
+            setProgress((i / totalRecords) * 100);
 
-        const values = lines[i].split(',').map(v => {
-          // Remove quotes and trim
-          return v.replace(/^"(.*)"$/, '$1').trim();
-        });
+            // Process record
+            const values = records[i].split(',');
+            const record: Partial<VinylRecord> = {};
 
-        // Create record object
-        const record: VinylRecord = {
-          artist: values[headers.indexOf('Artist')],
-          album: values[headers.indexOf('Album')],
-          year: values[headers.indexOf('Original Year')] ? parseInt(values[headers.indexOf('Original Year')]) : undefined,
-          label: values[headers.indexOf('Label')],
-          genres: values[headers.indexOf('Genres')].split(';').map(g => g.trim()).filter(Boolean),
-          styles: values[headers.indexOf('Styles')].split(';').map(s => s.trim()).filter(Boolean),
-          musicians: values[headers.indexOf('Musicians')].split(';').map(m => m.trim()).filter(Boolean),
-          master_url: values[headers.indexOf('Master URL')] || null,
-          current_release_url: values[headers.indexOf('Release URL')] || null,
-          current_release_year: values[headers.indexOf('Scanned Release Year')] ? 
-            parseInt(values[headers.indexOf('Scanned Release Year')]) : undefined,
-          added_from: 'csv_import'
-        };
+            headers.forEach((header, index) => {
+              const value = values[index]?.trim();
+              if (!value) return;
 
-        // Add custom column values if they exist
-        const customValues: Record<string, string> = {};
-        headers.forEach((header, index) => {
-          if (!requiredHeaders.includes(header) && header !== 'Added') {
-            customValues[header] = values[index];
+              switch (header.toLowerCase()) {
+                case 'artist':
+                  record.artist = value;
+                  break;
+                case 'album':
+                  record.album = value;
+                  break;
+                case 'original year':
+                  record.year = parseInt(value);
+                  break;
+                case 'label':
+                  record.label = value;
+                  break;
+                case 'genres':
+                  record.genres = value.split(';').map(g => g.trim());
+                  break;
+                case 'styles':
+                  record.styles = value.split(';').map(s => s.trim());
+                  break;
+                case 'musicians':
+                  record.musicians = value.split(';').map(m => m.trim());
+                  break;
+                case 'master url':
+                  record.master_url = value;
+                  break;
+                case 'release url':
+                  record.current_release_url = value;
+                  break;
+              }
+            });
+
+            // Add record
+            const response = await records.create(record);
+            if (response.success) {
+              successCount++;
+            } else {
+              failureCount++;
+            }
+          } catch (err) {
+            console.error('Failed to process record:', err);
+            failureCount++;
           }
+        }
+
+        setProgress(100);
+
+        // Show completion notification
+        notifications.show({
+          title: 'Import Complete',
+          message: `Successfully imported ${successCount} records. ${failureCount} records failed.`,
+          color: failureCount > 0 ? 'yellow' : 'green'
         });
 
-        if (Object.keys(customValues).length > 0) {
-          record.customValues = customValues;
-        }
+        // Trigger table refresh
+        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
 
-        recordsToImport.push(record);
-      }
+        // Reset state
+        setImporting(false);
+        setImportModalOpened(false);
+        setCsvFile(null);
+      };
 
-      // Import records
-      let imported = 0;
-      for (const record of recordsToImport) {
-        try {
-          await records.add(record);
-          imported++;
-          setProgress((imported / recordsToImport.length) * 100);
-        } catch (error) {
-          console.error('Failed to import record:', record, error);
-        }
-      }
-
-      notifications.show({
-        title: 'Import Complete',
-        message: `Successfully imported ${imported} of ${recordsToImport.length} records`,
-        color: 'green'
-      });
-
-      // Trigger table refresh
-      window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
-
-    } catch (error) {
+      reader.readAsText(csvFile);
+    } catch (err) {
+      console.error('Failed to import CSV:', err);
       notifications.show({
         title: 'Import Failed',
-        message: error instanceof Error ? error.message : 'Failed to import CSV file',
+        message: 'Failed to import CSV file. Please check the file format and try again.',
         color: 'red'
       });
-    } finally {
       setImporting(false);
-      setImportModalOpened(false);
-      setCsvFile(null);
-      setProgress(0);
     }
   };
 
-  const isCollectionPage = location.pathname === '/collection';
+  const isCollectionPage = location.pathname === '/';
 
   const NavLinks = () => (
     <>
@@ -149,8 +161,7 @@ function Layout() {
     <>
       <AppShell
         header={{
-          height: { base: 80, sm: 60 },
-          collapsed: false
+          height: { base: 80, sm: 60 }
         }}
         styles={(theme) => ({
           main: {
@@ -159,29 +170,27 @@ function Layout() {
             overflowY: 'auto',
             margin: 0,
             padding: 0,
-            position: 'relative',
-            zIndex: 1,
 
             [`@media (min-width: ${theme.breakpoints.sm})`]: {
               paddingTop: rem(60),
-              height: `calc(100vh - ${rem(60)})`
-            }
+              height: `calc(100vh - ${rem(60)})`,
+            },
           },
-
           header: {
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
-            zIndex: 200,
+            zIndex: 100,
+
             backgroundColor: 'var(--mantine-color-dark-7)',
             borderBottom: '1px solid var(--mantine-color-dark-4)',
-            height: rem(80),
 
+            height: rem(80),
             [`@media (min-width: ${theme.breakpoints.sm})`]: {
-              height: rem(60)
-            }
-          }
+              height: rem(60),
+            },
+          },
         })}
       >
         <AppShell.Header>
@@ -223,7 +232,6 @@ function Layout() {
         size="100%"
         padding="md"
         hiddenFrom="sm"
-        zIndex={300}
       >
         <Stack>
           <NavLinks />
@@ -242,23 +250,6 @@ function Layout() {
         closeOnClickOutside={!importing}
         closeOnEscape={!importing}
         withCloseButton={!importing}
-        zIndex={400}
-        styles={{
-          inner: {
-            '@media (max-width: 48em)': {
-              padding: 0
-            }
-          },
-          content: {
-            '@media (max-width: 48em)': {
-              width: '100vw',
-              height: '100vh',
-              margin: 0,
-              maxWidth: 'none',
-              maxHeight: 'none'
-            }
-          }
-        }}
       >
         <Stack>
           <Text size="sm">

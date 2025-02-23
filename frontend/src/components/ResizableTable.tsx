@@ -982,11 +982,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: isMobile ? 80 + columnHeaderHeight : 60 + columnHeaderHeight,
+                  top: isMobile ? 112 : 92,
                   zIndex: 2,
                   backgroundColor: 'var(--mantine-color-dark-7)',
                   [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                    top: 60 + columnHeaderHeight
+                    top: 92
                   }
                 }}
               >
@@ -997,14 +997,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: isMobile ? 80 + columnHeaderHeight : 60 + columnHeaderHeight,
+                      top: isMobile ? 112 : 92,
                       zIndex: 2,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
                       height: `${filterRowHeight}px`,
                       maxHeight: `${filterRowHeight}px`,
                       [`@media (min-width: ${theme.breakpoints.sm})`]: {
-                        top: 60 + columnHeaderHeight
+                        top: 92
                       }
                     }}
                   >
