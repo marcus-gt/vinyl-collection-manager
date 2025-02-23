@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress, rem } from '@mantine/core';
+import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress } from '@mantine/core';
 import { IconDownload, IconUpload } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
