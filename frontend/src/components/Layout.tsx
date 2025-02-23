@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress, rem } from '@mantine/core';
 import { IconDownload, IconUpload } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useDisclosure, useMediaQuery } from '@mantine/hooks';
+import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records } from '../services/api';

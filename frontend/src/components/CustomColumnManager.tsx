@@ -6,12 +6,14 @@ import type { CustomColumn, CustomColumnType } from '../types';
 import { PILL_COLORS } from '../types';
 import { notifications } from '@mantine/notifications';
 
-interface CustomColumnManagerProps {
+export interface CustomColumnManagerProps {
   opened: boolean;
   onClose: () => void;
+  customColumns: CustomColumn[];
+  onCustomColumnsChange: (newColumns: CustomColumn[]) => void;
 }
 
-export function CustomColumnManager({ opened, onClose }: CustomColumnManagerProps) {
+export function CustomColumnManager({ opened, onClose, customColumns, onCustomColumnsChange }: CustomColumnManagerProps) {
   const [columns, setColumns] = useState<CustomColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Partial<CustomColumn> | null>(null);

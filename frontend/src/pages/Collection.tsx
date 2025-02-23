@@ -63,14 +63,6 @@ const customValuesService = {
   }
 };
 
-// Add the missing prop types to CustomColumnManagerProps
-interface CustomColumnManagerProps {
-  opened: boolean;
-  onClose: () => void;
-  customColumns?: CustomColumn[];
-  onCustomColumnsChange?: (newColumns: CustomColumn[]) => void;
-}
-
 function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
