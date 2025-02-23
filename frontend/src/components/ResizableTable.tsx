@@ -969,7 +969,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: '32px',
+                  top: 32,
                   zIndex: 2,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
@@ -981,7 +981,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: '32px',
+                      top: 32,
                       zIndex: 2,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
