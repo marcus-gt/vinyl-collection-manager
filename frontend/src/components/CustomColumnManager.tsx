@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Switch, Menu, Badge } from '@mantine/core';
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
-import { customColumns, customValues, records } from '../services/api';
+import { customColumns as customColumnsService, customValues, records } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
 import { PILL_COLORS } from '../types';
 import { notifications } from '@mantine/notifications';
@@ -13,7 +13,7 @@ export interface CustomColumnManagerProps {
   onCustomColumnsChange: (newColumns: CustomColumn[]) => void;
 }
 
-export function CustomColumnManager({ opened, onClose, customColumns, onCustomColumnsChange }: CustomColumnManagerProps) {
+export function CustomColumnManager({ opened, onClose, customColumns: initialColumns, onCustomColumnsChange }: CustomColumnManagerProps) {
   const [columns, setColumns] = useState<CustomColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Partial<CustomColumn> | null>(null);
@@ -33,6 +33,10 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
     }
   }, [opened]);
 
+  useEffect(() => {
+    setColumns(initialColumns);
+  }, [initialColumns]);
+
   const handleModalClose = () => {
     if (columnsChanged) {
       // Only trigger table refresh if columns were modified
@@ -44,9 +48,10 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
   const loadColumns = async () => {
     setLoading(true);
     try {
-      const response = await customColumns.getAll();
+      const response = await customColumnsService.getAll();
       if (response.success && response.data) {
         setColumns(response.data);
+        onCustomColumnsChange(response.data);
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
@@ -81,7 +86,7 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
 
       if (editingColumn?.id) {
         // Update existing column
-        const response = await customColumns.update(editingColumn.id, columnData);
+        const response = await customColumnsService.update(editingColumn.id, columnData);
         if (response.success) {
           setColumnsChanged(true);
           notifications.show({
@@ -92,7 +97,7 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
         }
       } else {
         // Create new column
-        const response = await customColumns.create(columnData);
+        const response = await customColumnsService.create(columnData);
         if (response.success) {
           setColumnsChanged(true);
           notifications.show({
@@ -123,7 +128,7 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
 
     setLoading(true);
     try {
-      const response = await customColumns.delete(column.id);
+      const response = await customColumnsService.delete(column.id);
       if (response.success) {
         setColumnsChanged(true);
         notifications.show({
@@ -185,7 +190,7 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
         setOptionColors(newOptionColors);
 
         // Update in the backend
-        const response = await customColumns.update(editingColumn.id, {
+        const response = await customColumnsService.update(editingColumn.id, {
           ...editingColumn,
           option_colors: newOptionColors
         });
@@ -250,7 +255,7 @@ export function CustomColumnManager({ opened, onClose, customColumns, onCustomCo
         delete newOptionColors[optionToRemove];
 
         // First update the column definition to remove the option
-        const updateColumnResponse = await customColumns.update(editingColumn.id, {
+        const updateColumnResponse = await customColumnsService.update(editingColumn.id, {
           name: editingColumn.name || '',
           type: editingColumn.type || 'text',
           options: options.filter(opt => opt !== optionToRemove),
