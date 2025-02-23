@@ -827,7 +827,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     <Box style={{ 
       width: '100%',
       position: 'relative',
-      overflowX: 'auto'
+      overflowX: 'auto',
+      overflowY: 'visible'
     }}>
       <LoadingOverlay visible={loading} />
       <Table
@@ -890,7 +891,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 style={{
                   position: 'sticky',
                   top: isMobile ? 80 : 60,
-                  zIndex: 2,
+                  zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
               >
@@ -902,7 +903,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       width: header.getSize(),
                       position: 'sticky',
                       top: isMobile ? 80 : 60,
-                      zIndex: 2,
+                      zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       userSelect: 'none',
                       height: `${columnHeaderHeight}px`,
@@ -975,8 +976,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: isMobile ? 112 : 92,
-                  zIndex: 2,
+                  top: isMobile ? (80 + columnHeaderHeight) : (60 + columnHeaderHeight),
+                  zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
               >
@@ -987,8 +988,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: isMobile ? 112 : 92,
-                      zIndex: 2,
+                      top: isMobile ? (80 + columnHeaderHeight) : (60 + columnHeaderHeight),
+                      zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
                       height: `${filterRowHeight}px`,
