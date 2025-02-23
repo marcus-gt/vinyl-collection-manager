@@ -130,7 +130,7 @@ export const auth = {
   },
 };
 
-interface RecordsService {
+export interface RecordsService {
   getAll: () => Promise<ApiResponse<VinylRecord[]>>;
   add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
   delete: (id: string) => Promise<ApiResponse<void>>;

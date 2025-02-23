@@ -5,8 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
-import { records } from '../services/api';
-import type { VinylRecord, ApiResponse } from '../types';
+import { records, type RecordsService } from '../services/api';
+import type { VinylRecord } from '../types';
+
+const recordsService: RecordsService = records;
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -95,7 +97,7 @@ function Layout() {
             });
 
             // Add record
-            const response = await records.add(record);
+            const response = await recordsService.add(record);
             if (response.success) {
               successCount++;
             } else {
