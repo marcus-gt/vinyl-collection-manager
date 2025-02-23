@@ -890,7 +890,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: 0,
+                  top: isMobile ? '80px' : '60px',
                   zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
@@ -902,7 +902,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: 0,
+                      top: isMobile ? '80px' : '60px',
                       zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       userSelect: 'none',
@@ -976,7 +976,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: `${columnHeaderHeight}px`,
+                  top: isMobile ? `${80 + columnHeaderHeight}px` : `${60 + columnHeaderHeight}px`,
                   zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
@@ -988,7 +988,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: `${columnHeaderHeight}px`,
+                      top: isMobile ? `${80 + columnHeaderHeight}px` : `${60 + columnHeaderHeight}px`,
                       zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
