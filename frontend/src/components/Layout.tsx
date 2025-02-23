@@ -162,38 +162,8 @@ function Layout() {
   return (
     <>
       <AppShell
-        header={{
-          height: { base: 80, sm: 60 }
-        }}
-        styles={(theme) => ({
-          main: {
-            paddingTop: rem(80),
-            height: `calc(100vh - ${rem(80)})`,
-            overflowY: 'auto',
-            margin: 0,
-            padding: 0,
-
-            [`@media (min-width: ${theme.breakpoints.sm})`]: {
-              paddingTop: rem(60),
-              height: `calc(100vh - ${rem(60)})`,
-            },
-          },
-          header: {
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 100,
-
-            backgroundColor: 'var(--mantine-color-dark-7)',
-            borderBottom: '1px solid var(--mantine-color-dark-4)',
-
-            height: rem(80),
-            [`@media (min-width: ${theme.breakpoints.sm})`]: {
-              height: rem(60),
-            },
-          },
-        })}
+        header={{ height: { base: 80, sm: 60 } }}
+        padding="0"
       >
         <AppShell.Header>
           <Group 
@@ -223,7 +193,13 @@ function Layout() {
           </Group>
         </AppShell.Header>
 
-        <AppShell.Main>
+        <AppShell.Main
+          style={{
+            minHeight: '100vh',
+            paddingTop: 'var(--app-shell-header-height)',
+            backgroundColor: 'var(--mantine-color-dark-8)'
+          }}
+        >
           <Outlet />
         </AppShell.Main>
       </AppShell>
