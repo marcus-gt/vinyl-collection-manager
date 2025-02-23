@@ -159,6 +159,8 @@ function Layout() {
             overflowY: 'auto',
             margin: 0,
             padding: 0,
+            position: 'relative',
+            zIndex: 1,
 
             [`@media (min-width: ${theme.breakpoints.sm})`]: {
               paddingTop: rem(60),
@@ -171,12 +173,11 @@ function Layout() {
             top: 0,
             left: 0,
             right: 0,
-            zIndex: 100,
-
+            zIndex: 200,
             backgroundColor: 'var(--mantine-color-dark-7)',
             borderBottom: '1px solid var(--mantine-color-dark-4)',
-
             height: rem(80),
+
             [`@media (min-width: ${theme.breakpoints.sm})`]: {
               height: rem(60)
             }
@@ -222,6 +223,7 @@ function Layout() {
         size="100%"
         padding="md"
         hiddenFrom="sm"
+        zIndex={300}
       >
         <Stack>
           <NavLinks />
@@ -240,6 +242,23 @@ function Layout() {
         closeOnClickOutside={!importing}
         closeOnEscape={!importing}
         withCloseButton={!importing}
+        zIndex={400}
+        styles={{
+          inner: {
+            '@media (max-width: 48em)': {
+              padding: 0
+            }
+          },
+          content: {
+            '@media (max-width: 48em)': {
+              width: '100vw',
+              height: '100vh',
+              margin: 0,
+              maxWidth: 'none',
+              maxHeight: 'none'
+            }
+          }
+        }}
       >
         <Stack>
           <Text size="sm">

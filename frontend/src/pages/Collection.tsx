@@ -1168,21 +1168,35 @@ function Collection() {
     <Box
       style={{
         padding: 'var(--mantine-spacing-md)',
+        position: 'relative',
+        zIndex: 1
       }}
     >
-      <Group justify="space-between" mb="md">
+      <Group 
+        justify="space-between" 
+        mb="md"
+        wrap="wrap"
+        gap="md"
+      >
         <TextInput
           placeholder="Search records..."
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.currentTarget.value)}
           leftSection={<IconSearch size={14} />}
-          style={{ minWidth: '300px' }}
+          style={{ 
+            minWidth: '300px',
+            flex: '1 1 300px',
+            maxWidth: '100%'
+          }}
         />
-        <Group>
+        <Group gap="xs" wrap="nowrap">
           <Button
             variant="default"
             onClick={() => setAddRecordsModalOpened(true)}
             leftSection={<IconPlus size={14} />}
+            style={{
+              whiteSpace: 'nowrap'
+            }}
           >
             Add Records
           </Button>
@@ -1190,6 +1204,9 @@ function Collection() {
             variant="default"
             onClick={() => setCustomColumnManagerOpened(true)}
             leftSection={<IconColumns size={14} />}
+            style={{
+              whiteSpace: 'nowrap'
+            }}
           >
             Manage Columns
           </Button>
