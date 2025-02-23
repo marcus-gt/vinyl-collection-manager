@@ -826,9 +826,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   return (
     <Box style={{ 
       width: '100%',
-      position: 'relative',
       overflowX: 'auto',
-      overflowY: 'visible'
+      overflowY: 'visible',
+      position: 'relative'
     }}>
       <LoadingOverlay visible={loading} />
       <Table
