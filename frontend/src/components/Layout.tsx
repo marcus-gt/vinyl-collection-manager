@@ -199,8 +199,7 @@ function Layout() {
             paddingTop: 'var(--app-shell-header-height)',
             backgroundColor: 'var(--mantine-color-dark-8)',
             width: '100%',
-            maxWidth: '100%',
-            overflowX: 'auto'
+            maxWidth: '100%'
           }}
         >
           <Outlet />
