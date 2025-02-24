@@ -20,7 +20,7 @@ import {
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, MultiSelect, Select } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
-import { useLocalStorage, useMediaQuery } from '@mantine/hooks';
+import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -111,9 +111,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-
-  // Use useMediaQuery from @mantine/hooks
-  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   const columnHeaderHeight = 32;
   const filterRowHeight = 40;
 
