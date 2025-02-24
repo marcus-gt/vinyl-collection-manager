@@ -162,7 +162,7 @@ function Layout() {
   return (
     <>
       <AppShell
-        header={{ height: { base: 80, sm: 60 } }}
+        header={{ height: { base: 60, sm: 60 } }}
         padding="0"
       >
         <AppShell.Header>
@@ -195,12 +195,10 @@ function Layout() {
 
         <AppShell.Main
           style={{
-            minHeight: 'calc(100vh - var(--app-shell-header-height))',
+            height: '100vh',
             overflowY: 'auto',
             paddingTop: 'var(--app-shell-header-height)',
-            backgroundColor: 'var(--mantine-color-dark-8)',
-            width: '100%',
-            maxWidth: '100%'
+            backgroundColor: 'var(--mantine-color-dark-8)'
           }}
         >
           <Outlet />

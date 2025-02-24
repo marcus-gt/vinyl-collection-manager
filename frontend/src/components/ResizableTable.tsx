@@ -845,7 +845,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             width: '100%'
           },
           thead: {
-            backgroundColor: 'var(--mantine-color-dark-7)'
+            backgroundColor: 'var(--mantine-color-dark-7)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10
           },
           tbody: {
             width: '100%'
@@ -886,7 +889,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: isMobile ? 80 : 60,
+                  top: 0,
                   zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
@@ -898,7 +901,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: isMobile ? 80 : 60,
+                      top: 0,
                       zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       userSelect: 'none',
@@ -972,7 +975,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               <Table.Tr
                 style={{
                   position: 'sticky',
-                  top: isMobile ? (80 + columnHeaderHeight) : (60 + columnHeaderHeight),
+                  top: `${columnHeaderHeight}px`,
                   zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
@@ -984,7 +987,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     style={{
                       width: header.getSize(),
                       position: 'sticky',
-                      top: isMobile ? (80 + columnHeaderHeight) : (60 + columnHeaderHeight),
+                      top: `${columnHeaderHeight}px`,
                       zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
