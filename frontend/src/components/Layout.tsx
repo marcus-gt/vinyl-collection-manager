@@ -200,7 +200,7 @@ function Layout() {
             backgroundColor: 'var(--mantine-color-dark-8)',
             width: '100%',
             maxWidth: '100%',
-            overflowX: 'hidden'
+            overflowY: 'auto'
           }}
         >
           <Outlet />

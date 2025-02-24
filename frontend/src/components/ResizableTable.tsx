@@ -827,7 +827,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     <Box style={{ 
       width: '100%',
       overflowX: 'auto',
-      overflowY: 'visible',
       position: 'relative'
     }}>
       <LoadingOverlay visible={loading} />
@@ -891,7 +890,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 style={{
                   position: 'sticky',
                   top: isMobile ? 80 : 60,
-                  zIndex: 2,
+                  zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
               >
@@ -903,7 +902,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       width: header.getSize(),
                       position: 'sticky',
                       top: isMobile ? 80 : 60,
-                      zIndex: 2,
+                      zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       userSelect: 'none',
                       height: `${columnHeaderHeight}px`,
@@ -977,7 +976,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 style={{
                   position: 'sticky',
                   top: isMobile ? (80 + columnHeaderHeight) : (60 + columnHeaderHeight),
-                  zIndex: 2,
+                  zIndex: 10,
                   backgroundColor: 'var(--mantine-color-dark-7)'
                 }}
               >
@@ -989,7 +988,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                       width: header.getSize(),
                       position: 'sticky',
                       top: isMobile ? (80 + columnHeaderHeight) : (60 + columnHeaderHeight),
-                      zIndex: 2,
+                      zIndex: 10,
                       backgroundColor: 'var(--mantine-color-dark-7)',
                       padding: '4px 8px',
                       height: `${filterRowHeight}px`,
