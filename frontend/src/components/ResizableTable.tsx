@@ -845,9 +845,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             width: '100%'
           },
           thead: {
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
             backgroundColor: 'var(--mantine-color-dark-7)'
           },
           tbody: {
