@@ -824,9 +824,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     <Box>
       <Box style={{ 
         width: '100%',
-        overflowX: 'auto'
+        overflowX: 'auto',
+        position: 'relative'
       }}>
-        <LoadingOverlay visible={loading} />
+        <LoadingOverlay visible={loading} zIndex={100} />
         <Table
           striped
           highlightOnHover
@@ -1042,7 +1043,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           padding: '20px',
           borderTop: '1px solid var(--mantine-color-dark-4)',
           position: 'sticky',
-          left: 0
+          left: 0,
+          zIndex: 1
         }}
       >
         <MyCustomPagination
