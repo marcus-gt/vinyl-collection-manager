@@ -59,7 +59,9 @@ function Layout() {
 
             // Process record
             const values = records[i].split(',');
-            const record: Partial<VinylRecord> = {};
+            const record: Partial<VinylRecord> = {
+              added_from: 'csv_import'
+            };
 
             headers.forEach((header, index) => {
               const value = values[index]?.trim();
