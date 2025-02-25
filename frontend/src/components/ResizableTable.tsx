@@ -1034,25 +1034,27 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         </Table>
       </Box>
 
-      <Box
-        style={{
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          backgroundColor: 'var(--mantine-color-dark-8)',
-          padding: '20px',
-          borderTop: '1px solid var(--mantine-color-dark-4)',
-          position: 'sticky',
-          left: 0,
-          zIndex: 1
-        }}
-      >
-        <MyCustomPagination
-          page={page}
-          onChange={onPageChange}
-          total={Math.ceil(table.getFilteredRowModel().rows.length / recordsPerPage)}
-        />
-      </Box>
+      {table.getFilteredRowModel().rows.length > 0 && (
+        <Box
+          style={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            backgroundColor: 'var(--mantine-color-dark-8)',
+            padding: '20px',
+            borderTop: '1px solid var(--mantine-color-dark-4)',
+            position: 'sticky',
+            left: 0,
+            zIndex: 1
+          }}
+        >
+          <MyCustomPagination
+            page={page}
+            onChange={onPageChange}
+            total={Math.ceil(table.getFilteredRowModel().rows.length / recordsPerPage)}
+          />
+        </Box>
+      )}
     </Box>
   );
 } 
