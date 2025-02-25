@@ -1038,14 +1038,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           position: 'sticky',
           left: 0,
           right: 0,
-          bottom: 20,
+          bottom: 0,
           width: '100%',
           display: 'flex',
           justifyContent: 'center',
           zIndex: 10,
           backgroundColor: 'var(--mantine-color-dark-8)',
-          padding: '10px',
-          boxShadow: '0 -2px 4px rgba(0,0,0,0.1)'
+          padding: '20px',
+          borderTop: '1px solid var(--mantine-color-dark-4)',
+          marginTop: '-1px'  // To overlap with table bottom border
         }}
       >
         <MyCustomPagination
