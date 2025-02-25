@@ -1052,6 +1052,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             page={page}
             onChange={onPageChange}
             total={Math.ceil(table.getFilteredRowModel().rows.length / recordsPerPage)}
+            siblings={0}
           />
         </Box>
       )}

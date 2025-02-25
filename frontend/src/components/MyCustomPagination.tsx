@@ -72,6 +72,15 @@ export function MyCustomPagination({
 
   return (
     <Group gap={4} justify="center">
+      <Button
+        variant="subtle"
+        size="sm"
+        px="xs"
+        onClick={() => onChange(Math.max(1, page - 1))}
+      >
+        <IconChevronLeft size={16} />
+      </Button>
+
       {items.map((item: PaginationItem, index: number) => {
         if (item.type === 'ellipsis') {
           return (
@@ -81,7 +90,7 @@ export function MyCustomPagination({
           );
         }
 
-        if (item.type === 'first' || item.type === 'last') {
+        if (item.type === 'page') {
           return (
             <Button
               key={index}
@@ -90,27 +99,22 @@ export function MyCustomPagination({
               px="xs"
               onClick={() => onChange(item.value)}
             >
-              {item.type === 'first' ? (
-                <IconChevronLeft size={16} />
-              ) : (
-                <IconChevronRight size={16} />
-              )}
+              {item.value}
             </Button>
           );
         }
 
-        return (
-          <Button
-            key={index}
-            variant={item.active ? 'filled' : 'subtle'}
-            size="sm"
-            px="xs"
-            onClick={() => onChange(item.value)}
-          >
-            {item.value}
-          </Button>
-        );
+        return null;  // Don't render first/last controls
       })}
+
+      <Button
+        variant="subtle"
+        size="sm"
+        px="xs"
+        onClick={() => onChange(Math.min(total, page + 1))}
+      >
+        <IconChevronRight size={16} />
+      </Button>
     </Group>
   );
 } 
