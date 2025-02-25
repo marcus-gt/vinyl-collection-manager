@@ -139,7 +139,7 @@ function Layout() {
     }
   };
 
-  const isCollectionPage = location.pathname === '/';
+  const isCollectionPage = location.pathname === '/collection';
 
   const NavLinks = () => (
     <>
