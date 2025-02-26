@@ -137,6 +137,13 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                     else:
                         print(f"No credits found on track: {track.title}")
         
+        # Get country from main release if available, otherwise from current release
+        country = None
+        if main_release and hasattr(main_release, 'country'):
+            country = main_release.country
+        elif hasattr(release, 'country'):
+            country = release.country
+
         # Format the data
         data = {
             'artist': artist_name,
@@ -150,7 +157,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             'current_release_url': f'https://www.discogs.com/release/{release.id}',
             'current_release_year': getattr(release, 'year', None),
             'barcode': None,
-            'country': getattr(release, 'country', None),
+            'country': country,
             'added_from': added_from
         }
 
