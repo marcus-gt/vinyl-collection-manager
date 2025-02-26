@@ -442,6 +442,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         master_url: record.master_url || null,
         current_release_url: record.added_from === 'barcode' ? record.current_release_url : null,
         label: record.label,
+        country: record.country,
         added_from: record.added_from,
         customValues: record.customValues  // Add the edited custom values
       };
