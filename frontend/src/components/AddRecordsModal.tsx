@@ -1348,6 +1348,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
                       {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
                       {record.label && <Text size="sm">Label: {record.label}</Text>}
+                      {record.country && <Text size="sm">Country: {record.country}</Text>}
                       
                       {/* Add custom column preview */}
                       {customColumns.length > 0 && record.customValues && (
