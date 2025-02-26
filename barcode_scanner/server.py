@@ -944,6 +944,9 @@ def lookup_discogs_url():
             if result.get('data'):
                 result['data']['current_release_url'] = None
                 result['data']['current_release_year'] = None
+                # Make sure country is included in the response
+                if 'country' in result['data']:
+                    result['data']['country'] = result['data']['country']
             return jsonify(result)
         else:
             return jsonify({

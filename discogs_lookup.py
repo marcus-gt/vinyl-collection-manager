@@ -150,6 +150,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             'current_release_url': f'https://www.discogs.com/release/{release.id}',
             'current_release_year': getattr(release, 'year', None),
             'barcode': None,
+            'country': getattr(release, 'country', None),
             'added_from': added_from
         }
 
