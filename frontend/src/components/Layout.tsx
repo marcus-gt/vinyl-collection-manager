@@ -80,6 +80,9 @@ function Layout() {
                 case 'label':
                   record.label = value;
                   break;
+                case 'country':
+                  record.country = value;
+                  break;
                 case 'genres':
                   record.genres = value.split(';').map(g => g.trim());
                   break;
