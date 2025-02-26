@@ -3,10 +3,10 @@ import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput
 import { IconDownload, IconUpload } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
-import { records, type RecordsService } from '../services/api';
-import type { VinylRecord } from '../types';
+import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
+import type { VinylRecord, CustomColumn } from '../types';
 
 const recordsService: RecordsService = records;
 
@@ -19,6 +19,22 @@ function Layout() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+
+  useEffect(() => {
+    // Load custom columns when component mounts
+    const loadCustomColumns = async () => {
+      try {
+        const response = await customColumnsApi.getAll();
+        if (response.success && response.data) {
+          setCustomColumns(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to load custom columns:', err);
+      }
+    };
+    loadCustomColumns();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -43,9 +59,41 @@ function Layout() {
           throw new Error('Failed to read CSV file');
         }
 
+        // Parse CSV with proper handling of quoted values
+        const parseCSVLine = (line: string): string[] => {
+          const values: string[] = [];
+          let currentValue = '';
+          let insideQuotes = false;
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+              if (insideQuotes && line[i + 1] === '"') {
+                // Handle escaped quotes
+                currentValue += '"';
+                i++;
+              } else {
+                // Toggle quote state
+                insideQuotes = !insideQuotes;
+              }
+            } else if (char === ',' && !insideQuotes) {
+              // End of value
+              values.push(currentValue.trim());
+              currentValue = '';
+            } else {
+              currentValue += char;
+            }
+          }
+          
+          // Add the last value
+          values.push(currentValue.trim());
+          return values;
+        };
+
         // Parse CSV
         const lines = text.split('\n');
-        const headers = lines[0].split(',');
+        const headers = parseCSVLine(lines[0]);
         const records = lines.slice(1).filter(line => line.trim());
         const totalRecords = records.length;
 
@@ -58,15 +106,17 @@ function Layout() {
             setProgress((i / totalRecords) * 100);
 
             // Process record
-            const values = records[i].split(',');
+            const values = parseCSVLine(records[i]);
             const record: Partial<VinylRecord> = {
-              added_from: 'csv_import'
+              added_from: 'csv_import',
+              customValues: {}  // Initialize customValues object
             };
 
             headers.forEach((header, index) => {
               const value = values[index]?.trim();
               if (!value) return;
 
+              // First try to match standard fields
               switch (header.toLowerCase()) {
                 case 'artist':
                   record.artist = value;
@@ -98,6 +148,13 @@ function Layout() {
                 case 'release url':
                   record.current_release_url = value;
                   break;
+                default:
+                  // If it's not a standard field, check if it's a custom column
+                  const customColumn = customColumns.find(col => col.name === header);
+                  if (customColumn) {
+                    // Add to customValues if it's a custom column
+                    record.customValues![customColumn.id] = value;
+                  }
               }
             });
 
