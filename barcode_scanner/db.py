@@ -141,6 +141,7 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'current_release_url': record_data.get('current_release_url'),
             'current_release_year': record_data.get('current_release_year'),
             'barcode': record_data.get('barcode'),
+            'country': record_data.get('country'),
             'added_from': record_data.get('added_from', '')
         }
         
