@@ -743,6 +743,7 @@ def sync_subscribed_playlists():
                                 'master_url': lookup_response['data']['master_url'],
                                 'current_release_url': None,  # Always null for spotify_list_sub
                                 'current_release_year': None,  # Always null for spotify_list_sub
+                                'country': lookup_response['data'].get('country'),
                                 'added_from': 'spotify_list_sub',  # Force spotify_list_sub as source
                                 'created_at': datetime.utcnow().isoformat(),
                                 'updated_at': datetime.utcnow().isoformat()

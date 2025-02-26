@@ -17,6 +17,7 @@ export interface VinylRecord {
   current_release_url?: string | null;
   current_release_year?: number;
   label?: string;
+  country?: string;
   notes?: string;
   created_at?: string;
   updated_at?: string;

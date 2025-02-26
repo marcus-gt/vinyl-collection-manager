@@ -480,6 +480,19 @@ function Collection() {
               )
             },
             { 
+              id: 'country', 
+              accessorKey: 'country', 
+              header: 'Country', 
+              enableSorting: true,
+              size: 100,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <Text size="sm">{row.original.country || '-'}</Text>
+              )
+            },
+            { 
               id: 'genres', 
               accessorKey: 'genres', 
               header: 'Genres', 

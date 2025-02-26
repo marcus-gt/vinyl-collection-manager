@@ -616,6 +616,7 @@ def lookup_barcode(barcode):
                     'master_url': result.get('master_url'),
                     'current_release_url': result.get('current_release_url') if result.get('added_from') == 'barcode' else None,
                     'label': result.get('label'),
+                    'country': result.get('country'),
                     'added_from': result.get('added_from', 'barcode')
                 }
                 print(f"Processed record data: {record}")
