@@ -1214,6 +1214,28 @@ def sync_playlists():
             'error': 'Failed to sync playlists'
         }), 500
 
+# Add new endpoint for automated sync
+@app.route('/api/spotify/playlist/sync', methods=['POST'])
+def automated_sync_playlists():
+    """Automated playlist sync triggered by cron job"""
+    # Verify sync key
+    sync_key = request.headers.get('X-Sync-Key')
+    if not sync_key or sync_key != os.getenv('SYNC_SECRET_KEY'):
+        return jsonify({
+            'success': False,
+            'error': 'Unauthorized'
+        }), 401
+
+    try:
+        result = sync_subscribed_playlists(is_automated=True)  # Pass flag to indicate automated sync
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error in automated playlist sync: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to sync playlists'
+        }), 500
+
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
     port = int(os.environ.get('PORT', 10000))

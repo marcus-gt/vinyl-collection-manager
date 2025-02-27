@@ -9,6 +9,7 @@ from .db import get_supabase_client
 from datetime import datetime
 import sys
 from pathlib import Path
+from typing import Dict, Any
 
 # Add the parent directory to sys.path
 parent_dir = str(Path(__file__).parent.parent)
@@ -675,9 +676,10 @@ def get_subscribed_playlist():
             'error': 'Failed to get subscribed playlist'
         }
 
-def sync_subscribed_playlists():
+def sync_subscribed_playlists(is_automated: bool = False):
     """Sync all subscribed playlists (to be called by cron job)"""
     print("\n=== Syncing Subscribed Playlists ===")
+    print(f"Mode: {'Automated' if is_automated else 'Manual'}")
     
     try:
         client = get_supabase_client()
@@ -698,14 +700,66 @@ def sync_subscribed_playlists():
                     print(f"No Spotify tokens found for user {sub['user_id']}")
                     continue
                 
-                # Set up session for this user
-                session['spotify_access_token'] = tokens['access_token']
-                session['spotify_refresh_token'] = tokens['refresh_token']
-                session['user_id'] = sub['user_id']
-                session.modified = True
+                # For automated syncs, we don't use the session
+                if not is_automated:
+                    # Set up session for this user
+                    session['spotify_access_token'] = tokens['access_token']
+                    session['spotify_refresh_token'] = tokens['refresh_token']
+                    session['user_id'] = sub['user_id']
+                    session.modified = True
                 
-                # Get playlist tracks
-                tracks_response = get_playlist_tracks(sub['playlist_id'])
+                # Create headers for API calls
+                headers = {
+                    'Authorization': f"Bearer {tokens['access_token']}"
+                }
+                
+                # Get playlist tracks (using direct API call for automated syncs)
+                if is_automated:
+                    response = requests.get(
+                        f"{SPOTIFY_API_BASE_URL}/playlists/{sub['playlist_id']}/tracks",
+                        headers=headers
+                    )
+                    
+                    if response.status_code == 401:
+                        # Try to refresh token
+                        refresh_result = refresh_spotify_token_for_user(sub['user_id'], tokens['refresh_token'])
+                        if not refresh_result['success']:
+                            print(f"Failed to refresh token for user {sub['user_id']}")
+                            continue
+                            
+                        # Retry with new token
+                        headers['Authorization'] = f"Bearer {refresh_result['access_token']}"
+                        response = requests.get(
+                            f"{SPOTIFY_API_BASE_URL}/playlists/{sub['playlist_id']}/tracks",
+                            headers=headers
+                        )
+                    
+                    if not response.ok:
+                        print(f"Failed to get tracks for playlist {sub['playlist_id']}")
+                        continue
+                        
+                    tracks_data = response.json()
+                    # Extract unique albums
+                    albums = {}
+                    for item in tracks_data['items']:
+                        if not item['track']:
+                            continue
+                            
+                        album = item['track']['album']
+                        if album['id'] not in albums:
+                            albums[album['id']] = {
+                                'id': album['id'],
+                                'name': album['name'],
+                                'artist': album['artists'][0]['name'],
+                                'release_date': album['release_date']
+                            }
+                    tracks_response = {
+                        'success': True,
+                        'data': list(albums.values())
+                    }
+                else:
+                    tracks_response = get_playlist_tracks(sub['playlist_id'])
+                
                 if not tracks_response['success']:
                     print(f"Failed to get tracks for playlist {sub['playlist_id']}")
                     continue
@@ -804,3 +858,54 @@ def sync_subscribed_playlists():
             'success': False,
             'error': 'Failed to sync subscribed playlists'
         }
+
+def refresh_spotify_token_for_user(user_id: str, refresh_token: str) -> Dict[str, Any]:
+    """Refresh Spotify token for a specific user without using session"""
+    print(f"\n=== Refreshing Spotify Token for User {user_id} ===")
+    
+    if not refresh_token:
+        print("No refresh token provided")
+        return {'success': False, 'error': 'No refresh token available'}
+
+    auth_header = base64.b64encode(
+        f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
+    ).decode()
+
+    headers = {
+        'Authorization': f'Basic {auth_header}',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+
+    data = {
+        'grant_type': 'refresh_token',
+        'refresh_token': refresh_token
+    }
+
+    try:
+        response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
+        response.raise_for_status()
+        token_info = response.json()
+        
+        print("Got new token from Spotify")
+        
+        # Get the new tokens
+        access_token = token_info['access_token']
+        new_refresh_token = token_info.get('refresh_token', refresh_token)  # Use old refresh token if not provided
+        
+        # Update tokens in database
+        save_spotify_tokens_to_db(
+            user_id,
+            access_token,
+            new_refresh_token
+        )
+        
+        print("Updated tokens in database")
+        
+        return {
+            'success': True,
+            'access_token': access_token,
+            'refresh_token': new_refresh_token
+        }
+    except Exception as e:
+        print(f"Error refreshing token: {str(e)}")
+        return {'success': False, 'error': 'Failed to refresh token'}
