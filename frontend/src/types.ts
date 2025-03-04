@@ -23,7 +23,7 @@ export interface VinylRecord {
   updated_at?: string;
   added_from: string;
   customValues?: Record<string, string>;
-  custom_values_cache: Record<string, string>;
+  custom_values_cache?: Record<string, string>;
 }
 
 export interface ApiResponse<T> {
@@ -118,4 +118,12 @@ export interface SyncPlaylistsResponse {
   total_added: number;
   failed_lookups: FailedLookup[];
   total_failed: number;
+}
+
+export interface RecordsService {
+    getAll: () => Promise<ApiResponse<VinylRecord[]>>;
+    add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
+    delete: (id: string) => Promise<ApiResponse<void>>;
+    updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
+    updateCustomValue: (recordId: string, columnId: string, value: string) => Promise<ApiResponse<void>>;
 } 

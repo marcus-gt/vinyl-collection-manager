@@ -10,7 +10,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
-import { useQuery } from 'react-query';
 
 const PAGE_SIZE = 40;
 
@@ -76,26 +75,6 @@ function Collection() {
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
-
-  // Use React Query for better caching and background updates
-  const { data: recordsData, isLoading } = useQuery({
-    queryKey: ['records'],
-    queryFn: async () => {
-      const response = await records.getAll();
-      return response.data || [];
-    }
-  });
-
-  // Separate query for custom columns (changes less frequently)
-  const { data: columnsData } = useQuery({
-    queryKey: ['customColumns'],
-    queryFn: async () => {
-      const response = await customColumnsApi.getAll();
-      return response.data || [];
-    },
-    // Cache custom columns longer since they change less frequently
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
 
   useEffect(() => {
     loadRecords();
@@ -263,41 +242,9 @@ function Collection() {
     setLoading(true);
     setError(null);
     try {
-      console.log('=== Loading Records and Custom Values ===');
       const response = await records.getAll();
-      
       if (response.success && response.data) {
-        // First, get all record IDs
-        const recordIds = response.data.map(record => record.id!).filter(Boolean);
-        console.log(`Found ${recordIds.length} records, fetching their custom values...`);
-
-        // Fetch custom values for all records in parallel
-        const customValuesPromises = recordIds.map(id => customValuesService.getForRecord(id));
-        const customValuesResponses = await Promise.all(customValuesPromises);
-        
-        // Create a map of record ID to custom values
-        const customValuesMap = new Map<string, Record<string, string>>();
-        customValuesResponses.forEach((cvResponse, index) => {
-          if (cvResponse.success && cvResponse.data) {
-            const recordId = recordIds[index];
-            const values: Record<string, string> = {};
-            cvResponse.data.forEach(cv => {
-              values[cv.column_id] = cv.value;
-            });
-            customValuesMap.set(recordId, values);
-          }
-        });
-
-        console.log('Custom values map:', Object.fromEntries(customValuesMap));
-
-        // Merge custom values into records
-        const recordsWithCustomValues = response.data.map(record => ({
-          ...record,
-          custom_values_cache: customValuesMap.get(record.id!) || {}
-        }));
-
-        console.log('Records with custom values:', recordsWithCustomValues);
-        setUserRecords(recordsWithCustomValues);
+        setUserRecords(response.data);
       } else {
         setError(response.error || 'Failed to load records');
       }
@@ -780,7 +727,7 @@ function Collection() {
     ];
 
     // Add custom columns
-    const customColumnDefs: ColumnDef<VinylRecord>[] = columnsData?.map(column => ({
+    const customColumnDefs: ColumnDef<VinylRecord>[] = customColumns.map(column => ({
       id: column.id,
       header: column.name,
       accessorFn: (record: VinylRecord) => record.custom_values_cache[column.id],
@@ -802,7 +749,7 @@ function Collection() {
           // ... other cases
         }
       }
-    })) || [];
+    }));
 
     // Add actions column last
     const actionsColumn: ColumnDef<VinylRecord> = {
@@ -839,7 +786,7 @@ function Collection() {
     };
 
     return [...standardColumns, ...customColumnDefs, actionsColumn];
-  }, [columnsData]);
+  }, [customColumns]);
 
   return (
     <Box
