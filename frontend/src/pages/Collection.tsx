@@ -1,13 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Box, Badge, Checkbox } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
+import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Box, Badge, Popover } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { AddRecordsModal } from '../components/AddRecordsModal';
-import { useDebouncedCallback } from 'use-debounce';
-import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -65,6 +63,21 @@ const customValuesService = {
   }
 };
 
+// Add type for column meta
+interface CustomColumnMeta {
+  customColumn?: CustomColumn;
+}
+
+type ColumnWithMeta<T> = ColumnDef<T, unknown> & {
+  meta?: CustomColumnMeta;
+};
+
+// Type the mutation variables
+interface CustomValueMutation {
+  recordId: string;
+  values: Record<string, string>;
+}
+
 function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,8 +100,8 @@ function Collection() {
   });
 
   // Mutation for updating custom values
-  const updateCustomValuesMutation = useMutation({
-    mutationFn: ({ recordId, values }: { recordId: string; values: Record<string, string> }) =>
+  const updateCustomValuesMutation = useMutation<void, Error, CustomValueMutation>({
+    mutationFn: ({ recordId, values }) =>
       records.updateCustomValues(recordId, values),
     onMutate: async ({ recordId, values }) => {
       // Cancel outgoing refetches
@@ -825,13 +838,17 @@ function Collection() {
       id: column.id,
       header: column.name,
       accessorFn: (row: VinylRecord) => row.custom_values_cache[column.id] || '',
-      cell: ({ row, column }) => (
-        <CustomValueCell
-          value={row.original.custom_values_cache[column.id] || ''}
-          column={column.meta?.customColumn}
-          onChange={(value) => handleCustomValueChange(row.original.id, column.id, value)}
-        />
-      )
+      cell: ({ row, column: tableColumn }) => {
+        const columnMeta = (tableColumn as ColumnWithMeta<VinylRecord>).meta;
+        return (
+          <CustomValueCell
+            value={row.original.custom_values_cache[column.id] || ''}
+            column={columnMeta?.customColumn || column}
+            onChange={(value) => handleCustomValueChange(row.original.id, column.id, value)}
+          />
+        );
+      },
+      meta: { customColumn: column }
     }));
 
     // Add actions column last
