@@ -3,33 +3,9 @@ export interface User {
   email: string;
 }
 
-// Base interface with common fields
-interface BaseVinylRecord {
-  artist: string;
-  album: string;
-  year?: number;
-  barcode?: string;
-  genres: string[];
-  styles: string[];
-  musicians: string[];
-  master_url?: string;
-  current_release_url?: string;
-  current_release_year?: number;
-  label?: string;
-  country?: string;
-  added_from: string;
-  custom_values_cache: Record<string, string>;
-}
-
-// For creating new records
-export interface NewVinylRecord extends BaseVinylRecord {
-  // All fields from BaseVinylRecord
-  // custom_values_cache is required but can be empty: {}
-}
-
 // Single type for all vinyl records
 export interface VinylRecord {
-  // Required fields for new records
+  // Required fields
   artist: string;
   album: string;
   genres: string[];

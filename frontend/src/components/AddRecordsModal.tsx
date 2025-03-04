@@ -24,6 +24,13 @@ interface ManualRecordForm {
   musiciansText: string;
 }
 
+interface SpotifyAlbumResponse {
+  name: string;
+  artist: string;
+  release_date: string;
+  year?: number;
+}
+
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
@@ -32,7 +39,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [record, setRecord] = useState<Partial<VinylRecord> | null>(null);
+  const [record, setRecord] = useState<VinylRecord | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
@@ -529,24 +536,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
       if (result.success && result.data) {
-        // First try to find the record in Discogs
-        const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
-        if (lookupResponse.success && lookupResponse.data) {
-          // Show the record preview instead of adding directly
-          setRecord({
-            artist: result.data.name,
-            album: result.data.album,
-            year: result.data.year,
-            master_url: undefined,  // Use undefined instead of null
-            current_release_url: undefined,  // Use undefined instead of null
-            custom_values_cache: {},  // Initialize empty cache
-            added_from: 'spotify'
-          });
-          setSpotifyUrl('');
-          setError(null);
-        } else {
-          setError("Couldn't find record in Discogs");
-        }
+        setRecord({
+          artist: result.data.artist,
+          album: result.data.name,
+          genres: [],
+          styles: [],
+          musicians: [],
+          added_from: 'spotify',
+          custom_values_cache: {},
+          // Optional fields
+          year: result.data.year,
+          master_url: undefined,
+          current_release_url: undefined
+        });
+        setSpotifyUrl('');
+        setError(null);
       } else if (result.needs_auth) {
         setIsSpotifyAuthenticated(false);
       } else {
