@@ -112,4 +112,21 @@ export interface SyncPlaylistsResponse {
   total_added: number;
   failed_lookups: FailedLookup[];
   total_failed: number;
+}
+
+export interface NewVinylRecord {
+  artist: string;
+  album: string;
+  year?: number;
+  label?: string;
+  genres: string[];
+  styles: string[];
+  musicians: string[];
+  master_url?: string;
+  current_release_url?: string;
+  current_release_year?: number;
+  country?: string;
+  barcode?: string;
+  added_from: string;
+  customValues?: Record<string, string>;
 } 

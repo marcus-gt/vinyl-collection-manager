@@ -98,10 +98,10 @@ function Collection() {
   const queryClient = useQueryClient();
 
   // Fetch records with React Query
-  const { data: recordsData, isLoading } = useQuery({
+  const { data: recordsData } = useQuery({
     queryKey: ['records'],
     queryFn: () => records.getAll(),
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    staleTime: 5 * 60 * 1000
   });
 
   // Mutation for updating custom values
@@ -155,7 +155,9 @@ function Collection() {
   };
 
   useEffect(() => {
-    loadRecords();
+    if (recordsData?.success && recordsData.data) {
+      setUserRecords(recordsData.data);
+    }
     loadCustomColumns();
 
     // Add event listeners for data updates
@@ -180,7 +182,7 @@ function Collection() {
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
       window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
     };
-  }, []);
+  }, [recordsData]);
 
   // Separate useEffect for CSV export to ensure it has access to current userRecords
   useEffect(() => {

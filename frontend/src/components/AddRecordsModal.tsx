@@ -452,15 +452,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         artist: record.artist,
         album: record.album,
         year: record.year,
-        label: record.label,
+        label: record.label || undefined,  // Convert null to undefined
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url || undefined,  // Convert null to undefined
+        master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         country: record.country || undefined,
         barcode: record.barcode || undefined,
-        added_from: 'manual',
+        added_from: 'spotify',
         customValues: record.customValues
       };
 
