@@ -5,6 +5,7 @@ import { lookup, records, spotify, customColumns as customColumnsApi } from '../
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
+import { convertToNewVinylRecord } from '../utils/recordConverters';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -433,29 +434,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!record) return;
 
     try {
-      const recordToAdd: NewVinylRecord = {
-        // Required fields
-        artist: record.artist || 'Unknown Artist',
-        album: record.album || 'Unknown Album',
-        added_from: 'manual',
-        genres: [],    // Initialize empty arrays
-        styles: [],    // Initialize empty arrays
-        musicians: [], // Initialize empty arrays
-
-        // Optional fields
-        ...(record.year && { year: record.year }),
-        ...(record.label && { label: record.label }),
-        ...(record.master_url && { master_url: record.master_url }),
-        ...(record.current_release_url && { current_release_url: record.current_release_url }),
-        ...(record.country && { country: record.country }),
-        ...(record.barcode && { barcode: record.barcode }),
-        ...(record.customValues && { customValues: record.customValues })
-      };
-
-      // If we have arrays, add them
-      if (record.genres?.length) recordToAdd.genres = record.genres;
-      if (record.styles?.length) recordToAdd.styles = record.styles;
-      if (record.musicians?.length) recordToAdd.musicians = record.musicians;
+      const recordToAdd = convertToNewVinylRecord({
+        ...record,
+        added_from: 'manual'
+      });
 
       const response = await records.add(recordToAdd);
       console.log('Add response:', response);

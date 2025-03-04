@@ -4,6 +4,7 @@ import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
 import type { VinylRecord, NewVinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
+import { convertToNewVinylRecord } from '../utils/recordConverters';
 
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
@@ -301,34 +302,10 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      // Ensure we have the required fields
-      if (!record.artist || !record.album) {
-        setError('Artist and album are required');
-        return;
-      }
-
-      const recordToAdd: NewVinylRecord = {
-        // Required fields
-        artist: record.artist,  // We've already checked it exists
-        album: record.album,    // We've already checked it exists
-        added_from: 'barcode',  // Always set for scanner
-        genres: [],            // Initialize empty arrays
-        styles: [],            // Initialize empty arrays
-        musicians: [],         // Initialize empty arrays
-
-        // Optional fields - only add if they exist and aren't undefined
-        ...(record.year && { year: record.year }),
-        ...(record.label && { label: record.label }),
-        ...(record.master_url && { master_url: record.master_url }),
-        ...(record.current_release_url && { current_release_url: record.current_release_url }),
-        ...(record.country && { country: record.country }),
-        ...(record.barcode && { barcode: record.barcode })
-      };
-
-      // If we have arrays, add them
-      if (record.genres?.length) recordToAdd.genres = record.genres;
-      if (record.styles?.length) recordToAdd.styles = record.styles;
-      if (record.musicians?.length) recordToAdd.musicians = record.musicians;
+      const recordToAdd = convertToNewVinylRecord({
+        ...record,
+        added_from: 'barcode'
+      });
 
       const response = await records.add(recordToAdd);
       if (response.success) {
