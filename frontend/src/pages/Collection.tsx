@@ -78,6 +78,11 @@ interface CustomValueMutation {
   values: Record<string, string>;
 }
 
+// Type the mutation context
+interface MutationContext {
+  previousRecords: VinylRecord[];
+}
+
 function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,15 +105,12 @@ function Collection() {
   });
 
   // Mutation for updating custom values
-  const updateCustomValuesMutation = useMutation<void, Error, CustomValueMutation>({
+  const updateCustomValuesMutation = useMutation<void, Error, CustomValueMutation, MutationContext>({
     mutationFn: ({ recordId, values }) =>
       records.updateCustomValues(recordId, values),
     onMutate: async ({ recordId, values }) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['records'] });
-
-      // Snapshot the previous value
-      const previousRecords = queryClient.getQueryData(['records']);
+      const previousRecords = queryClient.getQueryData<VinylRecord[]>(['records']) || [];
 
       // Optimistically update the record
       queryClient.setQueryData(['records'], (old: VinylRecord[]) => {
@@ -128,9 +130,10 @@ function Collection() {
 
       return { previousRecords };
     },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context we saved
-      queryClient.setQueryData(['records'], context.previousRecords);
+    onError: (_err, _variables, context) => {
+      if (context) {
+        queryClient.setQueryData(['records'], context.previousRecords);
+      }
       notifications.show({
         title: 'Error',
         message: 'Failed to update record',

@@ -22,7 +22,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
   const [options, setOptions] = useState<string[]>([]);
   const [optionColors, setOptionColors] = useState<Record<string, string>>({});
   const [defaultValue, setDefaultValue] = useState('');
-  const [applyToAll, setApplyToAll] = useState(false);
   const [currentOption, setCurrentOption] = useState('');
   const [columnsChanged, setColumnsChanged] = useState(false);
 
@@ -78,8 +77,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
         type,
         options: (type === 'single-select' || type === 'multi-select') ? options : undefined,
         option_colors: optionColors,
-        defaultValue: defaultValue || undefined,
-        applyToAll
+        defaultValue: defaultValue || undefined
       };
 
       console.log('Submitting column data:', columnData);
@@ -157,7 +155,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     setOptions(column.options || []);
     setOptionColors(column.option_colors || {});
     setDefaultValue(column.defaultValue || '');
-    setApplyToAll(column.applyToAll || false);
   };
 
   const resetForm = () => {
@@ -167,7 +164,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     setOptions([]);
     setOptionColors({});
     setDefaultValue('');
-    setApplyToAll(false);
     setCurrentOption('');
   };
 
@@ -567,15 +563,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                     minHeight: '36px'
                   }
                 }}
-              />
-            )}
-            {/* Apply to all switch */}
-            {defaultValue && (
-              <Switch
-                label="Apply default value to all existing records"
-                checked={applyToAll}
-                onChange={(e) => setApplyToAll(e.currentTarget.checked)}
-                size="sm"
               />
             )}
             <Group justify="flex-end">
