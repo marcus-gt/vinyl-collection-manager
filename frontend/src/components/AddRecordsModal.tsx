@@ -691,8 +691,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         const recordData: VinylRecord = {
           ...lookupResponse.data,
           added_from: 'spotify_list',  // Force 'spotify_list' as the source
-          master_url: lookupResponse.data.master_url || null,
-          current_release_url: null  // Always null for spotify_list
+          master_url: lookupResponse.data.master_url || undefined,
+          current_release_url: undefined  // Always null for spotify_list
         };
         const response = await records.add(recordData);
         if (response.success) {
