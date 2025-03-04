@@ -30,8 +30,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [success, setSuccess] = useState<string | undefined>(undefined);
   const [record, setRecord] = useState<VinylRecord | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
@@ -48,13 +48,13 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     stylesText: '',
     musiciansText: ''
   });
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllerRef = useRef<AbortController | undefined>(undefined);
   const [spotifyPlaylists, setSpotifyPlaylists] = useState<Array<{
     id: string;
     name: string;
     tracks: number;
   }>>([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<string | undefined>(undefined);
   const [loadingSpotify, setLoadingSpotify] = useState(false);
   const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
   const [isLoadingSpotifyAuth, setIsLoadingSpotifyAuth] = useState(false);
@@ -63,7 +63,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     playlist_id: string;
     playlist_name: string;
     last_checked_at: string;
-  } | null>(null);
+  } | undefined>(undefined);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [playlistAlbums, setPlaylistAlbums] = useState<Array<{
     id: string;
@@ -76,7 +76,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [modalContent, setModalContent] = useState<{
     title: string;
     content: React.ReactNode;
-  }>({ title: '', content: null });
+  } | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
@@ -90,8 +90,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setDiscogsUrl('');
       setArtist('');
       setAlbum('');
-      setError(null);
-      setSuccess(null);
+      setError(undefined);
+      setSuccess(undefined);
       setRecord(undefined);
       setIsScanning(false);
       setShowManualForm(false);
@@ -110,7 +110,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       });
       // Reset Spotify states
       setSpotifyPlaylists([]);
-      setSelectedPlaylist(null);
+      setSelectedPlaylist(undefined);
       setLoadingSpotify(false);
       setIsSpotifyAuthenticated(false);
       console.log('States reset complete');
@@ -121,6 +121,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = undefined;
       }
     };
   }, []);
@@ -128,7 +129,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleCancel = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+      abortControllerRef.current = undefined;
       setLoading(false);
       setError('Search aborted');
     }
@@ -169,8 +170,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleScan = async (scannedBarcode: string) => {
     setBarcode(scannedBarcode);
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     abortControllerRef.current = new AbortController();
     
@@ -178,7 +179,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await lookup.byBarcode(scannedBarcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
-        setError(null);
+        setError(undefined);
       } else {
         setError(response.error || 'Failed to find record');
         setRecord(undefined);
@@ -191,7 +192,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
-        abortControllerRef.current = null;
+        abortControllerRef.current = undefined;
       }
       setLoading(false);
     }
@@ -204,8 +205,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
     
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     abortControllerRef.current = new AbortController();
     
@@ -213,7 +214,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
-        setError(null);
+        setError(undefined);
       } else {
         setError(response.error || 'Failed to find record');
         setRecord(undefined);
@@ -226,7 +227,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
-        abortControllerRef.current = null;
+        abortControllerRef.current = undefined;
       }
       setLoading(false);
     }
@@ -244,8 +245,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
     
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     abortControllerRef.current = new AbortController();
     
@@ -253,7 +254,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await lookup.byDiscogsUrl(discogsUrl, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
-        setError(null);
+        setError(undefined);
       } else {
         setError(response.error || 'Failed to find record');
         setRecord(undefined);
@@ -266,7 +267,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
-        abortControllerRef.current = null;
+        abortControllerRef.current = undefined;
       }
       setLoading(false);
     }
@@ -279,8 +280,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
     
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     abortControllerRef.current = new AbortController();
     
@@ -288,7 +289,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await lookup.byArtistAlbum(artist, album, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
-        setError(null);
+        setError(undefined);
       } else {
         setError("Couldn't find record");
         setRecord(undefined);
@@ -301,7 +302,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
-        abortControllerRef.current = null;
+        abortControllerRef.current = undefined;
       }
       setLoading(false);
     }
@@ -344,8 +345,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleManualSubmit = async () => {
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     try {
       const recordToSubmit: VinylRecord = {
@@ -397,7 +398,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         }
         // Clear success message after delay
         setTimeout(() => {
-          setSuccess(null);
+          setSuccess(undefined);
         }, 3000);
       } else {
         console.log('Failed to add record:', response.error);
@@ -415,8 +416,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!record) return;
     
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     try {
       // Create a NewVinylRecord object
@@ -446,7 +447,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setRecord(undefined);
         setBarcode('');
         setScannerKey(prev => prev + 1);
-        setTimeout(() => setSuccess(null), 3000);
+        setTimeout(() => setSuccess(undefined), 3000);
       } else {
         setError(response.error || 'Failed to add to collection');
       }
@@ -461,14 +462,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleClear = () => {
     setRecord(undefined);
     setBarcode('');
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     setScannerKey(prev => prev + 1);
   };
 
   const handleSpotifyAuth = async () => {
     setIsLoadingSpotifyAuth(true);
-    setError(null);
+    setError(undefined);
     try {
       console.log('Getting Spotify auth URL...');
       const response = await spotify.getAuthUrl();
@@ -496,7 +497,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const checkSpotifyAuth = async () => {
     setLoadingSpotify(true);
-    setError(null);
+    setError(undefined);
     try {
       const response = await spotify.getPlaylists();
       setIsSpotifyAuthenticated(!response.needs_auth);
@@ -522,8 +523,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!spotifyUrl) return;
     
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     try {
       const result = await spotify.getAlbumFromUrl(spotifyUrl);
@@ -540,7 +541,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           current_release_url: undefined
         });
         setSpotifyUrl('');
-        setError(null);
+        setError(undefined);
       } else if (result.needs_auth) {
         setIsSpotifyAuthenticated(false);
       } else {
@@ -581,11 +582,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (response.success && response.data) {
         setSubscribedPlaylist(response.data);
       } else {
-        setSubscribedPlaylist(null);
+        setSubscribedPlaylist(undefined);
       }
     } catch (err) {
       console.error('Failed to load subscribed playlist:', err);
-      setSubscribedPlaylist(null);
+      setSubscribedPlaylist(undefined);
     }
   };
 
@@ -632,8 +633,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           message: 'Unsubscribed from playlist',
           color: 'green'
         });
-        setSubscribedPlaylist(null);
-        setSelectedPlaylist(null);
+        setSubscribedPlaylist(undefined);
+        setSelectedPlaylist(undefined);
       } else {
         notifications.show({
           title: 'Error',
@@ -659,7 +660,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       return;
     }
     setLoadingSpotify(true);
-    setError(null);
+    setError(undefined);
     try {
       const response = await spotify.getPlaylistTracks(playlistId);
       if (response.success && response.data) {
@@ -680,8 +681,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     release_date: string;
   }) => {
     setLoading(true);
-    setError(null);
-    setSuccess(null);
+    setError(undefined);
+    setSuccess(undefined);
     
     try {
       const lookupResponse = await lookup.byArtistAlbum(album.artist, album.name);
@@ -733,7 +734,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleSyncPlaylists = async () => {
     setLoading(true);
-    setError(null);
+    setError(undefined);
     try {
       const response = await spotify.syncPlaylists();
       if (response.success && response.data) {
@@ -804,7 +805,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const response = await spotify.disconnectSpotify();
       if (response.success) {
         setIsSpotifyAuthenticated(false);
-        setSelectedPlaylist(null);
+        setSelectedPlaylist(undefined);
         setPlaylistAlbums([]);
         notifications.show({
           title: 'Success',
@@ -937,8 +938,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         color="red" 
                         onClick={() => {
                           setIsScanning(false);
-                          setError(null);
-                          setSuccess(null);
+                          setError(undefined);
+                          setSuccess(undefined);
                         }}
                       >
                         Stop Scanning
@@ -965,8 +966,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         <Button 
                           onClick={() => {
                             setIsScanning(true);
-                            setError(null);
-                            setSuccess(null);
+                            setError(undefined);
+                            setSuccess(undefined);
                           }} 
                           variant="light"
                           disabled={loading}
