@@ -4,23 +4,28 @@ export interface User {
 }
 
 export interface VinylRecord {
-  id: string;
-  user_id: string;
+  // Database fields (only present in existing records)
+  id?: string;
+  user_id?: string;
+  created_at?: string;
+  custom_values_cache?: Record<string, string>;
+
+  // Required fields for new records
   artist: string;
   album: string;
+  added_from: string;
+
+  // Optional fields
   year?: number;
   label?: string;
   genres?: string[];
   styles?: string[];
   musicians?: string[];
-  master_url: string | undefined | null;
-  current_release_url: string | undefined | null;
+  master_url?: string;
+  current_release_url?: string;
   current_release_year?: number;
-  created_at?: string;
-  custom_values_cache: Record<string, string>;
   country?: string;
   barcode?: string;
-  added_from: string;
   customValues?: Record<string, string>;
 }
 
@@ -112,24 +117,4 @@ export interface SyncPlaylistsResponse {
   total_added: number;
   failed_lookups: FailedLookup[];
   total_failed: number;
-}
-
-export interface NewVinylRecord {
-  // Required fields
-  artist: string;
-  album: string;
-  added_from: string;
-  genres: string[];      // Always an array, empty if no values
-  styles: string[];      // Always an array, empty if no values
-  musicians: string[];   // Always an array, empty if no values
-
-  // Optional fields
-  year?: number;
-  label?: string;
-  master_url?: string;
-  current_release_url?: string;
-  current_release_year?: number;
-  country?: string;
-  barcode?: string;
-  customValues?: Record<string, string>;
 } 

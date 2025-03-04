@@ -434,26 +434,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!record) return;
 
     try {
-      // First create a partial record with the fields we want
-      const partialRecord: Partial<VinylRecord> = {
-        artist: record.artist,
-        album: record.album,
+      const recordToAdd: VinylRecord = {
+        artist: record.artist || 'Unknown Artist',
+        album: record.album || 'Unknown Album',
+        added_from: 'manual',
+        genres: record.genres || [],
+        styles: record.styles || [],
+        musicians: record.musicians || [],
         year: record.year,
         label: record.label,
-        genres: record.genres,
-        styles: record.styles,
-        musicians: record.musicians,
         master_url: record.master_url,
         current_release_url: record.current_release_url,
         country: record.country,
         barcode: record.barcode,
         customValues: record.customValues
       };
-
-      const recordToAdd = convertToNewVinylRecord({
-        ...partialRecord,
-        added_from: 'manual'
-      });
 
       const response = await records.add(recordToAdd);
       console.log('Add response:', response);
