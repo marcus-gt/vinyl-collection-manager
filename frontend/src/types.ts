@@ -4,25 +4,20 @@ export interface User {
 }
 
 export interface VinylRecord {
-  id?: string;
-  user_id?: string;
+  id: string;
+  user_id: string;
   artist: string;
   album: string;
   year?: number;
-  barcode?: string;
+  label?: string;
   genres?: string[];
   styles?: string[];
   musicians?: string[];
-  master_url?: string | null;
-  current_release_url?: string | null;
+  master_url?: string;
+  current_release_url?: string;
   current_release_year?: number;
-  label?: string;
-  country?: string;
-  notes?: string;
   created_at?: string;
-  updated_at?: string;
-  added_from: string;
-  customValues?: Record<string, string>;
+  custom_values_cache: Record<string, string>;
 }
 
 export interface ApiResponse<T> {
@@ -52,15 +47,11 @@ export type CustomColumnType = 'text' | 'number' | 'single-select' | 'multi-sele
 
 export interface CustomColumn {
   id: string;
-  user_id: string;
   name: string;
-  type: CustomColumnType;
+  type: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
   options?: string[];
   option_colors?: Record<string, string>;
   defaultValue?: string;
-  applyToAll?: boolean;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface CustomColumnValue {

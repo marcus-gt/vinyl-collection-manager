@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Box, Badge, Checkbox } from '@mantine/core';
 import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
@@ -11,6 +11,7 @@ import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CustomValueCell } from '../components/CustomValueCell';
 
 const PAGE_SIZE = 40;
 

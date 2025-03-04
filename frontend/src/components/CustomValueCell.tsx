@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { TextInput, Select, MultiSelect, Badge } from '@mantine/core';
+import { TextInput, Select, MultiSelect } from '@mantine/core';
+import type { CustomColumn } from '../types';
 
 interface CustomValueCellProps {
   value: string;
@@ -18,7 +19,7 @@ export function CustomValueCell({ value, column, onChange }: CustomValueCellProp
         onChange={(newValues) => {
           onChange(newValues.join(','));
         }}
-        styles={(theme) => ({
+        styles={() => ({
           input: {
             minHeight: '36px'
           }
@@ -33,7 +34,7 @@ export function CustomValueCell({ value, column, onChange }: CustomValueCellProp
         value={value}
         data={column.options || []}
         onChange={(newValue) => onChange(newValue || '')}
-        styles={(theme) => ({
+        styles={() => ({
           input: {
             minHeight: '36px'
           }
