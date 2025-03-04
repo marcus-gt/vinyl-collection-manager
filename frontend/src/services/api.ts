@@ -135,6 +135,7 @@ export interface RecordsService {
   add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
   delete: (id: string) => Promise<ApiResponse<void>>;
   updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
+  updateCustomValues: (recordId: string, values: Record<string, string>) => Promise<ApiResponse<void>>;
 }
 
 export const records: RecordsService = {
@@ -189,6 +190,16 @@ export const records: RecordsService = {
     } catch (err) {
       console.error('Failed to update notes:', err);
       return { success: false, error: 'Failed to update notes' };
+    }
+  },
+
+  updateCustomValues: async (recordId: string, values: Record<string, string>): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.put(`/api/records/${recordId}/custom-values`, values);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to update custom values:', err);
+      return { success: false, error: 'Failed to update custom values' };
     }
   }
 };
