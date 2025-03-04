@@ -13,14 +13,14 @@ export interface VinylRecord {
   genres?: string[];
   styles?: string[];
   musicians?: string[];
-  master_url?: string;
-  current_release_url?: string;
+  master_url: string | undefined | null;
+  current_release_url: string | undefined | null;
   current_release_year?: number;
   created_at?: string;
   custom_values_cache: Record<string, string>;
   country?: string;
   barcode?: string;
-  added_from?: string;
+  added_from: string;
   customValues?: Record<string, string>;
 }
 

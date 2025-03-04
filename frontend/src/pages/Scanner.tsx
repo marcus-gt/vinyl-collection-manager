@@ -307,19 +307,18 @@ export function Scanner() {
       });
 
       const recordToAdd: NewVinylRecord = {
-        artist: record.artist || 'Unknown Artist',  // Provide defaults
-        album: record.album || 'Unknown Album',     // Provide defaults
-        year: record.year,
-        label: record.label || undefined,
+        artist: record.artist || 'Unknown Artist',
+        album: record.album || 'Unknown Album',
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
+        year: record.year,
+        label: record.label || undefined,
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         country: record.country || undefined,
         barcode: record.barcode || undefined,
-        added_from: 'barcode',  // Always provide a value
-        customValues: record.customValues
+        added_from: 'barcode'  // Always provide a value
       };
 
       console.log('Prepared record data:', recordToAdd);
@@ -383,23 +382,6 @@ export function Scanner() {
     setSuccess(null);
     // Reset scanner state to allow new scan
     setScannerKey(prev => prev + 1);
-  };
-
-  const handleBarcodeLookup = async () => {
-    // ...
-    const recordToAdd: NewVinylRecord = {
-      artist: manualRecord.artist || 'Unknown Artist',
-      album: manualRecord.album || 'Unknown Album',
-      genres: [],
-      styles: [],
-      musicians: [],
-      year: manualRecord.year,
-      label: manualRecord.label,
-      master_url: undefined,
-      current_release_url: undefined,
-      added_from: 'barcode'
-    };
-    // ...
   };
 
   return (

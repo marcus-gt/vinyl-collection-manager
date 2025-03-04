@@ -443,12 +443,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         artist: record.artist,  // Required
         album: record.album,    // Required
         year: record.year,
-        label: record.label || undefined,
-        genres: record.genres || [],      // Empty array instead of undefined
-        styles: record.styles || [],      // Empty array instead of undefined
-        musicians: record.musicians || [], // Empty array instead of undefined
-        master_url: record.master_url || undefined,
-        current_release_url: record.current_release_url || undefined,
+        label: record.label === null ? undefined : record.label,
+        genres: record.genres === null ? [] : record.genres,      // Empty array instead of undefined
+        styles: record.styles === null ? [] : record.styles,      // Empty array instead of undefined
+        musicians: record.musicians === null ? [] : record.musicians, // Empty array instead of undefined
+        master_url: record.master_url === null ? undefined : record.master_url,
+        current_release_url: record.current_release_url === null ? undefined : record.current_release_url,
         country: record.country || undefined,
         barcode: record.barcode || undefined,
         added_from: record.added_from || 'manual', // Always provide a value
