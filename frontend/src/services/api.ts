@@ -140,8 +140,11 @@ export interface RecordsService {
 export const records: RecordsService = {
   getAll: async (): Promise<ApiResponse<VinylRecord[]>> => {
     try {
-      const response = await api.get<ApiResponse<VinylRecord[]>>('/api/records');
-      return response.data;
+      const response = await fetch('/api/records', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      return handleApiResponse(response);
     } catch (err) {
       console.error('Failed to get records:', err);
       return { success: false, error: 'Failed to get records' };
@@ -186,25 +189,6 @@ export const records: RecordsService = {
     } catch (err) {
       console.error('Failed to update notes:', err);
       return { success: false, error: 'Failed to update notes' };
-    }
-  },
-
-  updateCustomValue: async (
-    recordId: string, 
-    columnId: string, 
-    value: string
-  ): Promise<ApiResponse<void>> => {
-    try {
-      const response = await api.put(
-        `/api/records/${recordId}/custom-values`,
-        { [columnId]: value }
-      );
-      
-      // The backend trigger will handle updating the cache
-      return response.data;
-    } catch (err) {
-      console.error('Failed to update custom value:', err);
-      return { success: false, error: 'Failed to update custom value' };
     }
   }
 };

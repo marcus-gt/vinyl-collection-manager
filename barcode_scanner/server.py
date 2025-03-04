@@ -471,23 +471,22 @@ def get_current_user():
     return response, 200
 
 @app.route('/api/records', methods=['GET'])
-@require_auth
 def get_records():
-    try:
-        response = supabase.table('vinyl_records').select(
-            '*'  # Now includes custom_values_cache
-        ).eq('user_id', session['user_id']).execute()
-
-        return jsonify({
-            'success': True,
-            'data': response.data
-        })
-    except Exception as e:
-        print(f"Error getting records: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': 'Failed to get records'
-        })
+    """Get all records for the current user."""
+    print("\n=== Getting User Records ===")
+    user_id = session.get('user_id')
+    print(f"User ID from session: {user_id}")
+    
+    if not user_id:
+        print("Error: Not authenticated")
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    result = get_user_collection(user_id)
+    print(f"Get records result: {result}")
+    
+    if result['success']:
+        return jsonify({'success': True, 'data': result['records']}), 200
+    return jsonify({'success': False, 'error': result['error']}), 400
 
 @app.route('/api/records', methods=['POST'])
 def add_record():
