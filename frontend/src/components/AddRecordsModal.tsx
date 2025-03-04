@@ -429,9 +429,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url || undefined,  // Use undefined instead of null
-        current_release_url: record.added_from === 'barcode' ? 
-          record.current_release_url || undefined : undefined,
+        master_url: record.master_url || undefined,
+        current_release_url: record.current_release_url || undefined,
         label: record.label,
         country: record.country,
         added_from: record.added_from || 'manual',
