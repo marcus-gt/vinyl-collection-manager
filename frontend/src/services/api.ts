@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse } from '../types';
+import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse, NewVinylRecord } from '../types';
 import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
@@ -132,7 +132,7 @@ export const auth = {
 
 export interface RecordsService {
   getAll: () => Promise<ApiResponse<VinylRecord[]>>;
-  add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
+  add: (record: NewVinylRecord) => Promise<ApiResponse<VinylRecord>>;
   delete: (id: string) => Promise<ApiResponse<void>>;
   updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
 }
@@ -155,7 +155,7 @@ export const records: RecordsService = {
     }
   },
 
-  add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
+  add: async (record: NewVinylRecord): Promise<ApiResponse<VinylRecord>> => {
     const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
     return response.data;
   },

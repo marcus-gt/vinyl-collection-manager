@@ -419,18 +419,13 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const handleAddToCollection = async () => {
     if (!record) return;
     
-    console.log('=== Adding Record to Collection ===');
-    console.log('Record data before adding:', record);
-    console.log('added_from value:', record.added_from);
-    console.log('Custom values:', record.customValues);
-
     setLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
-      // For barcode method, keep both URLs. For spotify_list_sub, keep master_url only
-      const recordData: VinylRecord = {
+      // Create a NewVinylRecord object
+      const recordData: NewVinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,
@@ -439,32 +434,26 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url || null,
-        current_release_url: record.added_from === 'barcode' ? record.current_release_url : null,
+        master_url: record.master_url || undefined,  // Use undefined instead of null
+        current_release_url: record.added_from === 'barcode' ? 
+          record.current_release_url || undefined : undefined,
         label: record.label,
         country: record.country,
-        added_from: record.added_from,
-        custom_values_cache: record.customValues  // Add the edited custom values
+        added_from: record.added_from || 'manual',
+        custom_values_cache: record.custom_values_cache || {}  // Use the new property name
       };
 
-      console.log('Adding record from search:', recordData);
+      console.log('Adding record:', recordData);
       const response = await records.add(recordData);
-      console.log('Add response:', response);
 
       if (response.success) {
-        console.log('Record added successfully, setting recordsChanged to true');
         setSuccess('Added to collection!');
-        setRecordsChanged(true);  // Record was successfully added
-        // Reset for next scan
+        setRecordsChanged(true);
         setRecord(null);
         setBarcode('');
         setScannerKey(prev => prev + 1);
-        // Clear success message after delay
-        setTimeout(() => {
-          setSuccess(null);
-        }, 3000);
+        setTimeout(() => setSuccess(null), 3000);
       } else {
-        console.log('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
       }
     } catch (err) {
