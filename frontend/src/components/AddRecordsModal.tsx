@@ -447,20 +447,19 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // For barcode method, keep both URLs. For spotify_list_sub, keep master_url only
       const recordToAdd: NewVinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,
-        label: record.label || undefined,  // Convert null to undefined
-        genres: record.genres || [],
-        styles: record.styles || [],
-        musicians: record.musicians || [],
+        label: record.label || undefined,
+        genres: record.genres,
+        styles: record.styles,
+        musicians: record.musicians,
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         country: record.country || undefined,
         barcode: record.barcode || undefined,
-        added_from: 'spotify',
+        added_from: record.added_from || 'manual',
         customValues: record.customValues
       };
 

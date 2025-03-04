@@ -119,9 +119,9 @@ export interface NewVinylRecord {
   album: string;
   year?: number;
   label?: string;
-  genres: string[];
-  styles: string[];
-  musicians: string[];
+  genres?: string[];
+  styles?: string[];
+  musicians?: string[];
   master_url?: string;
   current_release_url?: string;
   current_release_year?: number;

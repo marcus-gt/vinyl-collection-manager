@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
 import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
-import type { VinylRecord } from '../types';
+import type { VinylRecord, NewVinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
 
 export function Scanner() {
@@ -306,23 +306,25 @@ export function Scanner() {
         timestamp: new Date().toISOString()
       });
 
-      const recordData = {
+      const recordToAdd: NewVinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,
-        current_release_year: record.current_release_year,
-        barcode: record.barcode,
-        genres: record.genres || [],
-        styles: record.styles || [],
-        musicians: record.musicians || [],
-        master_url: record.master_url,
-        current_release_url: record.current_release_url,
-        label: record.label
+        label: record.label,
+        genres: record.genres,
+        styles: record.styles,
+        musicians: record.musicians,
+        master_url: record.master_url || undefined,
+        current_release_url: record.current_release_url || undefined,
+        country: record.country || undefined,
+        barcode: record.barcode || undefined,
+        added_from: 'barcode',  // Specify source
+        customValues: record.customValues
       };
 
-      console.log('Prepared record data:', recordData);
+      console.log('Prepared record data:', recordToAdd);
       
-      const response = await records.add(recordData);
+      const response = await records.add(recordToAdd);
       console.log('Add record response:', response);
 
       if (response.success) {
@@ -343,7 +345,7 @@ export function Scanner() {
           setTimeout(async () => {
             try {
               console.log('Retrying add to collection...');
-              const retryResponse = await records.add(recordData);
+              const retryResponse = await records.add(recordToAdd);
               if (retryResponse.success) {
                 setSuccess('Added to collection!');
                 await loadRecentRecords();
