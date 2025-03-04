@@ -106,9 +106,9 @@ function Collection() {
 
   // Mutation for updating custom values
   const updateCustomValuesMutation = useMutation<void, Error, CustomValueMutation, MutationContext>({
-    mutationFn: ({ recordId, values }) =>
+    mutationFn: ({ recordId, values }: CustomValueMutation) =>
       records.updateCustomValues(recordId, values),
-    onMutate: async ({ recordId, values }) => {
+    onMutate: async ({ recordId, values }: CustomValueMutation) => {
       await queryClient.cancelQueries({ queryKey: ['records'] });
       const previousRecords = queryClient.getQueryData<VinylRecord[]>(['records']) || [];
 
@@ -130,7 +130,7 @@ function Collection() {
 
       return { previousRecords };
     },
-    onError: (_err, _variables, context) => {
+    onError: (_err: Error, _variables: CustomValueMutation, context: MutationContext | undefined) => {
       if (context) {
         queryClient.setQueryData(['records'], context.previousRecords);
       }

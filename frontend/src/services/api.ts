@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse } from '../types';
+import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse, NewVinylRecord } from '../types';
 import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
@@ -132,7 +132,7 @@ export const auth = {
 
 export interface RecordsService {
   getAll: () => Promise<ApiResponse<VinylRecord[]>>;
-  add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
+  add: (record: NewVinylRecord) => Promise<ApiResponse<VinylRecord>>;
   delete: (id: string) => Promise<ApiResponse<void>>;
   updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
   updateCustomValues: (recordId: string, values: Record<string, string>) => Promise<ApiResponse<void>>;
@@ -152,9 +152,14 @@ export const records: RecordsService = {
     }
   },
 
-  add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
-    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
-    return response.data;
+  add: async (record: NewVinylRecord): Promise<ApiResponse<VinylRecord>> => {
+    try {
+      const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to add record:', err);
+      return { success: false, error: 'Failed to add record' };
+    }
   },
 
   delete: async (id: string): Promise<ApiResponse<void>> => {

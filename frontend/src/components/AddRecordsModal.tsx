@@ -448,25 +448,24 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     
     try {
       // For barcode method, keep both URLs. For spotify_list_sub, keep master_url only
-      const recordData: VinylRecord = {
+      const recordToAdd: NewVinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,
-        current_release_year: record.current_release_year,
-        barcode: record.barcode,
+        label: record.label,
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        master_url: record.master_url || null,
-        current_release_url: record.added_from === 'barcode' ? record.current_release_url : null,
-        label: record.label,
-        country: record.country,
-        added_from: record.added_from,
-        customValues: record.customValues  // Add the edited custom values
+        master_url: record.master_url || undefined,  // Convert null to undefined
+        current_release_url: record.current_release_url || undefined,
+        country: record.country || undefined,
+        barcode: record.barcode || undefined,
+        added_from: 'manual',
+        customValues: record.customValues
       };
 
-      console.log('Adding record from search:', recordData);
-      const response = await records.add(recordData);
+      console.log('Adding record from search:', recordToAdd);
+      const response = await records.add(recordToAdd);
       console.log('Add response:', response);
 
       if (response.success) {
