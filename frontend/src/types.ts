@@ -4,8 +4,8 @@ export interface User {
 }
 
 export interface VinylRecord {
-  id?: string;
-  user_id?: string;
+  id: string;
+  user_id: string;
   artist: string;
   album: string;
   year?: number;
@@ -13,16 +13,16 @@ export interface VinylRecord {
   genres?: string[];
   styles?: string[];
   musicians?: string[];
-  master_url?: string | null;
-  current_release_url?: string | null;
+  master_url?: string;
+  current_release_url?: string;
   current_release_year?: number;
   label?: string;
   country?: string;
   notes?: string;
   created_at?: string;
   updated_at?: string;
-  added_from: string;
-  customValues?: Record<string, string>;
+  added_from?: string;
+  custom_values_cache: Record<string, string>;
 }
 
 export interface ApiResponse<T> {

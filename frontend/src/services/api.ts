@@ -140,11 +140,15 @@ export interface RecordsService {
 export const records: RecordsService = {
   getAll: async (): Promise<ApiResponse<VinylRecord[]>> => {
     try {
-      const response = await fetch('/api/records', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      return handleApiResponse(response);
+      // Simplified query that uses the cache
+      const response = await api.get<ApiResponse<VinylRecord[]>>('/api/records');
+      
+      if (response.data.success) {
+        // Data already includes custom_values_cache, no need for transformation
+        return response.data;
+      }
+      
+      return { success: false, error: 'Failed to get records' };
     } catch (err) {
       console.error('Failed to get records:', err);
       return { success: false, error: 'Failed to get records' };
