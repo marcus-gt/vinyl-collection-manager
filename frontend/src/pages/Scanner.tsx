@@ -301,74 +301,45 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      console.log('Starting add to collection...', {
-        recordData: record,
-        timestamp: new Date().toISOString()
-      });
+      // Ensure we have the required fields
+      if (!record.artist || !record.album) {
+        setError('Artist and album are required');
+        return;
+      }
 
       const recordToAdd: NewVinylRecord = {
-        artist: record.artist || 'Unknown Artist',
-        album: record.album || 'Unknown Album',
-        genres: record.genres || [],
-        styles: record.styles || [],
-        musicians: record.musicians || [],
-        year: record.year,
-        label: record.label || undefined,
-        master_url: record.master_url || undefined,
-        current_release_url: record.current_release_url || undefined,
-        country: record.country || undefined,
-        barcode: record.barcode || undefined,
-        added_from: 'barcode'  // Always provide a value
+        // Required fields
+        artist: record.artist,  // We've already checked it exists
+        album: record.album,    // We've already checked it exists
+        added_from: 'barcode',  // Always set for scanner
+        genres: [],            // Initialize empty arrays
+        styles: [],            // Initialize empty arrays
+        musicians: [],         // Initialize empty arrays
+
+        // Optional fields - only add if they exist and aren't undefined
+        ...(record.year && { year: record.year }),
+        ...(record.label && { label: record.label }),
+        ...(record.master_url && { master_url: record.master_url }),
+        ...(record.current_release_url && { current_release_url: record.current_release_url }),
+        ...(record.country && { country: record.country }),
+        ...(record.barcode && { barcode: record.barcode })
       };
 
-      console.log('Prepared record data:', recordToAdd);
-      
-      const response = await records.add(recordToAdd);
-      console.log('Add record response:', response);
+      // If we have arrays, add them
+      if (record.genres?.length) recordToAdd.genres = record.genres;
+      if (record.styles?.length) recordToAdd.styles = record.styles;
+      if (record.musicians?.length) recordToAdd.musicians = record.musicians;
 
+      const response = await records.add(recordToAdd);
       if (response.success) {
         setSuccess('Added to collection!');
-        // Refresh recent records
         await loadRecentRecords();
-        // Reset for next scan
-        setRecord(null);
-        setBarcode('');
-        // Reset scanner state to allow new scan
-        setScannerKey(prev => prev + 1);
+        handleClear();
       } else {
-        console.error('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
-        // Add retry logic
-        if (response.error?.includes('security policy')) {
-          console.log('Detected security policy error, retrying in 1 second...');
-          setTimeout(async () => {
-            try {
-              console.log('Retrying add to collection...');
-              const retryResponse = await records.add(recordToAdd);
-              if (retryResponse.success) {
-                setSuccess('Added to collection!');
-                await loadRecentRecords();
-                setRecord(null);
-                setBarcode('');
-                setScannerKey(prev => prev + 1);
-                setError(null);
-              } else {
-                console.error('Retry failed:', retryResponse.error);
-                setError('Failed to add to collection after retry');
-              }
-            } catch (retryErr) {
-              console.error('Retry error:', retryErr);
-              setError('Failed to add to collection after retry');
-            }
-          }, 1000);
-        }
       }
     } catch (err) {
-      console.error('Error adding to collection:', {
-        error: err,
-        errorMessage: err instanceof Error ? err.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      });
+      console.error('Error adding to collection:', err);
       setError('Failed to add to collection');
     } finally {
       setLoading(false);
@@ -382,37 +353,6 @@ export function Scanner() {
     setSuccess(null);
     // Reset scanner state to allow new scan
     setScannerKey(prev => prev + 1);
-  };
-
-  const handleBarcodeScan = async () => {
-    try {
-      const record = await lookup.byBarcode(barcode);
-      
-      if (record.success && record.data) {
-        const recordToAdd: NewVinylRecord = {
-          // Required fields with defaults
-          artist: record.data.artist || 'Unknown Artist',
-          album: record.data.album || 'Unknown Album',
-          added_from: 'barcode',
-          genres: record.data.genres || [],
-          styles: record.data.styles || [],
-          musicians: record.data.musicians || [],
-
-          // Optional fields
-          ...(record.data.year && { year: record.data.year }),
-          ...(record.data.label && { label: record.data.label }),
-          ...(record.data.master_url && { master_url: record.data.master_url }),
-          ...(record.data.current_release_url && { current_release_url: record.data.current_release_url }),
-          ...(record.data.country && { country: record.data.country }),
-          ...(record.data.barcode && { barcode: record.data.barcode })
-        };
-
-        const response = await records.add(recordToAdd);
-        // ... handle response
-      }
-    } catch (err) {
-      // ... error handling
-    }
   };
 
   return (

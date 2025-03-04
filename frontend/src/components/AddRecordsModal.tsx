@@ -433,26 +433,29 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!record) return;
 
     try {
-      // Convert VinylRecord to NewVinylRecord
       const recordToAdd: NewVinylRecord = {
-        // Required fields - provide defaults if missing
+        // Required fields
         artist: record.artist || 'Unknown Artist',
         album: record.album || 'Unknown Album',
         added_from: 'manual',
-        genres: record.genres || [],    // Always provide an array
-        styles: record.styles || [],    // Always provide an array
-        musicians: record.musicians || [], // Always provide an array
+        genres: [],    // Initialize empty arrays
+        styles: [],    // Initialize empty arrays
+        musicians: [], // Initialize empty arrays
 
-        // Optional fields - only include if they exist
+        // Optional fields
         ...(record.year && { year: record.year }),
         ...(record.label && { label: record.label }),
         ...(record.master_url && { master_url: record.master_url }),
         ...(record.current_release_url && { current_release_url: record.current_release_url }),
-        ...(record.current_release_year && { current_release_year: record.current_release_year }),
         ...(record.country && { country: record.country }),
         ...(record.barcode && { barcode: record.barcode }),
         ...(record.customValues && { customValues: record.customValues })
       };
+
+      // If we have arrays, add them
+      if (record.genres?.length) recordToAdd.genres = record.genres;
+      if (record.styles?.length) recordToAdd.styles = record.styles;
+      if (record.musicians?.length) recordToAdd.musicians = record.musicians;
 
       const response = await records.add(recordToAdd);
       console.log('Add response:', response);
