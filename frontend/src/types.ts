@@ -3,9 +3,8 @@ export interface User {
   email: string;
 }
 
-export interface VinylRecord {
-  id: string;
-  user_id: string;
+// Base interface with common fields
+interface BaseVinylRecord {
   artist: string;
   album: string;
   year?: number;
@@ -18,28 +17,22 @@ export interface VinylRecord {
   current_release_year?: number;
   label?: string;
   country?: string;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
   added_from?: string;
   custom_values_cache: Record<string, string>;
 }
 
-export interface NewVinylRecord {
-  artist: string;
-  album: string;
-  year?: number;
-  barcode?: string;
-  genres?: string[];
-  styles?: string[];
-  musicians?: string[];
-  master_url?: string;
-  current_release_url?: string;
-  current_release_year?: number;
-  label?: string;
-  country?: string;
-  added_from?: string;
-  custom_values_cache: Record<string, string>;
+// For creating new records
+export interface NewVinylRecord extends BaseVinylRecord {
+  // All fields from BaseVinylRecord
+  // custom_values_cache is required but can be empty: {}
+}
+
+// For existing records from the database
+export interface VinylRecord extends BaseVinylRecord {
+  id: string;
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ApiResponse<T> {

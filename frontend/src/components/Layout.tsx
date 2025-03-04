@@ -107,18 +107,19 @@ function Layout() {
 
             // Process record
             const values = parseCSVLine(records[i]);
-            const importRecord: Partial<NewVinylRecord> = {
-              artist: values[0]?.trim(),
-              album: values[1]?.trim(),
-              year: values[2]?.trim() ? parseInt(values[2]?.trim()) : undefined,
+            const importRecord: NewVinylRecord = {
+              artist: values[0]?.trim() || '',
+              album: values[1]?.trim() || '',
+              year: values[2]?.trim() ? parseInt(values[2].trim()) : undefined,
               label: values[3]?.trim(),
               country: values[4]?.trim(),
-              genres: values[5]?.trim() ? values[5]?.trim().split(';').map(g => g.trim()) : undefined,
-              styles: values[6]?.trim() ? values[6]?.trim().split(';').map(s => s.trim()) : undefined,
-              musicians: values[7]?.trim() ? values[7]?.trim().split(';').map(m => m.trim()) : undefined,
+              genres: values[5]?.trim() ? values[5].trim().split(';').map(g => g.trim()) : [],
+              styles: values[6]?.trim() ? values[6].trim().split(';').map(s => s.trim()) : [],
+              musicians: values[7]?.trim() ? values[7].trim().split(';').map(m => m.trim()) : [],
               master_url: values[8]?.trim(),
               current_release_url: values[9]?.trim(),
-              custom_values_cache: {}  // Start with empty cache
+              added_from: 'csv_import',
+              custom_values_cache: {}
             };
 
             headers.forEach((header, index) => {
