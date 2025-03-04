@@ -348,26 +348,19 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // If we're in the manual form, use all the info, otherwise just use artist and album
-      const recordToSubmit: NewVinylRecord = showManualForm ? {
+      const recordToSubmit: VinylRecord = {
         artist: manualRecord.artist,
         album: manualRecord.album,
+        genres: [],           // Required but can be empty
+        styles: [],           // Required but can be empty
+        musicians: [],        // Required but can be empty
+        added_from: 'manual', // Required
+        custom_values_cache: {}, // Required but can be empty
+        // Optional fields
         year: manualRecord.year,
         label: manualRecord.label,
-        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
-        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
-        added_from: 'manual',
-        master_url: undefined,  // Use undefined instead of null
-        current_release_url: undefined,  // Use undefined instead of null
-        custom_values_cache: {}  // Required empty object
-      } : {
-        artist: artist.trim(),
-        album: album.trim(),
-        added_from: 'manual',
         master_url: undefined,
-        current_release_url: undefined,
-        custom_values_cache: {}  // Required empty object
+        current_release_url: undefined
       };
 
       if (!recordToSubmit.artist || !recordToSubmit.album) {

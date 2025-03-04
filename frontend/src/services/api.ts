@@ -132,7 +132,7 @@ export const auth = {
 
 export interface RecordsService {
   getAll: () => Promise<ApiResponse<VinylRecord[]>>;
-  add: (record: NewVinylRecord) => Promise<ApiResponse<VinylRecord>>;
+  add: (record: VinylRecord) => Promise<ApiResponse<VinylRecord>>;
   delete: (id: string) => Promise<ApiResponse<void>>;
   updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
 }
@@ -155,7 +155,7 @@ export const records: RecordsService = {
     }
   },
 
-  add: async (record: NewVinylRecord): Promise<ApiResponse<VinylRecord>> => {
+  add: async (record: VinylRecord): Promise<ApiResponse<VinylRecord>> => {
     const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
     return response.data;
   },

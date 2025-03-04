@@ -27,10 +27,29 @@ export interface NewVinylRecord extends BaseVinylRecord {
   // custom_values_cache is required but can be empty: {}
 }
 
-// For existing records from the database
-export interface VinylRecord extends BaseVinylRecord {
-  id: string;
-  user_id: string;
+// Single type for all vinyl records
+export interface VinylRecord {
+  // Required fields for new records
+  artist: string;
+  album: string;
+  genres: string[];
+  styles: string[];
+  musicians: string[];
+  added_from: string;
+  custom_values_cache: Record<string, string>;
+
+  // Optional fields
+  year?: number;
+  barcode?: string;
+  master_url?: string;
+  current_release_url?: string;
+  current_release_year?: number;
+  label?: string;
+  country?: string;
+
+  // Database fields (only present on existing records)
+  id?: string;
+  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
