@@ -653,7 +653,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handlePlaylistSelect = async (playlistId: string | null) => {
+  const handlePlaylistSelect = async (playlistId: string | undefined) => {
     setSelectedPlaylist(playlistId);
     if (!playlistId) {
       setPlaylistAlbums([]);
