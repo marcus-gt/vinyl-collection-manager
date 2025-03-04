@@ -653,7 +653,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handlePlaylistSelect = async (value: string | null) => {
+  const handlePlaylistSelect = async (value: string | null, _item?: any) => {
     // Convert null to undefined for our internal state
     setSelectedPlaylist(value ?? undefined);
     
@@ -665,7 +665,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setLoadingSpotify(true);
     setError(undefined);
     try {
-      const response = await spotify.getPlaylistTracks(value);  // Use value instead of playlistId
+      const response = await spotify.getPlaylistTracks(value);
       if (response.success && response.data) {
         setPlaylistAlbums(response.data);
       } else {
