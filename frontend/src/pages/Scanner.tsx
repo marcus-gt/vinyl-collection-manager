@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
 import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
-import type { VinylRecord, NewVinylRecord } from '../types';
+import type { VinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
 
 export function Scanner() {
@@ -251,7 +251,7 @@ export function Scanner() {
     
     try {
       // Ensure all required fields are present
-      const recordData: NewVinylRecord = {
+      const recordData: VinylRecord = {
         artist: manualRecord.artist || '',  // Provide default value
         album: manualRecord.album || '',    // Provide default value
         year: manualRecord.year,
@@ -311,7 +311,7 @@ export function Scanner() {
         timestamp: new Date().toISOString()
       });
 
-      const recordData: NewVinylRecord = {
+      const recordData: VinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,

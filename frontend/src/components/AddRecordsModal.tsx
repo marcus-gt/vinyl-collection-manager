@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
-import type { VinylRecord, CustomColumn, NewVinylRecord } from '../types';
+import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
 
@@ -29,6 +29,17 @@ interface SpotifyAlbumResponse {
   artist: string;
   release_date: string;
   year?: number;
+}
+
+interface SpotifyResponse {
+  success: boolean;
+  needs_auth?: boolean;
+  error?: string;
+  data?: {
+    name: string;
+    artist: string;
+    release_date: string;
+  };
 }
 
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
@@ -427,7 +438,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     
     try {
       // Create a NewVinylRecord object
-      const recordData: NewVinylRecord = {
+      const recordData: VinylRecord = {
         artist: record.artist,
         album: record.album,
         year: record.year,
@@ -545,7 +556,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           added_from: 'spotify',
           custom_values_cache: {},
           // Optional fields
-          year: result.data.year,
           master_url: undefined,
           current_release_url: undefined
         });

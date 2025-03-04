@@ -6,7 +6,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
-import type { CustomColumn, NewVinylRecord } from '../types';
+import type { CustomColumn, VinylRecord } from '../types';
 
 const recordsService: RecordsService = records;
 
@@ -107,7 +107,7 @@ function Layout() {
 
             // Process record
             const values = parseCSVLine(records[i]);
-            const importRecord: NewVinylRecord = {
+            const importRecord: VinylRecord = {
               artist: values[0]?.trim() || '',
               album: values[1]?.trim() || '',
               year: values[2]?.trim() ? parseInt(values[2].trim()) : undefined,
