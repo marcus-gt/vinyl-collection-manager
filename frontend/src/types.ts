@@ -4,29 +4,26 @@ export interface User {
 }
 
 export interface VinylRecord {
-  // Database fields (only present in existing records)
   id?: string;
   user_id?: string;
-  created_at?: string;
-  custom_values_cache?: Record<string, string>;
-
-  // Required fields for new records
   artist: string;
   album: string;
-  added_from: string;
-
-  // Optional fields
   year?: number;
-  label?: string;
+  barcode?: string;
   genres?: string[];
   styles?: string[];
   musicians?: string[];
-  master_url?: string;
-  current_release_url?: string;
+  master_url?: string | null;
+  current_release_url?: string | null;
   current_release_year?: number;
+  label?: string;
   country?: string;
-  barcode?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  added_from: string;
   customValues?: Record<string, string>;
+  custom_values_cache: Record<string, string>;
 }
 
 export interface ApiResponse<T> {
@@ -56,11 +53,15 @@ export type CustomColumnType = 'text' | 'number' | 'single-select' | 'multi-sele
 
 export interface CustomColumn {
   id: string;
+  user_id: string;
   name: string;
-  type: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
+  type: CustomColumnType;
   options?: string[];
   option_colors?: Record<string, string>;
   defaultValue?: string;
+  applyToAll?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CustomColumnValue {

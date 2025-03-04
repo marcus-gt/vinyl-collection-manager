@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse, NewVinylRecord } from '../types';
+import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse } from '../types';
 import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
@@ -132,34 +132,25 @@ export const auth = {
 
 export interface RecordsService {
   getAll: () => Promise<ApiResponse<VinylRecord[]>>;
-  add: (record: NewVinylRecord) => Promise<ApiResponse<VinylRecord>>;
+  add: (record: Partial<VinylRecord>) => Promise<ApiResponse<VinylRecord>>;
   delete: (id: string) => Promise<ApiResponse<void>>;
   updateNotes: (id: string, notes: string) => Promise<ApiResponse<VinylRecord>>;
-  updateCustomValues: (recordId: string, values: Record<string, string>) => Promise<ApiResponse<void>>;
 }
 
 export const records: RecordsService = {
   getAll: async (): Promise<ApiResponse<VinylRecord[]>> => {
     try {
-      const response = await fetch('/api/records', {
-        method: 'GET',
-        credentials: 'include'
-      });
-      return handleApiResponse(response);
+      const response = await api.get<ApiResponse<VinylRecord[]>>('/api/records');
+      return response.data;
     } catch (err) {
       console.error('Failed to get records:', err);
       return { success: false, error: 'Failed to get records' };
     }
   },
 
-  add: async (record: NewVinylRecord): Promise<ApiResponse<VinylRecord>> => {
-    try {
-      const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
-      return response.data;
-    } catch (err) {
-      console.error('Failed to add record:', err);
-      return { success: false, error: 'Failed to add record' };
-    }
+  add: async (record: Partial<VinylRecord>): Promise<ApiResponse<VinylRecord>> => {
+    const response = await api.post<ApiResponse<VinylRecord>>('/api/records', record);
+    return response.data;
   },
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
@@ -198,13 +189,22 @@ export const records: RecordsService = {
     }
   },
 
-  updateCustomValues: async (recordId: string, values: Record<string, string>): Promise<ApiResponse<void>> => {
+  updateCustomValue: async (
+    recordId: string, 
+    columnId: string, 
+    value: string
+  ): Promise<ApiResponse<void>> => {
     try {
-      const response = await api.put(`/api/records/${recordId}/custom-values`, values);
+      const response = await api.put(
+        `/api/records/${recordId}/custom-values`,
+        { [columnId]: value }
+      );
+      
+      // The backend trigger will handle updating the cache
       return response.data;
     } catch (err) {
-      console.error('Failed to update custom values:', err);
-      return { success: false, error: 'Failed to update custom values' };
+      console.error('Failed to update custom value:', err);
+      return { success: false, error: 'Failed to update custom value' };
     }
   }
 };

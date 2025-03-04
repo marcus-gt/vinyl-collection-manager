@@ -5,7 +5,6 @@ import { lookup, records, spotify, customColumns as customColumnsApi } from '../
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
-import { convertToNewVinylRecord } from '../utils/recordConverters';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -23,24 +22,6 @@ interface ManualRecordForm {
   genresText: string;
   stylesText: string;
   musiciansText: string;
-}
-
-// Create a type for the record during creation
-interface NewVinylRecord {
-  artist: string;
-  album: string;
-  year?: number;
-  label?: string;
-  genres: string[];
-  styles: string[];
-  musicians: string[];
-  master_url?: string;
-  current_release_url?: string;
-  current_release_year?: number;
-  country?: string;
-  barcode?: string;
-  added_from: string;
-  customValues?: Record<string, string>;
 }
 
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
@@ -367,28 +348,33 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // Create NewVinylRecord instead of VinylRecord
-      const recordToAdd: NewVinylRecord = showManualForm ? {
-        artist: manualRecord.artist || 'Unknown Artist',
-        album: manualRecord.album || 'Unknown Album',
+      // If we're in the manual form, use all the info, otherwise just use artist and album
+      const recordToSubmit: VinylRecord = showManualForm ? {
+        artist: manualRecord.artist,
+        album: manualRecord.album,
         year: manualRecord.year,
         label: manualRecord.label,
         genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
         styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
         musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
         added_from: 'manual',
-        master_url: undefined,
-        current_release_url: undefined
+        master_url: null,
+        current_release_url: null
       } : {
-        artist: artist.trim() || 'Unknown Artist',
-        album: album.trim() || 'Unknown Album',
-        genres: [],
-        styles: [],
-        musicians: [],
-        added_from: 'manual'
+        artist: artist.trim(),
+        album: album.trim(),
+        added_from: 'manual',
+        master_url: null,
+        current_release_url: null
       };
 
-      const response = await records.add(recordToAdd);
+      if (!recordToSubmit.artist || !recordToSubmit.album) {
+        setError('Artist and album are required');
+        return;
+      }
+
+      console.log('Submitting record:', recordToSubmit);
+      const response = await records.add(recordToSubmit);
       console.log('Submit response:', response);
 
       if (response.success) {
@@ -432,25 +418,37 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleAddToCollection = async () => {
     if (!record) return;
+    
+    console.log('=== Adding Record to Collection ===');
+    console.log('Record data before adding:', record);
+    console.log('added_from value:', record.added_from);
+    console.log('Custom values:', record.customValues);
 
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      const recordToAdd: VinylRecord = {
-        artist: record.artist || 'Unknown Artist',
-        album: record.album || 'Unknown Album',
-        added_from: 'manual',
+      // For barcode method, keep both URLs. For spotify_list_sub, keep master_url only
+      const recordData: VinylRecord = {
+        artist: record.artist,
+        album: record.album,
+        year: record.year,
+        current_release_year: record.current_release_year,
+        barcode: record.barcode,
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        year: record.year,
+        master_url: record.master_url || null,
+        current_release_url: record.added_from === 'barcode' ? record.current_release_url : null,
         label: record.label,
-        master_url: record.master_url,
-        current_release_url: record.current_release_url,
         country: record.country,
-        barcode: record.barcode,
-        customValues: record.customValues
+        added_from: record.added_from,
+        customValues: record.customValues  // Add the edited custom values
       };
 
-      const response = await records.add(recordToAdd);
+      console.log('Adding record from search:', recordData);
+      const response = await records.add(recordData);
       console.log('Add response:', response);
 
       if (response.success) {

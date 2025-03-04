@@ -4,7 +4,6 @@ import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
 import type { VinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
-import { convertToNewVinylRecord } from '../utils/recordConverters';
 
 export function Scanner() {
   const [barcode, setBarcode] = useState('');
@@ -296,34 +295,79 @@ export function Scanner() {
 
   const handleAddToCollection = async () => {
     if (!record) return;
-
+    
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      const recordToAdd: VinylRecord = {
-        artist: record.artist || 'Unknown Artist',
-        album: record.album || 'Unknown Album',
-        added_from: 'barcode',
+      console.log('Starting add to collection...', {
+        recordData: record,
+        timestamp: new Date().toISOString()
+      });
+
+      const recordData = {
+        artist: record.artist,
+        album: record.album,
+        year: record.year,
+        current_release_year: record.current_release_year,
+        barcode: record.barcode,
         genres: record.genres || [],
         styles: record.styles || [],
         musicians: record.musicians || [],
-        year: record.year,
-        label: record.label,
         master_url: record.master_url,
         current_release_url: record.current_release_url,
-        country: record.country,
-        barcode: record.barcode,
-        customValues: record.customValues
+        label: record.label
       };
 
-      const response = await records.add(recordToAdd);
+      console.log('Prepared record data:', recordData);
+      
+      const response = await records.add(recordData);
+      console.log('Add record response:', response);
+
       if (response.success) {
         setSuccess('Added to collection!');
+        // Refresh recent records
         await loadRecentRecords();
-        handleClear();
+        // Reset for next scan
+        setRecord(null);
+        setBarcode('');
+        // Reset scanner state to allow new scan
+        setScannerKey(prev => prev + 1);
       } else {
+        console.error('Failed to add record:', response.error);
         setError(response.error || 'Failed to add to collection');
+        // Add retry logic
+        if (response.error?.includes('security policy')) {
+          console.log('Detected security policy error, retrying in 1 second...');
+          setTimeout(async () => {
+            try {
+              console.log('Retrying add to collection...');
+              const retryResponse = await records.add(recordData);
+              if (retryResponse.success) {
+                setSuccess('Added to collection!');
+                await loadRecentRecords();
+                setRecord(null);
+                setBarcode('');
+                setScannerKey(prev => prev + 1);
+                setError(null);
+              } else {
+                console.error('Retry failed:', retryResponse.error);
+                setError('Failed to add to collection after retry');
+              }
+            } catch (retryErr) {
+              console.error('Retry error:', retryErr);
+              setError('Failed to add to collection after retry');
+            }
+          }, 1000);
+        }
       }
     } catch (err) {
-      console.error('Error adding to collection:', err);
+      console.error('Error adding to collection:', {
+        error: err,
+        errorMessage: err instanceof Error ? err.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
       setError('Failed to add to collection');
     } finally {
       setLoading(false);

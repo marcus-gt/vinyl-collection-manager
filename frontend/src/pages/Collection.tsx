@@ -1,15 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
-import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Box, Badge, Popover } from '@mantine/core';
-import { IconTrash, IconExternalLink, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
+import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { IconTrash, IconExternalLink, IconX, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { AddRecordsModal } from '../components/AddRecordsModal';
+import { useDebouncedCallback } from 'use-debounce';
+import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CustomValueCell } from '../components/CustomValueCell';
+import { useQuery } from 'react-query';
 
 const PAGE_SIZE = 40;
 
@@ -63,26 +64,6 @@ const customValuesService = {
   }
 };
 
-// Add type for column meta
-interface CustomColumnMeta {
-  customColumn?: CustomColumn;
-}
-
-type ColumnWithMeta<T> = ColumnDef<T, unknown> & {
-  meta?: CustomColumnMeta;
-};
-
-// Type the mutation variables
-interface CustomValueMutation {
-  recordId: string;
-  values: Record<string, string>;
-}
-
-// Type the mutation context
-interface MutationContext {
-  previousRecords: VinylRecord[];
-}
-
 function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,73 +76,29 @@ function Collection() {
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
-  const queryClient = useQueryClient();
 
-  // Fetch records with React Query
-  const { data: recordsData } = useQuery({
+  // Use React Query for better caching and background updates
+  const { data: recordsData, isLoading } = useQuery({
     queryKey: ['records'],
-    queryFn: () => records.getAll(),
-    staleTime: 5 * 60 * 1000
-  });
-
-  // Mutation for updating custom values
-  const updateCustomValuesMutation = useMutation<void, Error, CustomValueMutation, MutationContext>({
-    mutationFn: async ({ recordId, values }) => {
-      const response = await records.updateCustomValues(recordId, values);
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to update values');
-      }
-    },
-    onMutate: async ({ recordId, values }: CustomValueMutation) => {
-      await queryClient.cancelQueries({ queryKey: ['records'] });
-      const previousRecords = queryClient.getQueryData<VinylRecord[]>(['records']) || [];
-
-      // Optimistically update the record
-      queryClient.setQueryData(['records'], (old: VinylRecord[]) => {
-        return old.map(record => {
-          if (record.id === recordId) {
-            return {
-              ...record,
-              custom_values_cache: {
-                ...record.custom_values_cache,
-                ...values
-              }
-            };
-          }
-          return record;
-        });
-      });
-
-      return { previousRecords };
-    },
-    onError: (_err: Error, _variables: CustomValueMutation, context: MutationContext | undefined) => {
-      if (context) {
-        queryClient.setQueryData(['records'], context.previousRecords);
-      }
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to update record',
-        color: 'red'
-      });
-    },
-    onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['records'] });
+    queryFn: async () => {
+      const response = await records.getAll();
+      return response.data || [];
     }
   });
 
-  // Handler for updating custom values
-  const handleCustomValueChange = async (recordId: string, columnId: string, value: string) => {
-    updateCustomValuesMutation.mutate({
-      recordId,
-      values: { [columnId]: value }
-    });
-  };
+  // Separate query for custom columns (changes less frequently)
+  const { data: columnsData } = useQuery({
+    queryKey: ['customColumns'],
+    queryFn: async () => {
+      const response = await customColumnsApi.getAll();
+      return response.data || [];
+    },
+    // Cache custom columns longer since they change less frequently
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   useEffect(() => {
-    if (recordsData?.success && recordsData.data) {
-      setUserRecords(recordsData.data);
-    }
+    loadRecords();
     loadCustomColumns();
 
     // Add event listeners for data updates
@@ -186,7 +123,7 @@ function Collection() {
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
       window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
     };
-  }, [recordsData]);
+  }, []);
 
   // Separate useEffect for CSV export to ensure it has access to current userRecords
   useEffect(() => {
@@ -248,7 +185,7 @@ function Collection() {
 
         // Custom fields
         const customFields = customColumns.map(col => {
-          const value = record.custom_values_cache?.[col.id];
+          const value = record.custom_values_cache[col.id];
           console.log(`Custom field ${col.name}:`, value);
           return value || '';
         });
@@ -843,22 +780,29 @@ function Collection() {
     ];
 
     // Add custom columns
-    const customColumnDefs: ColumnDef<VinylRecord>[] = customColumns.map(column => ({
+    const customColumnDefs: ColumnDef<VinylRecord>[] = columnsData?.map(column => ({
       id: column.id,
       header: column.name,
-      accessorFn: (row: VinylRecord) => row.custom_values_cache[column.id] || '',
-      cell: ({ row, column: tableColumn }) => {
-        const columnMeta = (tableColumn as ColumnWithMeta<VinylRecord>).meta;
-        return (
-          <CustomValueCell
-            value={row.original.custom_values_cache[column.id] || ''}
-            column={columnMeta?.customColumn || column}
-            onChange={(value) => handleCustomValueChange(row.original.id, column.id, value)}
-          />
-        );
-      },
-      meta: { customColumn: column }
-    }));
+      accessorFn: (record: VinylRecord) => record.custom_values_cache[column.id],
+      cell: ({ row }) => {
+        const value = record.custom_values_cache[column.id];
+        
+        if (!column) return null;
+
+        switch (column.type) {
+          case 'multi-select':
+            return value?.split(',').map(val => (
+              <Badge 
+                key={val} 
+                color={column.option_colors?.[val] || 'gray'}
+              >
+                {val}
+              </Badge>
+            ));
+          // ... other cases
+        }
+      }
+    })) || [];
 
     // Add actions column last
     const actionsColumn: ColumnDef<VinylRecord> = {
@@ -895,7 +839,7 @@ function Collection() {
     };
 
     return [...standardColumns, ...customColumnDefs, actionsColumn];
-  }, [customColumns]);
+  }, [columnsData]);
 
   return (
     <Box

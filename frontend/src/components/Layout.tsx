@@ -6,7 +6,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
-import type { VinylRecord, CustomColumn, NewVinylRecord } from '../types';
+import type { VinylRecord, CustomColumn } from '../types';
 
 const recordsService: RecordsService = records;
 
@@ -159,19 +159,7 @@ function Layout() {
             });
 
             // Add record
-            const recordToAdd: NewVinylRecord = {
-              artist: record.artist || 'Unknown Artist',
-              album: record.album || 'Unknown Album',
-              year: record.year,
-              label: record.label,
-              genres: record.genres || [],
-              styles: record.styles || [],
-              musicians: record.musicians || [],
-              master_url: record.master_url || undefined,
-              current_release_url: record.current_release_url || undefined,
-              added_from: 'csv_import'
-            };
-            const response = await recordsService.add(recordToAdd);
+            const response = await recordsService.add(record);
             if (response.success) {
               successCount++;
             } else {
