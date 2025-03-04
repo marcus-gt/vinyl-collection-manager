@@ -436,7 +436,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     try {
       const recordToAdd = convertToNewVinylRecord({
         ...record,
-        added_from: 'manual'
+        added_from: 'manual',
+        genres: record.genres || [],
+        styles: record.styles || [],
+        musicians: record.musicians || []
       });
 
       const response = await records.add(recordToAdd);

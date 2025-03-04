@@ -1,17 +1,22 @@
 import type { VinylRecord, NewVinylRecord } from '../types';
 
-export function convertToNewVinylRecord(record: VinylRecord | Partial<VinylRecord>): NewVinylRecord {
+export function convertToNewVinylRecord(record: Partial<VinylRecord>): NewVinylRecord {
+  // Ensure arrays are initialized even if undefined
+  const genres = Array.isArray(record.genres) ? record.genres : [];
+  const styles = Array.isArray(record.styles) ? record.styles : [];
+  const musicians = Array.isArray(record.musicians) ? record.musicians : [];
+
   return {
     // Required fields with defaults
     artist: record.artist || 'Unknown Artist',
     album: record.album || 'Unknown Album',
     added_from: record.added_from || 'manual',
-    genres: record.genres || [],
-    styles: record.styles || [],
-    musicians: record.musicians || [],
+    genres,
+    styles,
+    musicians,
 
-    // Optional fields
-    ...(record.year && { year: record.year }),
+    // Optional fields - only include if they have non-null values
+    ...(record.year !== undefined && { year: record.year }),
     ...(record.label && { label: record.label }),
     ...(record.master_url && { master_url: record.master_url }),
     ...(record.current_release_url && { current_release_url: record.current_release_url }),

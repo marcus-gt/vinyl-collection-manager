@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
 import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
-import type { VinylRecord, NewVinylRecord } from '../types';
+import type { VinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
 import { convertToNewVinylRecord } from '../utils/recordConverters';
 
@@ -297,14 +297,14 @@ export function Scanner() {
   const handleAddToCollection = async () => {
     if (!record) return;
     
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
     try {
       const recordToAdd = convertToNewVinylRecord({
         ...record,
-        added_from: 'barcode'
+        added_from: 'barcode',
+        // Ensure arrays are provided
+        genres: record.genres || [],
+        styles: record.styles || [],
+        musicians: record.musicians || []
       });
 
       const response = await records.add(recordToAdd);
