@@ -115,18 +115,21 @@ export interface SyncPlaylistsResponse {
 }
 
 export interface NewVinylRecord {
+  // Required fields
   artist: string;
   album: string;
+  added_from: string;
+
+  // Optional fields with explicit types
   year?: number;
   label?: string;
-  genres?: string[];
-  styles?: string[];
-  musicians?: string[];
+  genres: string[];        // Empty array instead of undefined
+  styles: string[];        // Empty array instead of undefined
+  musicians: string[];     // Empty array instead of undefined
   master_url?: string;
   current_release_url?: string;
   current_release_year?: number;
   country?: string;
   barcode?: string;
-  added_from: string;
   customValues?: Record<string, string>;
 } 

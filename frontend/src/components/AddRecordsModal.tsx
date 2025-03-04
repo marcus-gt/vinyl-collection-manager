@@ -436,34 +436,30 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleAddToCollection = async () => {
     if (!record) return;
-    
-    console.log('=== Adding Record to Collection ===');
-    console.log('Record data before adding:', record);
-    console.log('added_from value:', record.added_from);
-    console.log('Custom values:', record.customValues);
 
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
     try {
+      // Ensure required fields are present
+      if (!record.artist || !record.album) {
+        setError('Artist and album are required');
+        return;
+      }
+
       const recordToAdd: NewVinylRecord = {
-        artist: record.artist,
-        album: record.album,
+        artist: record.artist,  // Required
+        album: record.album,    // Required
         year: record.year,
         label: record.label || undefined,
-        genres: record.genres,
-        styles: record.styles,
-        musicians: record.musicians,
+        genres: record.genres || [],      // Empty array instead of undefined
+        styles: record.styles || [],      // Empty array instead of undefined
+        musicians: record.musicians || [], // Empty array instead of undefined
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         country: record.country || undefined,
         barcode: record.barcode || undefined,
-        added_from: record.added_from || 'manual',
+        added_from: record.added_from || 'manual', // Always provide a value
         customValues: record.customValues
       };
 
-      console.log('Adding record from search:', recordToAdd);
       const response = await records.add(recordToAdd);
       console.log('Add response:', response);
 

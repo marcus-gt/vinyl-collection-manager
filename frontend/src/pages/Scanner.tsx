@@ -307,18 +307,18 @@ export function Scanner() {
       });
 
       const recordToAdd: NewVinylRecord = {
-        artist: record.artist,
-        album: record.album,
+        artist: record.artist || 'Unknown Artist',  // Provide defaults
+        album: record.album || 'Unknown Album',     // Provide defaults
         year: record.year,
-        label: record.label,
-        genres: record.genres,
-        styles: record.styles,
-        musicians: record.musicians,
+        label: record.label || undefined,
+        genres: record.genres || [],
+        styles: record.styles || [],
+        musicians: record.musicians || [],
         master_url: record.master_url || undefined,
         current_release_url: record.current_release_url || undefined,
         country: record.country || undefined,
         barcode: record.barcode || undefined,
-        added_from: 'barcode',  // Specify source
+        added_from: 'barcode',  // Always provide a value
         customValues: record.customValues
       };
 
