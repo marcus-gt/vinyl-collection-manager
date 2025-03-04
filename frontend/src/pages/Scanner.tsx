@@ -298,13 +298,25 @@ export function Scanner() {
     if (!record) return;
     
     try {
+      // First create a partial record with the fields we want
+      const partialRecord: Partial<VinylRecord> = {
+        artist: record.artist,
+        album: record.album,
+        year: record.year,
+        label: record.label,
+        genres: record.genres,
+        styles: record.styles,
+        musicians: record.musicians,
+        master_url: record.master_url,
+        current_release_url: record.current_release_url,
+        country: record.country,
+        barcode: record.barcode,
+        customValues: record.customValues
+      };
+
       const recordToAdd = convertToNewVinylRecord({
-        ...record,
-        added_from: 'barcode',
-        // Ensure arrays are provided
-        genres: record.genres || [],
-        styles: record.styles || [],
-        musicians: record.musicians || []
+        ...partialRecord,
+        added_from: 'barcode'
       });
 
       const response = await records.add(recordToAdd);
