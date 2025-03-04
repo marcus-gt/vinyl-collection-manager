@@ -6,7 +6,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
-import type { VinylRecord, CustomColumn, NewVinylRecord } from '../types';
+import type { CustomColumn, NewVinylRecord } from '../types';
 
 const recordsService: RecordsService = records;
 

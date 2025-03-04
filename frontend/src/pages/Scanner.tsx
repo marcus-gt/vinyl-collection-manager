@@ -250,18 +250,23 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      // Convert text fields to arrays
-      const recordToSubmit = {
-        ...manualRecord,
-        genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
-        styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
-        musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || []
+      // Ensure all required fields are present
+      const recordData: NewVinylRecord = {
+        artist: manualRecord.artist || '',  // Provide default value
+        album: manualRecord.album || '',    // Provide default value
+        year: manualRecord.year,
+        genres: manualRecord.genres || [],
+        styles: manualRecord.styles || [],
+        musicians: manualRecord.musicians || [],
+        master_url: undefined,
+        current_release_url: undefined,
+        label: manualRecord.label,
+        country: undefined,
+        added_from: 'manual',
+        custom_values_cache: {}  // Required empty object
       };
 
-      // Remove the text fields before submitting
-      const { genresText, stylesText, musiciansText, ...submitData } = recordToSubmit;
-
-      const response = await records.add(submitData);
+      const response = await records.add(recordData);
       if (response.success) {
         setSuccess('Added to collection!');
         // Refresh recent records

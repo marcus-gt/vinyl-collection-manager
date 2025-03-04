@@ -32,7 +32,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [record, setRecord] = useState<VinylRecord | null>(null);
+  const [record, setRecord] = useState<Partial<VinylRecord> | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
@@ -162,7 +162,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
     return {
       ...recordData,
-      customValues
+      custom_values_cache: customValues
     };
   };
 
@@ -540,10 +540,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         const lookupResponse = await lookup.byArtistAlbum(result.data.artist, result.data.name);
         if (lookupResponse.success && lookupResponse.data) {
           // Show the record preview instead of adding directly
-          setRecord(getRecordWithDefaults({
-            ...lookupResponse.data,
+          setRecord({
+            artist: result.data.name,
+            album: result.data.album,
+            year: result.data.year,
+            master_url: undefined,  // Use undefined instead of null
+            current_release_url: undefined,  // Use undefined instead of null
+            custom_values_cache: {},  // Initialize empty cache
             added_from: 'spotify'
-          }));
+          });
           setSpotifyUrl('');
           setError(null);
         } else {
@@ -1342,11 +1347,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       {record.country && <Text size="sm">Country: {record.country}</Text>}
                       
                       {/* Add custom column preview */}
-                      {customColumns.length > 0 && record.customValues && (
+                      {customColumns.length > 0 && record.custom_values_cache && (
                         <>
                           <Divider my="sm" label="Custom Fields" labelPosition="center" />
                           {customColumns.map(column => {
-                            const value = record.customValues?.[column.id];
+                            const value = record.custom_values_cache[column.id];
                             if (!value) return null;
 
                             // Format display value based on column type
@@ -1361,8 +1366,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                         const newValue = e.currentTarget.checked.toString();
                                         setRecord(prev => prev ? {
                                           ...prev,
-                                          customValues: {
-                                            ...prev.customValues,
+                                          custom_values_cache: {
+                                            ...prev.custom_values_cache,
                                             [column.id]: newValue
                                           }
                                         } : null);
@@ -1385,8 +1390,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                       onChange={(newValue) => {
                                         setRecord(prev => prev ? {
                                           ...prev,
-                                          customValues: {
-                                            ...prev.customValues,
+                                          custom_values_cache: {
+                                            ...prev.custom_values_cache,
                                             [column.id]: newValue || ''
                                           }
                                         } : null);
@@ -1406,8 +1411,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                       onChange={(newValues) => {
                                         setRecord(prev => prev ? {
                                           ...prev,
-                                          customValues: {
-                                            ...prev.customValues,
+                                          custom_values_cache: {
+                                            ...prev.custom_values_cache,
                                             [column.id]: newValues.join(',')
                                           }
                                         } : null);
@@ -1433,8 +1438,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                     onChange={(e) => {
                                       setRecord(prev => prev ? {
                                         ...prev,
-                                        customValues: {
-                                          ...prev.customValues,
+                                        custom_values_cache: {
+                                          ...prev.custom_values_cache,
                                           [column.id]: e.target.value
                                         }
                                       } : null);
@@ -1458,8 +1463,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                   onChange={(e) => {
                                     setRecord(prev => prev ? {
                                       ...prev,
-                                      customValues: {
-                                        ...prev.customValues,
+                                      custom_values_cache: {
+                                        ...prev.custom_values_cache,
                                         [column.id]: e.target.value
                                       }
                                     } : null);
