@@ -32,7 +32,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [record, setRecord] = useState<VinylRecord | null>(null);
+  const [record, setRecord] = useState<VinylRecord | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [showManualForm, setShowManualForm] = useState(false);
@@ -92,7 +92,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setAlbum('');
       setError(null);
       setSuccess(null);
-      setRecord(null);
+      setRecord(undefined);
       setIsScanning(false);
       setShowManualForm(false);
       setRecordsChanged(false);
@@ -181,14 +181,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
-        setRecord(null);
+        setRecord(undefined);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
       setError('Failed to lookup barcode');
-      setRecord(null);
+      setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
         abortControllerRef.current = null;
@@ -216,14 +216,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
-        setRecord(null);
+        setRecord(undefined);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
       setError('Failed to lookup barcode');
-      setRecord(null);
+      setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
         abortControllerRef.current = null;
@@ -256,14 +256,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setError(null);
       } else {
         setError(response.error || 'Failed to find record');
-        setRecord(null);
+        setRecord(undefined);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
       setError('Failed to lookup Discogs release');
-      setRecord(null);
+      setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
         abortControllerRef.current = null;
@@ -291,14 +291,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setError(null);
       } else {
         setError("Couldn't find record");
-        setRecord(null);
+        setRecord(undefined);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
       setError("Couldn't find record");
-      setRecord(null);
+      setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
         abortControllerRef.current = null;
@@ -379,7 +379,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         // Reset form
         setArtist('');
         setAlbum('');
-        setRecord(null);
+        setRecord(undefined);
         if (showManualForm) {
           setShowManualForm(false);
           setManualRecord({
@@ -443,7 +443,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (response.success) {
         setSuccess('Added to collection!');
         setRecordsChanged(true);
-        setRecord(null);
+        setRecord(undefined);
         setBarcode('');
         setScannerKey(prev => prev + 1);
         setTimeout(() => setSuccess(null), 3000);
@@ -459,7 +459,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleClear = () => {
-    setRecord(null);
+    setRecord(undefined);
     setBarcode('');
     setError(null);
     setSuccess(null);
@@ -1357,7 +1357,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                             ...prev.custom_values_cache,
                                             [column.id]: newValue
                                           }
-                                        } : null);
+                                        } : undefined);
                                       }}
                                       size="sm"
                                     />
@@ -1381,7 +1381,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                             ...prev.custom_values_cache,
                                             [column.id]: newValue || ''
                                           }
-                                        } : null);
+                                        } : undefined);
                                       }}
                                       size="xs"
                                       clearable
@@ -1402,7 +1402,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                             ...prev.custom_values_cache,
                                             [column.id]: newValues.join(',')
                                           }
-                                        } : null);
+                                        } : undefined);
                                       }}
                                       size="xs"
                                       clearable
@@ -1429,7 +1429,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                           ...prev.custom_values_cache,
                                           [column.id]: e.target.value
                                         }
-                                      } : null);
+                                      } : undefined);
                                     }}
                                     size="xs"
                                     styles={{
@@ -1454,7 +1454,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                         ...prev.custom_values_cache,
                                         [column.id]: e.target.value
                                       }
-                                    } : null);
+                                    } : undefined);
                                   }}
                                   size="xs"
                                   styles={{
