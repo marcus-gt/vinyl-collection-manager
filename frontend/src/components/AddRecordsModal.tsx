@@ -433,26 +433,25 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     if (!record) return;
 
     try {
-      // Ensure required fields are present
-      if (!record.artist || !record.album) {
-        setError('Artist and album are required');
-        return;
-      }
-
+      // Convert VinylRecord to NewVinylRecord
       const recordToAdd: NewVinylRecord = {
-        artist: record.artist,  // Required
-        album: record.album,    // Required
-        year: record.year,
-        label: record.label === null ? undefined : record.label,
-        genres: record.genres === null ? [] : record.genres,      // Empty array instead of undefined
-        styles: record.styles === null ? [] : record.styles,      // Empty array instead of undefined
-        musicians: record.musicians === null ? [] : record.musicians, // Empty array instead of undefined
-        master_url: record.master_url === null ? undefined : record.master_url,
-        current_release_url: record.current_release_url === null ? undefined : record.current_release_url,
-        country: record.country || undefined,
-        barcode: record.barcode || undefined,
-        added_from: record.added_from || 'manual', // Always provide a value
-        customValues: record.customValues
+        // Required fields - provide defaults if missing
+        artist: record.artist || 'Unknown Artist',
+        album: record.album || 'Unknown Album',
+        added_from: 'manual',
+        genres: record.genres || [],    // Always provide an array
+        styles: record.styles || [],    // Always provide an array
+        musicians: record.musicians || [], // Always provide an array
+
+        // Optional fields - only include if they exist
+        ...(record.year && { year: record.year }),
+        ...(record.label && { label: record.label }),
+        ...(record.master_url && { master_url: record.master_url }),
+        ...(record.current_release_url && { current_release_url: record.current_release_url }),
+        ...(record.current_release_year && { current_release_year: record.current_release_year }),
+        ...(record.country && { country: record.country }),
+        ...(record.barcode && { barcode: record.barcode }),
+        ...(record.customValues && { customValues: record.customValues })
       };
 
       const response = await records.add(recordToAdd);

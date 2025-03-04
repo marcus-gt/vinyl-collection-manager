@@ -119,13 +119,13 @@ export interface NewVinylRecord {
   artist: string;
   album: string;
   added_from: string;
+  genres: string[];      // Always an array, empty if no values
+  styles: string[];      // Always an array, empty if no values
+  musicians: string[];   // Always an array, empty if no values
 
-  // Optional fields with explicit types
+  // Optional fields
   year?: number;
   label?: string;
-  genres: string[];        // Empty array instead of undefined
-  styles: string[];        // Empty array instead of undefined
-  musicians: string[];     // Empty array instead of undefined
   master_url?: string;
   current_release_url?: string;
   current_release_year?: number;

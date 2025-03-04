@@ -384,6 +384,37 @@ export function Scanner() {
     setScannerKey(prev => prev + 1);
   };
 
+  const handleBarcodeScan = async () => {
+    try {
+      const record = await lookup.byBarcode(barcode);
+      
+      if (record.success && record.data) {
+        const recordToAdd: NewVinylRecord = {
+          // Required fields with defaults
+          artist: record.data.artist || 'Unknown Artist',
+          album: record.data.album || 'Unknown Album',
+          added_from: 'barcode',
+          genres: record.data.genres || [],
+          styles: record.data.styles || [],
+          musicians: record.data.musicians || [],
+
+          // Optional fields
+          ...(record.data.year && { year: record.data.year }),
+          ...(record.data.label && { label: record.data.label }),
+          ...(record.data.master_url && { master_url: record.data.master_url }),
+          ...(record.data.current_release_url && { current_release_url: record.data.current_release_url }),
+          ...(record.data.country && { country: record.data.country }),
+          ...(record.data.barcode && { barcode: record.data.barcode })
+        };
+
+        const response = await records.add(recordToAdd);
+        // ... handle response
+      }
+    } catch (err) {
+      // ... error handling
+    }
+  };
+
   return (
     <Container 
       fluid 
