@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
-import type { VinylRecord, CustomColumn } from '../types';
+import type { VinylRecord, CustomColumn, NewVinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
 
@@ -444,7 +444,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         label: record.label,
         country: record.country,
         added_from: record.added_from,
-        customValues: record.customValues  // Add the edited custom values
+        custom_values_cache: record.customValues  // Add the edited custom values
       };
 
       console.log('Adding record from search:', recordData);

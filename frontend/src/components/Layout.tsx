@@ -6,7 +6,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
-import type { VinylRecord, CustomColumn } from '../types';
+import type { VinylRecord, CustomColumn, NewVinylRecord } from '../types';
 
 const recordsService: RecordsService = records;
 
@@ -107,9 +107,18 @@ function Layout() {
 
             // Process record
             const values = parseCSVLine(records[i]);
-            const record: Partial<VinylRecord> = {
-              added_from: 'csv_import',
-              customValues: {}  // Initialize customValues object
+            const importRecord: Partial<NewVinylRecord> = {
+              artist: values[0]?.trim(),
+              album: values[1]?.trim(),
+              year: values[2]?.trim() ? parseInt(values[2]?.trim()) : undefined,
+              label: values[3]?.trim(),
+              country: values[4]?.trim(),
+              genres: values[5]?.trim() ? values[5]?.trim().split(';').map(g => g.trim()) : undefined,
+              styles: values[6]?.trim() ? values[6]?.trim().split(';').map(s => s.trim()) : undefined,
+              musicians: values[7]?.trim() ? values[7]?.trim().split(';').map(m => m.trim()) : undefined,
+              master_url: values[8]?.trim(),
+              current_release_url: values[9]?.trim(),
+              custom_values_cache: {}  // Start with empty cache
             };
 
             headers.forEach((header, index) => {
@@ -119,47 +128,47 @@ function Layout() {
               // First try to match standard fields
               switch (header.toLowerCase()) {
                 case 'artist':
-                  record.artist = value;
+                  importRecord.artist = value;
                   break;
                 case 'album':
-                  record.album = value;
+                  importRecord.album = value;
                   break;
                 case 'original year':
-                  record.year = parseInt(value);
+                  importRecord.year = parseInt(value);
                   break;
                 case 'label':
-                  record.label = value;
+                  importRecord.label = value;
                   break;
                 case 'country':
-                  record.country = value;
+                  importRecord.country = value;
                   break;
                 case 'genres':
-                  record.genres = value.split(';').map(g => g.trim());
+                  importRecord.genres = value.split(';').map(g => g.trim());
                   break;
                 case 'styles':
-                  record.styles = value.split(';').map(s => s.trim());
+                  importRecord.styles = value.split(';').map(s => s.trim());
                   break;
                 case 'musicians':
-                  record.musicians = value.split(';').map(m => m.trim());
+                  importRecord.musicians = value.split(';').map(m => m.trim());
                   break;
                 case 'master url':
-                  record.master_url = value;
+                  importRecord.master_url = value;
                   break;
                 case 'release url':
-                  record.current_release_url = value;
+                  importRecord.current_release_url = value;
                   break;
                 default:
                   // If it's not a standard field, check if it's a custom column
                   const customColumn = customColumns.find(col => col.name === header);
                   if (customColumn) {
-                    // Add to customValues if it's a custom column
-                    record.customValues![customColumn.id] = value;
+                    // Add to custom_values_cache if it's a custom column
+                    importRecord.custom_values_cache![customColumn.id] = value;
                   }
               }
             });
 
             // Add record
-            const response = await recordsService.add(record);
+            const response = await recordsService.add(importRecord);
             if (response.success) {
               successCount++;
             } else {

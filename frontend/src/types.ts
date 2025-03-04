@@ -25,6 +25,23 @@ export interface VinylRecord {
   custom_values_cache: Record<string, string>;
 }
 
+export interface NewVinylRecord {
+  artist: string;
+  album: string;
+  year?: number;
+  barcode?: string;
+  genres?: string[];
+  styles?: string[];
+  musicians?: string[];
+  master_url?: string;
+  current_release_url?: string;
+  current_release_year?: number;
+  label?: string;
+  country?: string;
+  added_from?: string;
+  custom_values_cache: Record<string, string>;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

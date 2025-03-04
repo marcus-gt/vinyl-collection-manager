@@ -236,7 +236,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
       if (recordsResponse.success && recordsResponse.data) {
         // Filter records that have this value
         const recordsToUpdate = recordsResponse.data.filter(record => {
-          const value = record.customValues?.[editingColumn.id!];
+          const value = record.custom_values_cache[editingColumn.id!];
           if (!value) return false;
 
           if (type === 'single-select') {
@@ -276,19 +276,25 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
 
         // Then update all records that use this option
         const updates = recordsToUpdate.map(record => {
-          if (type === 'multi-select' && record.customValues) {
+          if (type === 'multi-select' && record.custom_values_cache) {
             // Remove the option from the comma-separated list while preserving other options
-            const values = record.customValues[editingColumn.id!].split(',').filter(Boolean);
+            const values = record.custom_values_cache[editingColumn.id!].split(',').filter(Boolean);
             const newValues = values.filter(v => v !== optionToRemove);
             console.log(`Updating record ${record.id} from values [${values.join(',')}] to [${newValues.join(',')}]`);
             return customValues.update(record.id!, {
-              [editingColumn.id!]: newValues.join(',')
+              custom_values_cache: {
+                ...record.custom_values_cache,
+                [editingColumn.id!]: newValues.join(',')
+              }
             });
           } else {
             // For single-select, just clear the value
             console.log(`Clearing value for record ${record.id}`);
             return customValues.update(record.id!, {
-              [editingColumn.id!]: ''
+              custom_values_cache: {
+                ...record.custom_values_cache,
+                [editingColumn.id!]: ''
+              }
             });
           }
         });
