@@ -366,33 +366,28 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(null);
     
     try {
-      // If we're in the manual form, use all the info, otherwise just use artist and album
-      const recordToSubmit: VinylRecord = showManualForm ? {
-        artist: manualRecord.artist,
-        album: manualRecord.album,
+      // Create NewVinylRecord instead of VinylRecord
+      const recordToAdd: NewVinylRecord = showManualForm ? {
+        artist: manualRecord.artist || 'Unknown Artist',
+        album: manualRecord.album || 'Unknown Album',
         year: manualRecord.year,
         label: manualRecord.label,
         genres: manualRecord.genresText?.split(',').map(g => g.trim()).filter(Boolean) || [],
         styles: manualRecord.stylesText?.split(',').map(s => s.trim()).filter(Boolean) || [],
         musicians: manualRecord.musiciansText?.split(',').map(m => m.trim()).filter(Boolean) || [],
         added_from: 'manual',
-        master_url: null,
-        current_release_url: null
+        master_url: undefined,
+        current_release_url: undefined
       } : {
-        artist: artist.trim(),
-        album: album.trim(),
-        added_from: 'manual',
-        master_url: null,
-        current_release_url: null
+        artist: artist.trim() || 'Unknown Artist',
+        album: album.trim() || 'Unknown Album',
+        genres: [],
+        styles: [],
+        musicians: [],
+        added_from: 'manual'
       };
 
-      if (!recordToSubmit.artist || !recordToSubmit.album) {
-        setError('Artist and album are required');
-        return;
-      }
-
-      console.log('Submitting record:', recordToSubmit);
-      const response = await records.add(recordToSubmit);
+      const response = await records.add(recordToAdd);
       console.log('Submit response:', response);
 
       if (response.success) {

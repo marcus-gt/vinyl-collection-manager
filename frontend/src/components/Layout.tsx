@@ -160,17 +160,16 @@ function Layout() {
 
             // Add record
             const recordToAdd: NewVinylRecord = {
-              artist: record.artist || '',  // Ensure required fields have values
-              album: record.album || '',
+              artist: record.artist || 'Unknown Artist',
+              album: record.album || 'Unknown Album',
               year: record.year,
               label: record.label,
-              genres: record.genres,
-              styles: record.styles,
-              musicians: record.musicians,
+              genres: record.genres || [],
+              styles: record.styles || [],
+              musicians: record.musicians || [],
               master_url: record.master_url || undefined,
               current_release_url: record.current_release_url || undefined,
-              added_from: 'csv_import',
-              customValues: record.customValues
+              added_from: 'csv_import'
             };
             const response = await recordsService.add(recordToAdd);
             if (response.success) {

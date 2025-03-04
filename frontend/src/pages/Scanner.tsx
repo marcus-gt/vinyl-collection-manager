@@ -385,6 +385,23 @@ export function Scanner() {
     setScannerKey(prev => prev + 1);
   };
 
+  const handleBarcodeLookup = async () => {
+    // ...
+    const recordToAdd: NewVinylRecord = {
+      artist: manualRecord.artist || 'Unknown Artist',
+      album: manualRecord.album || 'Unknown Album',
+      genres: [],
+      styles: [],
+      musicians: [],
+      year: manualRecord.year,
+      label: manualRecord.label,
+      master_url: undefined,
+      current_release_url: undefined,
+      added_from: 'barcode'
+    };
+    // ...
+  };
+
   return (
     <Container 
       fluid 
