@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+nimport { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
@@ -653,16 +653,19 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handlePlaylistSelect = async (playlistId: string | undefined) => {
-    setSelectedPlaylist(playlistId);
-    if (!playlistId) {
+  const handlePlaylistSelect = async (value: string | null) => {
+    // Convert null to undefined for our internal state
+    setSelectedPlaylist(value ?? undefined);
+    
+    if (!value) {
       setPlaylistAlbums([]);
       return;
     }
+
     setLoadingSpotify(true);
     setError(undefined);
     try {
-      const response = await spotify.getPlaylistTracks(playlistId);
+      const response = await spotify.getPlaylistTracks(value);  // Use value instead of playlistId
       if (response.success && response.data) {
         setPlaylistAlbums(response.data);
       } else {
