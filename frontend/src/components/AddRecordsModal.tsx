@@ -24,24 +24,6 @@ interface ManualRecordForm {
   musiciansText: string;
 }
 
-interface SpotifyAlbumResponse {
-  name: string;
-  artist: string;
-  release_date: string;
-  year?: number;
-}
-
-interface SpotifyResponse {
-  success: boolean;
-  needs_auth?: boolean;
-  error?: string;
-  data?: {
-    name: string;
-    artist: string;
-    release_date: string;
-  };
-}
-
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [barcode, setBarcode] = useState('');
   const [discogsUrl, setDiscogsUrl] = useState('');
@@ -555,7 +537,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           musicians: [],
           added_from: 'spotify',
           custom_values_cache: {},
-          // Optional fields
           master_url: undefined,
           current_release_url: undefined
         });
