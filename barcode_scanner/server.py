@@ -377,10 +377,19 @@ def login():
         })
         
         if response.user:
-            session.permanent = True  # Make session permanent
+            print("\n=== Login Success ===")
+            print(f"Access Token: {response.session.access_token[:20]}...")
+            print(f"Refresh Token: {response.session.refresh_token[:20]}...")
+            
+            # Set session data
             session['access_token'] = response.session.access_token
             session['refresh_token'] = response.session.refresh_token
             session['user_id'] = response.user.id
+            session.permanent = True
+            
+            print("\nSession data after login:")
+            print(f"Session ID: {session.sid}")
+            print(f"Session data: {dict(session)}")
             
             return jsonify({
                 'success': True,
@@ -1244,13 +1253,19 @@ def automated_sync_playlists():
 @app.route('/api/auth/refresh', methods=['POST'])
 def refresh_token():
     try:
+        print("\n=== Token Refresh Attempt ===")
+        print(f"Session data: {dict(session)}")
+        
         # Check if we have a refresh token
         refresh_token = session.get('refresh_token')
         if not refresh_token:
+            print("No refresh token found in session")
             return jsonify({
                 'success': False,
                 'error': 'No refresh token'
             }), 401
+
+        print(f"Found refresh token: {refresh_token[:20]}...")
 
         # Get authenticated client
         client = get_supabase_client()
@@ -1259,11 +1274,18 @@ def refresh_token():
         response = client.auth.refresh_session(refresh_token)
         
         if response.session:
+            print("Session refresh successful")
+            print(f"New access token: {response.session.access_token[:20]}...")
+            print(f"New refresh token: {response.session.refresh_token[:20]}...")
+            
             # Update session with new tokens
             session['access_token'] = response.session.access_token
             session['refresh_token'] = response.session.refresh_token
             session['user_id'] = response.session.user.id
             session.permanent = True
+            
+            print("\nUpdated session data:")
+            print(f"Session data: {dict(session)}")
             
             return jsonify({
                 'success': True,
@@ -1276,7 +1298,7 @@ def refresh_token():
                 }
             })
         
-        # If refresh failed, clear the session
+        print("Session refresh failed - no new session")
         session.clear()
         return jsonify({
             'success': False,
