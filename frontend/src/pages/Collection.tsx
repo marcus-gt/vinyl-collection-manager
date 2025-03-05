@@ -1192,7 +1192,7 @@ function Collection() {
         </Text>
       )}
 
-      <ResizableTable
+      <ResizableTable<VinylRecord>
         data={userRecords}
         columns={tableColumns}
         sortState={sortStatus}
