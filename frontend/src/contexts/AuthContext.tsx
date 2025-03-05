@@ -1,11 +1,10 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import { auth } from '../services/api';
 import type { User } from '../types';
-import { debounce } from 'lodash';
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
@@ -13,6 +12,18 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+// Add our own simple debounce function
+function useDebounce(callback: () => void, delay: number) {
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  return useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(callback, delay);
+  }, [callback, delay]);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -127,8 +138,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Add session refresh function
   const refreshSession = useCallback(async () => {
     try {
-      const response = await auth.post('/api/auth/refresh');
-      return response.data.success;
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      return data.success;
     } catch (err) {
       console.error('Failed to refresh session:', err);
       return false;
@@ -144,12 +162,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, refreshSession]);
 
-  // Also refresh session on user activity
+  // Update the activity handler
   useEffect(() => {
     if (user) {
-      const handleActivity = debounce(() => {
+      const handleActivity = useDebounce(() => {
         refreshSession();
-      }, 5000); // Debounce to prevent too many requests
+      }, 5000);
 
       window.addEventListener('mousemove', handleActivity);
       window.addEventListener('keydown', handleActivity);
