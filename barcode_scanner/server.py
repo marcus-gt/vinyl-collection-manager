@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import timedelta, datetime
 import requests
 from functools import wraps
+import tempfile
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -382,13 +383,15 @@ def login():
             print(f"Refresh Token: {response.session.refresh_token[:20]}...")
             
             # Set session data
+            session.clear()  # Clear any existing session data
             session['access_token'] = response.session.access_token
             session['refresh_token'] = response.session.refresh_token
             session['user_id'] = response.user.id
+            session['logged_in'] = True
             session.permanent = True
             
             print("\nSession data after login:")
-            print(f"Session ID: {session.sid}")
+            print(f"Session ID: {session.sid if hasattr(session, 'sid') else 'No SID'}")
             print(f"Session data: {dict(session)}")
             
             return jsonify({
@@ -706,7 +709,7 @@ def create_custom_column():
     if not user_id:
         print("Error: User not authenticated")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-    
+
     try:
         data = request.get_json()
         print(f"Request data: {data}")
@@ -1255,14 +1258,16 @@ def refresh_token():
     try:
         print("\n=== Token Refresh Attempt ===")
         print(f"Session data: {dict(session)}")
+        print(f"Request cookies: {request.cookies}")
         
         # Check if we have a refresh token
         refresh_token = session.get('refresh_token')
         if not refresh_token:
-            print("No refresh token found in session")
+            print("No refresh token in session")
             return jsonify({
                 'success': False,
-                'error': 'No refresh token'
+                'error': 'No refresh token',
+                'needs_auth': True
             }), 401
 
         print(f"Found refresh token: {refresh_token[:20]}...")
@@ -1270,52 +1275,87 @@ def refresh_token():
         # Get authenticated client
         client = get_supabase_client()
         
-        # Attempt to refresh the session
-        response = client.auth.refresh_session(refresh_token)
-        
-        if response.session:
-            print("Session refresh successful")
-            print(f"New access token: {response.session.access_token[:20]}...")
-            print(f"New refresh token: {response.session.refresh_token[:20]}...")
+        try:
+            # Attempt to refresh the session
+            response = client.auth.refresh_session(refresh_token)
             
-            # Update session with new tokens
-            session['access_token'] = response.session.access_token
-            session['refresh_token'] = response.session.refresh_token
-            session['user_id'] = response.session.user.id
-            session.permanent = True
-            
-            print("\nUpdated session data:")
-            print(f"Session data: {dict(session)}")
-            
-            return jsonify({
-                'success': True,
-                'session': {
-                    'access_token': response.session.access_token,
-                    'user': {
-                        'id': response.session.user.id,
-                        'email': response.session.user.email
+            if response.session:
+                print("Session refresh successful")
+                print(f"New access token: {response.session.access_token[:20]}...")
+                print(f"New refresh token: {response.session.refresh_token[:20]}...")
+                
+                # Update session with new tokens
+                session['access_token'] = response.session.access_token
+                session['refresh_token'] = response.session.refresh_token
+                session['user_id'] = response.session.user.id
+                session['logged_in'] = True
+                session.permanent = True
+                
+                print("\nUpdated session data:")
+                print(f"Session data: {dict(session)}")
+                
+                return jsonify({
+                    'success': True,
+                    'session': {
+                        'access_token': response.session.access_token,
+                        'user': {
+                            'id': response.session.user.id,
+                            'email': response.session.user.email
+                        }
                     }
-                }
-            })
-        
-        print("Session refresh failed - no new session")
-        session.clear()
-        return jsonify({
-            'success': False,
-            'error': 'Failed to refresh session'
-        }), 401
-        
+                })
+            
+            print("Session refresh failed - no new session")
+            session.clear()
+            return jsonify({
+                'success': False,
+                'error': 'Failed to refresh session',
+                'needs_auth': True
+            }), 401
+            
+        except Exception as e:
+            print(f"Supabase refresh error: {str(e)}")
+            session.clear()
+            return jsonify({
+                'success': False,
+                'error': 'Failed to refresh session',
+                'needs_auth': True
+            }), 401
+            
     except Exception as e:
         print(f"Error refreshing token: {str(e)}")
         session.clear()
         return jsonify({
             'success': False,
-            'error': 'Failed to refresh session'
+            'error': 'Failed to refresh session',
+            'needs_auth': True
         }), 401
 
-# At the top of your Flask app configuration
-app.permanent_session_lifetime = timedelta(days=365)  # Set session lifetime to 1 year
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+# Update Flask configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='None',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=365),
+    SESSION_REFRESH_EACH_REQUEST=True,
+    SESSION_COOKIE_NAME='vinyl_session',
+    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
+    SESSION_TYPE='filesystem',
+    SESSION_FILE_DIR=tempfile.gettempdir()  # Use system temp directory
+)
+
+# Add session interface
+from flask_session import Session
+Session(app)
+
+@app.before_request
+def before_request():
+    # Make session permanent
+    session.permanent = True
+    # Print session info for debugging
+    print("\n=== Request Debug ===")
+    print(f"Session data: {dict(session)}")
+    print(f"Request cookies: {request.cookies}")
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'

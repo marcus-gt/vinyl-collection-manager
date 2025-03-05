@@ -39,33 +39,26 @@ api.interceptors.response.use(
 
       try {
         console.log('Attempting token refresh...');
-        // Try to refresh the token
         const response = await api.post('/api/auth/refresh', {}, {
-          withCredentials: true,  // Ensure cookies are sent
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          withCredentials: true
         });
 
         console.log('Refresh response:', response.data);
 
         if (response.data.success) {
           console.log('Token refresh successful');
-          // Retry the original request
           return api(originalRequest);
-        } else {
-          console.log('Token refresh failed:', response.data.error);
-          throw new Error(response.data.error);
+        } else if (response.data.needs_auth) {
+          console.log('Authentication needed, redirecting to login');
+          window.location.href = '/login';
+          return Promise.reject(error);
         }
       } catch (refreshError) {
-        console.log('Token refresh error:', refreshError);
-        // If refresh fails and it's not a /me request, redirect to login
+        console.log('Token refresh failed:', refreshError);
         if (originalRequest.url !== '/api/auth/me') {
-          // Clear any auth state
-          localStorage.removeItem('session');
           window.location.href = '/login';
         }
-        throw refreshError;
+        return Promise.reject(refreshError);
       }
     }
 
