@@ -820,6 +820,35 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   };
 
+  // Update the filtering logic
+  const filteredData = useMemo(() => {
+    return data.filter(record => {
+      // Convert all searchable values to lowercase strings
+      const searchableValues = [
+        record.artist,
+        record.album,
+        record.year?.toString(),
+        record.label,
+        record.country,
+        record.genres?.join(', '),
+        record.styles?.join(', '),
+        record.musicians?.join(', '),
+        // Add custom values to searchable content
+        ...Object.values(record.custom_values_cache || {})
+      ]
+        .filter(Boolean)
+        .map(value => value.toLowerCase());
+
+      // Search query terms (split by space)
+      const searchTerms = searchQuery.toLowerCase().split(' ').filter(Boolean);
+
+      // Check if all search terms are found in any of the searchable values
+      return searchTerms.every(term =>
+        searchableValues.some(value => value.includes(term))
+      );
+    });
+  }, [data, searchQuery]);
+
   return (
     <Box>
       <Box style={{ 
