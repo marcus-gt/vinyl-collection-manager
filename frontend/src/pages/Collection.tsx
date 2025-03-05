@@ -11,7 +11,7 @@ import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 40;
 
 // Create a service for custom values
 const customValuesService = {
@@ -71,7 +71,7 @@ function Collection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
-  const [sortStatus, setSortStatus] = useState<SortingState>([]);
+  const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
@@ -736,7 +736,10 @@ function Collection() {
       standardColumns.push({
         id: column.id,
         header: column.name,
-        accessorFn: (record: VinylRecord) => getCustomValue(record, column.id),
+        accessorFn: (record: VinylRecord) => {
+          // Safely access custom_values_cache with fallback
+          return record.custom_values_cache?.[column.id] || '';
+        },
         enableSorting: true,
         size: column.type === 'boolean' ? 50 : // Smaller width for boolean columns
               column.type === 'multi-select' ? 300 : 
@@ -1192,7 +1195,7 @@ function Collection() {
         </Text>
       )}
 
-      <ResizableTable<VinylRecord>
+      <ResizableTable
         data={userRecords}
         columns={tableColumns}
         sortState={sortStatus}

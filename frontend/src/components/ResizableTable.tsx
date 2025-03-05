@@ -71,16 +71,6 @@ type ExtendedColumnDef<T> = ColumnDef<T> & {
 
 // Extend RowData to include created_at
 interface BaseRowData {
-  id: string;
-  artist: string;
-  album: string;
-  year?: number;
-  label?: string;
-  country?: string;
-  genres?: string[];
-  styles?: string[];
-  musicians?: string[];
-  custom_values_cache: Record<string, string>;
   created_at?: string;
 }
 
@@ -421,39 +411,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     });
   }, [columns, customColumns]);
 
-  // Update the filtering logic
-  const filteredData = useMemo(() => {
-    if (!searchQuery) return data;
-
-    return data.filter(record => {
-      // Convert all searchable values to lowercase strings
-      const searchableValues = [
-        record.artist,
-        record.album,
-        record.year?.toString(),
-        record.label,
-        record.country,
-        record.genres?.join(', '),
-        record.styles?.join(', '),
-        record.musicians?.join(', '),
-        // Add custom values to searchable content
-        ...Object.values(record.custom_values_cache || {})
-      ]
-        .filter(Boolean)
-        .map(value => value.toLowerCase());
-
-      // Search query terms (split by space)
-      const searchTerms = searchQuery.toLowerCase().split(' ').filter(Boolean);
-
-      // Check if all search terms are found in any of the searchable values
-      return searchTerms.every(term =>
-        searchableValues.some(value => value.includes(term))
-      );
-    });
-  }, [data, searchQuery]);
+  // When processing data for the table
+  const processedData = useMemo(() => {
+    return data.map(record => ({
+      ...record,
+      // Ensure custom_values_cache exists
+      custom_values_cache: record.custom_values_cache || {}
+    }));
+  }, [data]);
 
   const table = useReactTable({
-    data: filteredData,
+    data: processedData,
     columns: columnsWithFilters,
     state: {
       sorting: sortState,
@@ -489,7 +457,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    pageCount: Math.ceil(filteredData.length / recordsPerPage),
+    pageCount: Math.ceil(data.length / recordsPerPage),
     manualPagination: false,
     enableColumnFilters: true,
     manualFiltering: false,
@@ -576,7 +544,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   };
 
   const renderDateRangeFilter = (header: Header<T, unknown>) => {
-    const value = header.column.getFilterValue() as DateRangeValue || { start: null, end: null };
+    const currentFilter = table.getState().columnFilters.find(
+      (filter: { id: string; value: unknown }) => filter.id === header.column.id
+    );
+    const value = (currentFilter?.value as DateRangeValue) || { start: null, end: null };
 
     return (
       <Group gap="xs">
