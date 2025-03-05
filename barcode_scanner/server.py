@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 import requests
 from functools import wraps
 import tempfile
+import redis
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -82,39 +83,22 @@ print("\n=== Flask Configuration ===")
 print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
 
-# Set session configuration based on environment
-if os.getenv('FLASK_ENV') == 'production':
-    session_config = {
-        'SESSION_COOKIE_SECURE': True,
-        'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
-        'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
-        'SESSION_COOKIE_PATH': '/',
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
-        'SESSION_PROTECTION': 'strong',
-        'SESSION_COOKIE_NAME': 'session',
-        'SESSION_REFRESH_EACH_REQUEST': True,
-        'REMEMBER_COOKIE_SECURE': True,
-        'REMEMBER_COOKIE_HTTPONLY': True,
-        'REMEMBER_COOKIE_SAMESITE': 'None',
-        'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com'
-    }
-else:
-    session_config = {
-        'SESSION_COOKIE_SECURE': True,
-        'SESSION_COOKIE_HTTPONLY': True,
-        'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
-        'SESSION_COOKIE_PATH': '/',
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
-        'SESSION_PROTECTION': 'strong',
-        'SESSION_COOKIE_NAME': 'session',
-        'SESSION_REFRESH_EACH_REQUEST': True,
-        'REMEMBER_COOKIE_SECURE': True,
-        'REMEMBER_COOKIE_HTTPONLY': True,
-        'REMEMBER_COOKIE_SAMESITE': 'None'
-    }
+# Initialize Redis
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_client = redis.from_url(redis_url)
 
-app.config.update(**session_config)
+# Update Flask configuration
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='None',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=365),
+    SESSION_REFRESH_EACH_REQUEST=True,
+    SESSION_COOKIE_NAME='vinyl_session',
+    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
+    SESSION_TYPE='redis',
+    SESSION_REDIS=redis_client
+)
 
 print("\n=== Session Configuration ===")
 print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set - using request host')}")
@@ -368,10 +352,7 @@ def login():
         email = data.get('email')
         password = data.get('password')
         
-        # Get authenticated client
         client = get_supabase_client()
-        
-        # Sign in user
         response = client.auth.sign_in_with_password({
             'email': email,
             'password': password
@@ -379,20 +360,24 @@ def login():
         
         if response.user:
             print("\n=== Login Success ===")
-            print(f"Access Token: {response.session.access_token[:20]}...")
-            print(f"Refresh Token: {response.session.refresh_token[:20]}...")
             
-            # Set session data
-            session.clear()  # Clear any existing session data
-            session['access_token'] = response.session.access_token
-            session['refresh_token'] = response.session.refresh_token
-            session['user_id'] = response.user.id
-            session['logged_in'] = True
+            # Store session data in Redis
+            session_data = {
+                'access_token': response.session.access_token,
+                'refresh_token': response.session.refresh_token,
+                'user_id': response.user.id,
+                'logged_in': True
+            }
+            
+            # Clear any existing session
+            session.clear()
+            
+            # Set new session data
+            for key, value in session_data.items():
+                session[key] = value
             session.permanent = True
             
-            print("\nSession data after login:")
-            print(f"Session ID: {session.sid if hasattr(session, 'sid') else 'No SID'}")
-            print(f"Session data: {dict(session)}")
+            print(f"Session data stored: {dict(session)}")
             
             return jsonify({
                 'success': True,
@@ -1330,19 +1315,6 @@ def refresh_token():
             'error': 'Failed to refresh session',
             'needs_auth': True
         }), 401
-
-# Update Flask configuration
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=365),
-    SESSION_REFRESH_EACH_REQUEST=True,
-    SESSION_COOKIE_NAME='vinyl_session',
-    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
-    SESSION_TYPE='filesystem',
-    SESSION_FILE_DIR=tempfile.gettempdir()  # Use system temp directory
-)
 
 # Add session interface
 from flask_session import Session
