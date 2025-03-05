@@ -6,6 +6,7 @@ export interface User {
 // Single type for all vinyl records
 export interface VinylRecord {
   // Required fields
+  id: string;
   artist: string;
   album: string;
   genres: string[];
@@ -15,6 +16,7 @@ export interface VinylRecord {
   custom_values_cache: Record<string, string>;
 
   // Optional fields
+  user_id?: string;
   year?: number;
   barcode?: string;
   master_url?: string;
@@ -22,10 +24,6 @@ export interface VinylRecord {
   current_release_year?: number;
   label?: string;
   country?: string;
-
-  // Database fields (only present on existing records)
-  id?: string;
-  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }

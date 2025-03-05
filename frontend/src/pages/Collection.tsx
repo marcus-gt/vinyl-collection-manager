@@ -11,7 +11,7 @@ import { PILL_COLORS } from '../types';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 10;
 
 // Create a service for custom values
 const customValuesService = {
@@ -71,7 +71,7 @@ function Collection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
   const [editingNotes, setEditingNotes] = useState('');
-  const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
+  const [sortStatus, setSortStatus] = useState<SortingState>([]);
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);

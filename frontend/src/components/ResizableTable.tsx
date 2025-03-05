@@ -81,6 +81,7 @@ interface BaseRowData {
   styles?: string[];
   musicians?: string[];
   custom_values_cache: Record<string, string>;
+  created_at?: string;
 }
 
 interface ResizableTableProps<T extends RowData & BaseRowData> {
@@ -575,10 +576,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   };
 
   const renderDateRangeFilter = (header: Header<T, unknown>) => {
-    const currentFilter = table.getState().columnFilters.find(
-      (filter: { id: string; value: unknown }) => filter.id === header.column.id
-    );
-    const value = (currentFilter?.value as DateRangeValue) || { start: null, end: null };
+    const value = header.column.getFilterValue() as DateRangeValue || { start: null, end: null };
 
     return (
       <Group gap="xs">
