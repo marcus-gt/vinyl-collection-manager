@@ -1252,8 +1252,15 @@ def automated_sync_playlists():
 def refresh_token():
     try:
         print("\n=== Token Refresh Attempt ===")
-        print(f"Current session: {dict(session)}")
+        print(f"Current session: {dict(session) if session else 'No session'}")
         
+        if not session:
+            return jsonify({
+                'success': False,
+                'error': 'No session found',
+                'needs_auth': True
+            }), 401
+
         refresh_token = session.get('refresh_token')
         if not refresh_token:
             session.clear()
@@ -1264,37 +1271,47 @@ def refresh_token():
             }), 401
 
         client = get_supabase_client()
-        response = client.auth.refresh_session(refresh_token)
-        
-        if response.session:
-            # Update session data
-            session['access_token'] = response.session.access_token
-            session['refresh_token'] = response.session.refresh_token
-            session['user_id'] = response.session.user.id
-            session['logged_in'] = True
-            session.permanent = True
-            session.modified = True
+        try:
+            response = client.auth.refresh_session(refresh_token)
             
-            print(f"Updated session: {dict(session)}")
-            
-            return jsonify({
-                'success': True,
-                'session': {
-                    'access_token': response.session.access_token,
-                    'user': {
-                        'id': response.session.user.id,
-                        'email': response.session.user.email
+            if response.session:
+                # Update session data
+                session['access_token'] = response.session.access_token
+                session['refresh_token'] = response.session.refresh_token
+                session['user_id'] = response.session.user.id
+                session['logged_in'] = True
+                session.permanent = True
+                session.modified = True
+                
+                print(f"Updated session: {dict(session)}")
+                
+                return jsonify({
+                    'success': True,
+                    'session': {
+                        'access_token': response.session.access_token,
+                        'user': {
+                            'id': response.session.user.id,
+                            'email': response.session.user.email
+                        }
                     }
-                }
-            })
-        
-        session.clear()
-        return jsonify({
-            'success': False,
-            'error': 'Failed to refresh session',
-            'needs_auth': True
-        }), 401
-        
+                })
+            
+            session.clear()
+            return jsonify({
+                'success': False,
+                'error': 'Failed to refresh session',
+                'needs_auth': True
+            }), 401
+            
+        except Exception as e:
+            print(f"Supabase refresh error: {str(e)}")
+            session.clear()
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'needs_auth': True
+            }), 401
+            
     except Exception as e:
         print(f"Refresh error: {str(e)}")
         session.clear()

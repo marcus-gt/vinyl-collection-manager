@@ -39,44 +39,35 @@ api.interceptors.response.use(
 
       try {
         console.log('Attempting token refresh...');
-        const response = await api.post('/api/auth/refresh', {}, {
-          withCredentials: true
-        });
-
-        console.log('Refresh response:', response.data);
+        const response = await api.post('/api/auth/refresh');
 
         if (response.data.success) {
           console.log('Token refresh successful');
           return api(originalRequest);
-        } else if (response.data.needs_auth) {
-          console.log('Authentication needed, redirecting to login');
-          window.location.href = '/login';
-          return Promise.reject(error);
         }
+        
+        // If refresh fails, redirect to login
+        console.log('Token refresh failed - redirecting to login');
+        window.location.href = '/login';
+        return Promise.reject(error);
       } catch (refreshError) {
-        console.log('Token refresh failed:', refreshError);
-        if (originalRequest.url !== '/api/auth/me') {
+        console.log('Token refresh error:', refreshError);
+        // Don't redirect if it's an auth check
+        if (!originalRequest.url?.includes('/api/auth/me')) {
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);
       }
     }
 
-    // Don't log 401s from /api/auth/me or /api/auth/refresh as errors
-    if ((error.config?.url === '/api/auth/me' || error.config?.url === '/api/auth/refresh') 
-        && error.response?.status === 401) {
-      console.log('Auth check: No active session');
+    // Don't retry 401s from auth endpoints
+    if (error.response?.status === 401 && 
+        (error.config?.url?.includes('/api/auth/me') || 
+         error.config?.url?.includes('/api/auth/refresh'))) {
+      console.log('Auth check failed - not retrying');
       return Promise.reject(error);
     }
-    
-    // For other errors, log them
-    console.error(`Error from ${error.config?.url}:`, {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-      // Don't log the full error object to keep the console clean
-      details: error.response?.data?.error || error.message
-    });
+
     return Promise.reject(error);
   }
 );
