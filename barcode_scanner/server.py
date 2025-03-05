@@ -6,6 +6,7 @@ import requests
 from functools import wraps
 import tempfile
 import redis
+from urllib.parse import urlparse
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -84,39 +85,71 @@ print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
 
 # Get Redis URL from environment or use default
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
+REDIS_URL = os.getenv('REDIS_URL')
 
-# Update Flask configuration
-app.config.update(
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=365),
-    SESSION_REFRESH_EACH_REQUEST=True,
-    SESSION_COOKIE_NAME='vinyl_session',
-    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
-    SESSION_TYPE='redis',
-    SESSION_REDIS=redis.from_url(REDIS_URL)
-)
+if not REDIS_URL:
+    print("WARNING: No REDIS_URL found, falling back to filesystem sessions")
+    app.config.update(
+        SESSION_TYPE='filesystem',
+        SESSION_FILE_DIR=tempfile.gettempdir(),  # Use system temp directory
+        SESSION_COOKIE_SECURE=True,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='None',
+        PERMANENT_SESSION_LIFETIME=timedelta(days=365),
+        SESSION_REFRESH_EACH_REQUEST=True,
+        SESSION_COOKIE_NAME='vinyl_session',
+        SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None
+    )
+else:
+    try:
+        # Parse Redis URL to get host and port for logging
+        parsed_url = urlparse(REDIS_URL)
+        print(f"\n=== Redis Configuration ===")
+        print(f"Host: {parsed_url.hostname}")
+        print(f"Port: {parsed_url.port}")
+        print(f"Using Redis for session storage")
+        
+        # Test Redis connection
+        redis_client = redis.from_url(REDIS_URL)
+        redis_client.ping()
+        
+        app.config.update(
+            SESSION_TYPE='redis',
+            SESSION_REDIS=redis_client
+        )
+    except redis.ConnectionError as e:
+        print(f"WARNING: Redis connection failed ({str(e)}), falling back to filesystem sessions")
+        app.config.update(
+            SESSION_TYPE='filesystem',
+            SESSION_FILE_DIR=tempfile.gettempdir(),  # Use system temp directory
+            SESSION_COOKIE_SECURE=True,
+            SESSION_COOKIE_HTTPONLY=True,
+            SESSION_COOKIE_SAMESITE='None',
+            PERMANENT_SESSION_LIFETIME=timedelta(days=365),
+            SESSION_REFRESH_EACH_REQUEST=True,
+            SESSION_COOKIE_NAME='vinyl_session',
+            SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None
+        )
 
 # Initialize Flask-Session
 from flask_session import Session
 Session(app)
 
-# Add debug logging for session
+# Update debug logging to handle None session
 @app.before_request
 def before_request():
     print("\n=== Request Debug ===")
     print(f"Request path: {request.path}")
     print(f"Request method: {request.method}")
-    print(f"Session data before: {dict(session)}")
+    print(f"Session data before: {dict(session) if session else 'No session'}")
     print(f"Request cookies: {request.cookies}")
-    session.permanent = True
+    if session:
+        session.permanent = True
 
 @app.after_request
 def after_request(response):
     print("\n=== Response Debug ===")
-    print(f"Session data after: {dict(session)}")
+    print(f"Session data after: {dict(session) if session else 'No session'}")
     print(f"Response cookies: {response.headers.get('Set-Cookie')}")
     return response
 
