@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Container, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Table, ScrollArea, Tabs } from '@mantine/core';
 import { IconExternalLink, IconX } from '@tabler/icons-react';
 import { lookup, records } from '../services/api';
-import type { VinylRecord } from '../types';
+import type { VinylRecord, NewVinylRecord } from '../types';
 import { BarcodeScanner } from '../components/BarcodeScanner';
 
 export function Scanner() {
@@ -301,35 +301,31 @@ export function Scanner() {
   const handleAddToCollection = async () => {
     if (!record) return;
     
+    const recordData: NewVinylRecord = {
+      artist: record.artist,
+      album: record.album,
+      genres: record.genres || [],
+      styles: record.styles || [],
+      musicians: record.musicians || [],
+      added_from: record.added_from || 'manual',
+      custom_values_cache: {},
+      year: record.year,
+      label: record.label,
+      master_url: record.master_url,
+      current_release_url: record.current_release_url,
+      country: record.country
+    };
+    
     setLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
       console.log('Starting add to collection...', {
-        recordData: record,
+        recordData: recordData,
         timestamp: new Date().toISOString()
       });
 
-      const recordData: VinylRecord = {
-        artist: record.artist,
-        album: record.album,
-        year: record.year,
-        current_release_year: record.current_release_year,
-        barcode: record.barcode,
-        genres: record.genres || [],
-        styles: record.styles || [],
-        musicians: record.musicians || [],
-        master_url: record.master_url,
-        current_release_url: record.current_release_url,
-        label: record.label,
-        country: record.country,
-        added_from: record.added_from || 'manual',
-        custom_values_cache: {}  // Required empty object
-      };
-
-      console.log('Prepared record data:', recordData);
-      
       const response = await records.add(recordData);
       console.log('Add record response:', response);
 

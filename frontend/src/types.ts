@@ -3,10 +3,8 @@ export interface User {
   email: string;
 }
 
-// Single type for all vinyl records
-export interface VinylRecord {
-  // Required fields
-  id: string;
+// Base interface with common fields
+interface BaseVinylRecord {
   artist: string;
   album: string;
   genres: string[];
@@ -14,9 +12,7 @@ export interface VinylRecord {
   musicians: string[];
   added_from: string;
   custom_values_cache: Record<string, string>;
-
   // Optional fields
-  user_id?: string;
   year?: number;
   barcode?: string;
   master_url?: string;
@@ -24,6 +20,15 @@ export interface VinylRecord {
   current_release_year?: number;
   label?: string;
   country?: string;
+}
+
+// For creating new records
+export interface NewVinylRecord extends BaseVinylRecord {}
+
+// For existing records from the database
+export interface VinylRecord extends BaseVinylRecord {
+  id: string;
+  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -120,4 +125,11 @@ export interface SyncPlaylistsResponse {
   total_added: number;
   failed_lookups: FailedLookup[];
   total_failed: number;
+}
+
+// Update the API service
+export interface RecordsService {
+  getAll: () => Promise<ApiResponse<VinylRecord[]>>;
+  add: (record: NewVinylRecord) => Promise<ApiResponse<VinylRecord>>;
+  // ...
 } 

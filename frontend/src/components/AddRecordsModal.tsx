@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
-import type { VinylRecord, CustomColumn } from '../types';
+import type { VinylRecord, CustomColumn, NewVinylRecord } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
 
@@ -349,15 +349,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(undefined);
     
     try {
-      const recordToSubmit: VinylRecord = {
+      const recordToSubmit: NewVinylRecord = {
         artist: manualRecord.artist,
         album: manualRecord.album,
-        genres: [],           // Required but can be empty
-        styles: [],           // Required but can be empty
-        musicians: [],        // Required but can be empty
-        added_from: 'manual', // Required
-        custom_values_cache: {}, // Required but can be empty
-        // Optional fields
+        genres: [],
+        styles: [],
+        musicians: [],
+        added_from: 'manual',
+        custom_values_cache: {},
         year: manualRecord.year,
         label: manualRecord.label,
         master_url: undefined,
