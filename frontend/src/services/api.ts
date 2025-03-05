@@ -29,14 +29,7 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for debugging
 api.interceptors.response.use(
-  (response) => {
-    console.log(`Response from ${response.config.url}:`, {
-      status: response.status,
-      data: response.data,
-      headers: response.headers
-    });
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
@@ -52,13 +45,18 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // If refresh fails, redirect to login
-        window.location.href = '/login';
+        // If refresh fails and it's not a /me request, redirect to login
+        if (originalRequest.url !== '/api/auth/me') {
+          // Clear any auth state
+          localStorage.removeItem('session');
+          window.location.href = '/login';
+        }
       }
     }
 
-    // Don't log 401s from /api/auth/me as errors
-    if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
+    // Don't log 401s from /api/auth/me or /api/auth/refresh as errors
+    if ((error.config?.url === '/api/auth/me' || error.config?.url === '/api/auth/refresh') 
+        && error.response?.status === 401) {
       console.log('Auth check: No active session');
       return Promise.reject(error);
     }

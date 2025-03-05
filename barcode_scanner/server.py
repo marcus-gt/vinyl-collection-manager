@@ -1244,18 +1244,26 @@ def automated_sync_playlists():
 @app.route('/api/auth/refresh', methods=['POST'])
 def refresh_token():
     try:
+        # Check if we have a refresh token
+        refresh_token = session.get('refresh_token')
+        if not refresh_token:
+            return jsonify({
+                'success': False,
+                'error': 'No refresh token'
+            }), 401
+
         # Get authenticated client
         client = get_supabase_client()
         
         # Attempt to refresh the session
-        response = client.auth.refresh_session()
+        response = client.auth.refresh_session(refresh_token)
         
         if response.session:
             # Update session with new tokens
             session['access_token'] = response.session.access_token
             session['refresh_token'] = response.session.refresh_token
             session['user_id'] = response.session.user.id
-            session.permanent = True  # Make session persistent
+            session.permanent = True
             
             return jsonify({
                 'success': True,
@@ -1268,6 +1276,8 @@ def refresh_token():
                 }
             })
         
+        # If refresh failed, clear the session
+        session.clear()
         return jsonify({
             'success': False,
             'error': 'Failed to refresh session'
@@ -1275,6 +1285,7 @@ def refresh_token():
         
     except Exception as e:
         print(f"Error refreshing token: {str(e)}")
+        session.clear()
         return jsonify({
             'success': False,
             'error': 'Failed to refresh session'
