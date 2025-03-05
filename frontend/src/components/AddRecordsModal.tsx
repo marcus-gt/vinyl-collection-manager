@@ -1,4 +1,4 @@
-nimport { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
