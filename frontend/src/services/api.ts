@@ -13,7 +13,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN'
 });
 
 // Add request interceptor for debugging
@@ -37,7 +37,26 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If the error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh the token
+        const response = await api.post('/api/auth/refresh');
+        if (response.data.success) {
+          // Retry the original request
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
+        window.location.href = '/login';
+      }
+    }
+
     // Don't log 401s from /api/auth/me as errors
     if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
       console.log('Auth check: No active session');

@@ -362,50 +362,45 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    """Login a user."""
-    print("\n=== Login Attempt ===")
-    print(f"Request Headers: {dict(request.headers)}")
-    print(f"Request Origin: {request.headers.get('Origin')}")
-    print(f"Previous session: {dict(session)}")
-    
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not email or not password:
-        print("Error: Missing email or password")
-        return jsonify({'success': False, 'error': 'Email and password required'}), 400
-    
-    result = login_user(email, password)
-    print(f"Login result: {result}")
-    
-    if result['success']:
-        # Clear any existing session data
-        session.clear()
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
         
-        # Set new session data
-        session['user_id'] = result['session'].user.id
-        session['access_token'] = result['session'].access_token
-        session['refresh_token'] = result['session'].refresh_token
-        session.permanent = True
-        session.modified = True
+        # Get authenticated client
+        client = get_supabase_client()
         
-        response = jsonify({
-            'success': True,
-            'session': {
-                'access_token': result['session'].access_token,
-                'user': {
-                    'id': result['session'].user.id,
-                    'email': result['session'].user.email
-                }
-            }
+        # Sign in user
+        response = client.auth.sign_in_with_password({
+            'email': email,
+            'password': password
         })
         
-        print(f"Session after login: {dict(session)}")
-        print(f"Response Headers: {dict(response.headers)}")
-        return response, 200
+        if response.user:
+            session.permanent = True  # Make session permanent
+            session['access_token'] = response.session.access_token
+            session['refresh_token'] = response.session.refresh_token
+            session['user_id'] = response.user.id
+            
+            return jsonify({
+                'success': True,
+                'user': {
+                    'id': response.user.id,
+                    'email': response.user.email
+                }
+            })
+            
+        return jsonify({
+            'success': False,
+            'error': 'Invalid credentials'
+        }), 401
         
-    return jsonify({'success': False, 'error': result['error']}), 401
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Login failed'
+        }), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -1245,6 +1240,49 @@ def automated_sync_playlists():
             'success': False,
             'error': 'Failed to sync playlists'
         }), 500
+
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_token():
+    try:
+        # Get authenticated client
+        client = get_supabase_client()
+        
+        # Attempt to refresh the session
+        response = client.auth.refresh_session()
+        
+        if response.session:
+            # Update session with new tokens
+            session['access_token'] = response.session.access_token
+            session['refresh_token'] = response.session.refresh_token
+            session['user_id'] = response.session.user.id
+            session.permanent = True  # Make session persistent
+            
+            return jsonify({
+                'success': True,
+                'session': {
+                    'access_token': response.session.access_token,
+                    'user': {
+                        'id': response.session.user.id,
+                        'email': response.session.user.email
+                    }
+                }
+            })
+        
+        return jsonify({
+            'success': False,
+            'error': 'Failed to refresh session'
+        }), 401
+        
+    except Exception as e:
+        print(f"Error refreshing token: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to refresh session'
+        }), 401
+
+# At the top of your Flask app configuration
+app.permanent_session_lifetime = timedelta(days=365)  # Set session lifetime to 1 year
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
