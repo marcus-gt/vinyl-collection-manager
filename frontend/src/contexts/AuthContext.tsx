@@ -1,10 +1,10 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { auth } from '../services/api';
 import type { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
@@ -13,21 +13,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Add our own simple debounce function
-function useDebounce(callback: () => void, delay: number) {
-  const timeoutRef = useRef<NodeJS.Timeout>();
-
-  return useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(callback, delay);
-  }, [callback, delay]);
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const checkAuth = useCallback(async () => {
@@ -58,26 +46,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    console.log('AuthProvider mounted, checking auth...');
+    // Try to restore session from localStorage on mount
+    const savedSession = localStorage.getItem('session');
+    if (savedSession) {
+      try {
+        const parsedSession = JSON.parse(savedSession);
+        setUser(parsedSession.user);
+      } catch (err) {
+        console.error('Failed to parse saved session:', err);
+      }
+    }
+    
     checkAuth().finally(() => {
-      console.log('Auth check completed, setting loading to false');
-      setLoading(false);
+      setIsLoading(false);
     });
   }, [checkAuth]);
 
   const login = useCallback(async (email: string, password: string) => {
     console.log('Attempting login...');
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     try {
       const response = await auth.login(email, password);
       console.log('Login response:', response);
       
-      if (response.success && response.session && response.session.user) {
-        console.log('Setting user after login:', response.session.user);
+      if (response.success && response.session) {
+        // Save session to localStorage
+        localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
-        // Verify session is set
-        await checkAuth();
       } else {
         console.log('Login failed:', response.error);
         setError(response.error || 'Login failed');
@@ -88,13 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Login failed');
       setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [checkAuth]);
+  }, []);
 
   const register = useCallback(async (email: string, password: string) => {
     console.log('Attempting registration...');
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     try {
       const response = await auth.register(email, password);
@@ -115,74 +111,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(err instanceof Error ? err.message : 'Registration failed');
       setUser(null);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [checkAuth]);
 
   const logout = useCallback(async () => {
     console.log('Attempting logout...');
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     try {
       await auth.logout();
+      // Clear session from localStorage
+      localStorage.removeItem('session');
       console.log('Logout successful, clearing user');
       setUser(null);
     } catch (err) {
       console.error('Logout error:', err);
       setError(err instanceof Error ? err.message : 'Logout failed');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
-  // Add session refresh function
-  const refreshSession = useCallback(async () => {
-    try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await response.json();
-      return data.success;
-    } catch (err) {
-      console.error('Failed to refresh session:', err);
-      return false;
-    }
-  }, []);
-
-  // Add periodic session refresh
-  useEffect(() => {
-    if (user) {
-      // Refresh session every 24 hours
-      const interval = setInterval(refreshSession, 24 * 60 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [user, refreshSession]);
-
-  // Update the activity handler
-  useEffect(() => {
-    if (user) {
-      const handleActivity = useDebounce(() => {
-        refreshSession();
-      }, 5000);
-
-      window.addEventListener('mousemove', handleActivity);
-      window.addEventListener('keydown', handleActivity);
-
-      return () => {
-        window.removeEventListener('mousemove', handleActivity);
-        window.removeEventListener('keydown', handleActivity);
-      };
-    }
-  }, [user, refreshSession]);
-
-  console.log('Current auth state:', { user, loading, error });
+  console.log('Current auth state:', { user, isLoading, error });
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

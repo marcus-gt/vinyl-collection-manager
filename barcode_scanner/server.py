@@ -85,17 +85,9 @@ print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 
 session_config = {
     'SESSION_COOKIE_SECURE': True,
     'SESSION_COOKIE_HTTPONLY': True,
-    'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
-    'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None,
-    'SESSION_COOKIE_PATH': '/',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=30),  # Extend to 30 days
-    'SESSION_PROTECTION': 'strong',
-    'SESSION_COOKIE_NAME': 'session',
-    'SESSION_REFRESH_EACH_REQUEST': True,
-    'REMEMBER_COOKIE_DURATION': timedelta(days=30),  # Also set remember cookie duration
-    'REMEMBER_COOKIE_SECURE': True,
-    'REMEMBER_COOKIE_HTTPONLY': True,
-    'REMEMBER_COOKIE_SAMESITE': 'None'
+    'SESSION_COOKIE_SAMESITE': 'None',
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to a long time
+    'SESSION_REFRESH_EACH_REQUEST': True,  # Refresh session on each request
 }
 
 app.config.update(**session_config)
@@ -348,49 +340,49 @@ def register():
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login a user."""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        remember = data.get('remember', True)  # Default to True
+    print("\n=== Login Attempt ===")
+    print(f"Request Headers: {dict(request.headers)}")
+    print(f"Request Origin: {request.headers.get('Origin')}")
+    print(f"Previous session: {dict(session)}")
+    
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        print("Error: Missing email or password")
+        return jsonify({'success': False, 'error': 'Email and password required'}), 400
+    
+    result = login_user(email, password)
+    print(f"Login result: {result}")
+    
+    if result['success']:
+        # Clear any existing session data
+        session.clear()
         
-        if not email or not password:
-            return jsonify({'success': False, 'error': 'Email and password required'}), 400
+        # Set new session data
+        session['user_id'] = result['session'].user.id
+        session['access_token'] = result['session'].access_token
+        session['refresh_token'] = result['session'].refresh_token
+        session.permanent = True
+        session.modified = True
         
-        result = login_user(email, password)
-        
-        if result['success']:
-            # Clear any existing session
-            session.clear()
-            
-            # Set new session data
-            session['user_id'] = result['session'].user.id
-            session['access_token'] = result['session'].access_token
-            session['refresh_token'] = result['session'].refresh_token
-            
-            # Make session permanent
-            session.permanent = True
-            
-            # Set remember cookie if requested
-            if remember:
-                session['remember'] = True
-                
-            return jsonify({
-                'success': True,
-                'session': {
-                    'access_token': result['session'].access_token,
-                    'user': {
-                        'id': result['session'].user.id,
-                        'email': result['session'].user.email
-                    }
+        response = jsonify({
+            'success': True,
+            'session': {
+                'access_token': result['session'].access_token,
+                'user': {
+                    'id': result['session'].user.id,
+                    'email': result['session'].user.email
                 }
-            })
-            
-        return jsonify({'success': False, 'error': result['error']}), 401
+            }
+        })
         
-    except Exception as e:
-        print(f"Login error: {str(e)}")
-        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+        print(f"Session after login: {dict(session)}")
+        print(f"Response Headers: {dict(response.headers)}")
+        return response, 200
+        
+    return jsonify({'success': False, 'error': result['error']}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -1230,20 +1222,6 @@ def automated_sync_playlists():
             'success': False,
             'error': 'Failed to sync playlists'
         }), 500
-
-@app.route('/api/auth/refresh', methods=['POST'])
-def refresh_session():
-    """Refresh the user's session."""
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-        
-    # Extend session lifetime
-    session.modified = True
-    
-    return jsonify({
-        'success': True,
-        'message': 'Session refreshed'
-    })
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'

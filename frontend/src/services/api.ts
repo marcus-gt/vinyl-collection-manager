@@ -37,7 +37,31 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If the error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Try to refresh the session
+        const response = await auth.getCurrentUser();
+        
+        if (response.success && response.session) {
+          // Update the token in localStorage if you're using it
+          localStorage.setItem('session', JSON.stringify(response.session));
+          
+          // Retry the original request
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+    
     // Don't log 401s from /api/auth/me as errors
     if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
       console.log('Auth check: No active session');
