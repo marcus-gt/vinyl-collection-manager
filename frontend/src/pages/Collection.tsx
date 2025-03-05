@@ -368,11 +368,6 @@ function Collection() {
     }
   };
 
-  // When rendering custom column values, use the cache
-  const getCustomValue = (record: VinylRecord, columnId: string) => {
-    return record.custom_values_cache[columnId] || '';
-  };
-
   const tableColumns = useMemo(() => {
     const standardColumns: ColumnDef<VinylRecord>[] = [
             { 

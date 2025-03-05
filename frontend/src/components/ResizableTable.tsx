@@ -69,9 +69,10 @@ type ExtendedColumnDef<T> = ColumnDef<T> & {
   };
 };
 
-// Extend RowData to include created_at
+// Extend RowData to include created_at and custom_values_cache
 interface BaseRowData {
   created_at?: string;
+  custom_values_cache: Record<string, string>;
 }
 
 interface ResizableTableProps<T extends RowData & BaseRowData> {
@@ -415,9 +416,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const processedData = useMemo(() => {
     return data.map(record => ({
       ...record,
-      // Ensure custom_values_cache exists
-      custom_values_cache: record.custom_values_cache || {}
-    }));
+      custom_values_cache: (record as any).custom_values_cache || {}
+    })) as T[];
   }, [data]);
 
   const table = useReactTable({
