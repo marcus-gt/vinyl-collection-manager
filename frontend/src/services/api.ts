@@ -13,7 +13,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN'
+  xsrfHeaderName: 'X-XSRF-TOKEN',
 });
 
 // Add request interceptor for debugging
@@ -29,45 +29,29 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for debugging
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If the error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        console.log('Attempting token refresh...');
-        const response = await api.post('/api/auth/refresh');
-
-        if (response.data.success) {
-          console.log('Token refresh successful');
-          return api(originalRequest);
-        }
-        
-        // If refresh fails, redirect to login
-        console.log('Token refresh failed - redirecting to login');
-        window.location.href = '/login';
-        return Promise.reject(error);
-      } catch (refreshError) {
-        console.log('Token refresh error:', refreshError);
-        // Don't redirect if it's an auth check
-        if (!originalRequest.url?.includes('/api/auth/me')) {
-          window.location.href = '/login';
-        }
-        return Promise.reject(refreshError);
-      }
-    }
-
-    // Don't retry 401s from auth endpoints
-    if (error.response?.status === 401 && 
-        (error.config?.url?.includes('/api/auth/me') || 
-         error.config?.url?.includes('/api/auth/refresh'))) {
-      console.log('Auth check failed - not retrying');
+  (response) => {
+    console.log(`Response from ${response.config.url}:`, {
+      status: response.status,
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
+  (error) => {
+    // Don't log 401s from /api/auth/me as errors
+    if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
+      console.log('Auth check: No active session');
       return Promise.reject(error);
     }
-
+    
+    // For other errors, log them
+    console.error(`Error from ${error.config?.url}:`, {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+      // Don't log the full error object to keep the console clean
+      details: error.response?.data?.error || error.message
+    });
     return Promise.reject(error);
   }
 );

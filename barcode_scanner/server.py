@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from datetime import timedelta, datetime
 import requests
 from functools import wraps
-import tempfile
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -82,40 +81,44 @@ print("\n=== Flask Configuration ===")
 print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
 
-# Update Flask configuration with filesystem session storage
-app.config.update(
-    SESSION_TYPE='filesystem',
-    SESSION_FILE_DIR=tempfile.gettempdir(),  # Use system temp directory
-    SESSION_COOKIE_SECURE=True,
-    SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='None',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=365),
-    SESSION_REFRESH_EACH_REQUEST=True,
-    SESSION_COOKIE_NAME='vinyl_session',
-    SESSION_COOKIE_DOMAIN='vinyl-collection-manager.onrender.com' if os.getenv('FLASK_ENV') == 'production' else None
-)
+# Set session configuration based on environment
+if os.getenv('FLASK_ENV') == 'production':
+    session_config = {
+        'SESSION_COOKIE_SECURE': True,
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
+        'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
+        'SESSION_COOKIE_PATH': '/',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
+        'SESSION_PROTECTION': 'strong',
+        'SESSION_COOKIE_NAME': 'session',
+        'SESSION_REFRESH_EACH_REQUEST': True,
+        'REMEMBER_COOKIE_SECURE': True,
+        'REMEMBER_COOKIE_HTTPONLY': True,
+        'REMEMBER_COOKIE_SAMESITE': 'None',
+        'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com'
+    }
+else:
+    session_config = {
+        'SESSION_COOKIE_SECURE': True,
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': 'None',  # Required for cross-origin requests
+        'SESSION_COOKIE_PATH': '/',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=7),
+        'SESSION_PROTECTION': 'strong',
+        'SESSION_COOKIE_NAME': 'session',
+        'SESSION_REFRESH_EACH_REQUEST': True,
+        'REMEMBER_COOKIE_SECURE': True,
+        'REMEMBER_COOKIE_HTTPONLY': True,
+        'REMEMBER_COOKIE_SAMESITE': 'None'
+    }
 
-# Initialize Flask-Session
-from flask_session import Session
-Session(app)
+app.config.update(**session_config)
 
-# Update debug logging to handle None session
-@app.before_request
-def before_request():
-    print("\n=== Request Debug ===")
-    print(f"Request path: {request.path}")
-    print(f"Request method: {request.method}")
-    print(f"Session data before: {dict(session) if session else 'No session'}")
-    print(f"Request cookies: {request.cookies}")
-    if session:
-        session.permanent = True
-
-@app.after_request
-def after_request(response):
-    print("\n=== Response Debug ===")
-    print(f"Session data after: {dict(session) if session else 'No session'}")
-    print(f"Response cookies: {response.headers.get('Set-Cookie')}")
-    return response
+print("\n=== Session Configuration ===")
+print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set - using request host')}")
+print(f"SESSION_COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
+print(f"SESSION_COOKIE_SAMESITE: {app.config['SESSION_COOKIE_SAMESITE']}")
 
 # At the top of the file, after loading environment variables
 print("\n=== Environment Configuration ===")
@@ -359,55 +362,50 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
+    """Login a user."""
+    print("\n=== Login Attempt ===")
+    print(f"Request Headers: {dict(request.headers)}")
+    print(f"Request Origin: {request.headers.get('Origin')}")
+    print(f"Previous session: {dict(session)}")
+    
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        print("Error: Missing email or password")
+        return jsonify({'success': False, 'error': 'Email and password required'}), 400
+    
+    result = login_user(email, password)
+    print(f"Login result: {result}")
+    
+    if result['success']:
+        # Clear any existing session data
+        session.clear()
         
-        client = get_supabase_client()
-        response = client.auth.sign_in_with_password({
-            'email': email,
-            'password': password
+        # Set new session data
+        session['user_id'] = result['session'].user.id
+        session['access_token'] = result['session'].access_token
+        session['refresh_token'] = result['session'].refresh_token
+        session.permanent = True
+        session.modified = True
+        
+        response = jsonify({
+            'success': True,
+            'session': {
+                'access_token': result['session'].access_token,
+                'user': {
+                    'id': result['session'].user.id,
+                    'email': result['session'].user.email
+                }
+            }
         })
         
-        if response.user:
-            print("\n=== Login Success ===")
-            
-            # Clear any existing session
-            session.clear()
-            
-            # Set new session data
-            session['access_token'] = response.session.access_token
-            session['refresh_token'] = response.session.refresh_token
-            session['user_id'] = response.user.id
-            session['logged_in'] = True
-            session.permanent = True
-            
-            # Force session save
-            session.modified = True
-            
-            print(f"New session data: {dict(session)}")
-            
-            return jsonify({
-                'success': True,
-                'user': {
-                    'id': response.user.id,
-                    'email': response.user.email
-                }
-            })
-            
-        return jsonify({
-            'success': False,
-            'error': 'Invalid credentials'
-        }), 401
+        print(f"Session after login: {dict(session)}")
+        print(f"Response Headers: {dict(response.headers)}")
+        return response, 200
         
-    except Exception as e:
-        print(f"Login error: {str(e)}")
-        session.clear()
-        return jsonify({
-            'success': False,
-            'error': 'Login failed'
-        }), 401
+    return jsonify({'success': False, 'error': result['error']}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -704,7 +702,7 @@ def create_custom_column():
     if not user_id:
         print("Error: User not authenticated")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-
+    
     try:
         data = request.get_json()
         print(f"Request data: {data}")
@@ -790,7 +788,7 @@ def update_custom_column(column_id):
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-
+    
     try:
         data = request.get_json()
         if not data:
@@ -1247,79 +1245,6 @@ def automated_sync_playlists():
             'success': False,
             'error': 'Failed to sync playlists'
         }), 500
-
-@app.route('/api/auth/refresh', methods=['POST'])
-def refresh_token():
-    try:
-        print("\n=== Token Refresh Attempt ===")
-        print(f"Current session: {dict(session) if session else 'No session'}")
-        
-        if not session:
-            return jsonify({
-                'success': False,
-                'error': 'No session found',
-                'needs_auth': True
-            }), 401
-
-        refresh_token = session.get('refresh_token')
-        if not refresh_token:
-            session.clear()
-            return jsonify({
-                'success': False,
-                'error': 'No refresh token',
-                'needs_auth': True
-            }), 401
-
-        client = get_supabase_client()
-        try:
-            response = client.auth.refresh_session(refresh_token)
-            
-            if response.session:
-                # Update session data
-                session['access_token'] = response.session.access_token
-                session['refresh_token'] = response.session.refresh_token
-                session['user_id'] = response.session.user.id
-                session['logged_in'] = True
-                session.permanent = True
-                session.modified = True
-                
-                print(f"Updated session: {dict(session)}")
-                
-                return jsonify({
-                    'success': True,
-                    'session': {
-                        'access_token': response.session.access_token,
-                        'user': {
-                            'id': response.session.user.id,
-                            'email': response.session.user.email
-                        }
-                    }
-                })
-            
-            session.clear()
-            return jsonify({
-                'success': False,
-                'error': 'Failed to refresh session',
-                'needs_auth': True
-            }), 401
-            
-        except Exception as e:
-            print(f"Supabase refresh error: {str(e)}")
-            session.clear()
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'needs_auth': True
-            }), 401
-            
-    except Exception as e:
-        print(f"Refresh error: {str(e)}")
-        session.clear()
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'needs_auth': True
-        }), 401
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
