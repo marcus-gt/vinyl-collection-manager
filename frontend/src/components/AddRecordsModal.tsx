@@ -420,7 +420,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(undefined);
     
     try {
-      // Create a NewVinylRecord object
+      // Create a record with custom values
       const recordData: VinylRecord = {
         artist: record.artist,
         album: record.album,
@@ -435,10 +435,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         label: record.label,
         country: record.country,
         added_from: record.added_from || 'manual',
-        custom_values_cache: record.custom_values_cache || {}  // Use the new property name
+        // Use the custom values from the record, not empty object
+        custom_values_cache: record.custom_values_cache
       };
 
-      console.log('Adding record:', recordData);
+      console.log('Adding record with custom values:', recordData);
       const response = await records.add(recordData);
 
       if (response.success) {

@@ -476,82 +476,49 @@ def get_records():
         })
 
 @app.route('/api/records', methods=['POST'])
+@require_auth
 def add_record():
-    """Add a new record to the user's collection."""
-    print("\n=== Adding Record to Collection ===")
-    user_id = session.get('user_id')
-    print(f"User ID from session: {user_id}")
-    
-    if not user_id:
-        print("Error: User not authenticated")
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-    
     try:
-        record_data = request.get_json()
-        print(f"Raw request data: {request.data}")
-        print(f"Parsed record data: {record_data}")
-        print(f"added_from value: {record_data.get('added_from', 'NOT SET')}")
+        data = request.get_json()
+        user_id = session.get('user_id')
+        client = get_supabase_client()
+
+        # Get custom columns to check for default values
+        custom_columns = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
         
-        if not record_data:
-            print("Error: No record data provided")
-            return jsonify({'success': False, 'error': 'Record data required'}), 400
+        # Start with provided custom_values_cache or empty dict
+        custom_values = data.get('custom_values_cache', {})
         
-        # Log the record data before adding
-        print("\nRecord data to be added:")
-        for key, value in record_data.items():
-            print(f"{key}: {type(value).__name__} = {value}")
+        # Only apply defaults if value not already set
+        if custom_columns.data:
+            for column in custom_columns.data:
+                if column.get('defaultValue') and column['id'] not in custom_values:
+                    custom_values[column['id']] = column['defaultValue']
         
-        # Ensure required fields are present
-        required_fields = ['artist', 'album']
-        missing_fields = [field for field in required_fields if not record_data.get(field)]
-        if missing_fields:
-            error_msg = f"Missing required fields: {', '.join(missing_fields)}"
-            print(f"Error: {error_msg}")
-            return jsonify({'success': False, 'error': error_msg}), 400
+        # Update data with final custom values
+        data['custom_values_cache'] = custom_values
         
-        # Set added_from if not already set
-        if not record_data.get('added_from'):
-            print("No added_from value provided, defaulting to 'manual'")
-            record_data['added_from'] = 'manual'
-        else:
-            print(f"Using provided added_from value: {record_data['added_from']}")
-        
-        # Initialize empty lists for list fields if not present
-        if 'genres' not in record_data:
-            record_data['genres'] = []
-        if 'styles' not in record_data:
-            record_data['styles'] = []
-        if 'musicians' not in record_data:
-            record_data['musicians'] = []
-        
-        # Validate data types
-        if not isinstance(record_data.get('genres', []), list):
-            print("Error: genres must be a list")
-            return jsonify({'success': False, 'error': 'genres must be a list'}), 400
-            
-        if not isinstance(record_data.get('styles', []), list):
-            print("Error: styles must be a list")
-            return jsonify({'success': False, 'error': 'styles must be a list'}), 400
-            
-        if not isinstance(record_data.get('musicians', []), list):
-            print("Error: musicians must be a list")
-            return jsonify({'success': False, 'error': 'musicians must be a list'}), 400
-        
-        result = add_record_to_collection(user_id, record_data)
-        print(f"\nAdd record result: {result}")
-        
-        if result['success']:
-            print("\nSuccessfully added record:")
-            print(f"Record ID: {result['record'].get('id')}")
-            return jsonify({'success': True, 'record': result['record']}), 201
-            
-        print(f"\nFailed to add record: {result['error']}")
-        return jsonify({'success': False, 'error': result['error']}), 400
+        # Create the record
+        response = client.table('vinyl_records').insert({
+            **data,
+            'user_id': user_id
+        }).execute()
+
+        if response.data:
+            return jsonify({
+                'success': True,
+                'data': response.data[0]
+            }), 201
+        return jsonify({
+            'success': False,
+            'error': 'Failed to add record'
+        }), 400
     except Exception as e:
-        print(f"\nError adding record: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': f'Failed to add record: {str(e)}'}), 500
+        print(f"Error adding record: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/records/<record_id>', methods=['DELETE'])
 def delete_record(record_id):
