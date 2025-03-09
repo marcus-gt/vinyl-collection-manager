@@ -1,13 +1,12 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { auth } from '../services/api';
 import type { User } from '../types';
-import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -18,37 +17,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const checkAuth = useCallback(async () => {
-    if (isRefreshing) return false;
-    
+    console.log('Checking authentication status...');
     try {
-      setIsRefreshing(true);
       const response = await auth.getCurrentUser();
+      console.log('Auth check response:', response);
       
-      if (response.success && response.session) {
+      if (response.success && response.session && response.session.user) {
+        console.log('Setting user from session:', response.session.user);
         setUser(response.session.user);
-        localStorage.setItem('session', JSON.stringify(response.session));
+        return true;
+      } else if (response.success && response.user) {
+        console.log('Setting user from direct response:', response.user);
+        setUser(response.user);
         return true;
       }
-      
-      // Clear invalid session
+      // Handle the case where there's no valid session
+      console.log('No active session found');
       setUser(null);
-      localStorage.removeItem('session');
       return false;
     } catch (err) {
-      console.error('Auth check error:', err);
+      // This will now only be for unexpected errors
+      console.error('Unexpected auth check error:', err);
       setUser(null);
-      localStorage.removeItem('session');
       return false;
-    } finally {
-      setIsRefreshing(false);
     }
   }, []);
 
-  // Only check auth on mount
   useEffect(() => {
+    // Try to restore session from localStorage on mount
     const savedSession = localStorage.getItem('session');
     if (savedSession) {
       try {
@@ -64,30 +62,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [checkAuth]);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string) => {
+    console.log('Attempting login...');
     setIsLoading(true);
     setError(null);
     try {
       const response = await auth.login(email, password);
+      console.log('Login response:', response);
       
       if (response.success && response.session) {
+        // Save session to localStorage
         localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
-        
-        api.defaults.headers.common['Authorization'] = 
-          `Bearer ${response.session.access_token}`;
-          
-        return true;
       } else {
+        console.log('Login failed:', response.error);
         setError(response.error || 'Login failed');
         setUser(null);
-        return false;
       }
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
       setUser(null);
-      return false;
     } finally {
       setIsLoading(false);
     }

@@ -86,10 +86,8 @@ session_config = {
     'SESSION_COOKIE_SECURE': True,
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'None',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
-    'SESSION_REFRESH_EACH_REQUEST': True,
-    'SESSION_COOKIE_NAME': 'session',
-    'SESSION_PROTECTION': 'strong'
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to a long time
+    'SESSION_REFRESH_EACH_REQUEST': True,  # Refresh session on each request
 }
 
 app.config.update(**session_config)
@@ -237,38 +235,6 @@ def make_session_permanent():
     print(f"Session cookie name: {app.config.get('SESSION_COOKIE_NAME', 'session')}")
     print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
 
-@app.before_request
-def refresh_session():
-    """Refresh the session token if needed."""
-    # Skip refresh for auth endpoints and when no user
-    if request.path.startswith('/api/auth/') or 'user_id' not in session:
-        return
-
-    try:
-        client = get_supabase_client()
-        response = client.auth.get_user()
-        
-        if response.user:
-            session['access_token'] = response.session.access_token
-            session.modified = True
-            session.permanent = True
-            return
-            
-        # If no user, clear session
-        session.clear()
-        return jsonify({
-            'success': False,
-            'error': 'Session expired',
-            'needs_auth': True
-        }), 401
-    except Exception as e:
-        session.clear()
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'needs_auth': True
-        }), 401
-
 # Frontend routes - these must be before API routes
 @app.route('/')
 @app.route('/login')
@@ -373,45 +339,50 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    """Handle user login."""
-    try:
-        data = request.get_json()
-        client = get_supabase_client()
+    """Login a user."""
+    print("\n=== Login Attempt ===")
+    print(f"Request Headers: {dict(request.headers)}")
+    print(f"Request Origin: {request.headers.get('Origin')}")
+    print(f"Previous session: {dict(session)}")
+    
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        print("Error: Missing email or password")
+        return jsonify({'success': False, 'error': 'Email and password required'}), 400
+    
+    result = login_user(email, password)
+    print(f"Login result: {result}")
+    
+    if result['success']:
+        # Clear any existing session data
+        session.clear()
         
-        # Attempt login with Supabase
-        auth_response = client.auth.sign_in_with_password({
-            'email': data['email'],
-            'password': data['password']
+        # Set new session data
+        session['user_id'] = result['session'].user.id
+        session['access_token'] = result['session'].access_token
+        session['refresh_token'] = result['session'].refresh_token
+        session.permanent = True
+        session.modified = True
+        
+        response = jsonify({
+            'success': True,
+            'session': {
+                'access_token': result['session'].access_token,
+                'user': {
+                    'id': result['session'].user.id,
+                    'email': result['session'].user.email
+                }
+            }
         })
         
-        if auth_response.user and auth_response.session:
-            # Store session data
-            session['user_id'] = auth_response.user.id
-            session['access_token'] = auth_response.session.access_token
-            session.permanent = True
-            
-            return jsonify({
-                'success': True,
-                'session': {
-                    'access_token': auth_response.session.access_token,
-                    'user': {
-                        'id': auth_response.user.id,
-                        'email': auth_response.user.email
-                    }
-                }
-            })
+        print(f"Session after login: {dict(session)}")
+        print(f"Response Headers: {dict(response.headers)}")
+        return response, 200
         
-        return jsonify({
-            'success': False,
-            'error': 'Invalid credentials'
-        }), 401
-        
-    except Exception as e:
-        print(f"Login error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 401
+    return jsonify({'success': False, 'error': result['error']}), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():

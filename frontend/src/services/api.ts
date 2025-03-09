@@ -6,8 +6,7 @@ const API_URL = import.meta.env.PROD
   ? 'https://vinyl-collection-manager.onrender.com'
   : 'http://localhost:3000';
 
-// Export the api instance
-export const api = axios.create({
+const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: {
@@ -16,23 +15,6 @@ export const api = axios.create({
   xsrfCookieName: 'XSRF-TOKEN',
   xsrfHeaderName: 'X-XSRF-TOKEN',
 });
-
-// Add a flag to track refresh attempts
-let isRefreshing = false;
-
-// Add auth header to all requests if we have a session
-const savedSession = localStorage.getItem('session');
-if (savedSession) {
-  try {
-    const session = JSON.parse(savedSession);
-    if (session.access_token) {
-      api.defaults.headers.common['Authorization'] = 
-        `Bearer ${session.access_token}`;
-    }
-  } catch (err) {
-    console.error('Failed to parse saved session:', err);
-  }
-}
 
 // Add request interceptor for debugging
 api.interceptors.request.use((config) => {
@@ -47,33 +29,36 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for debugging
 api.interceptors.response.use(
-  response => response,
-  async error => {
+  (response) => {
+    console.log(`Response from ${response.config.url}:`, {
+      status: response.status,
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
+  async (error) => {
     const originalRequest = error.config;
     
+    // If the error is 401 and we haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // If already refreshing, redirect to login
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
+      originalRequest._retry = true;
+      
       try {
-        isRefreshing = true;
-        originalRequest._retry = true;
-        
+        // Try to refresh the session
         const response = await auth.getCurrentUser();
+        
         if (response.success && response.session) {
-          api.defaults.headers.common['Authorization'] = 
-            `Bearer ${response.session.access_token}`;
+          // Update the token in localStorage if you're using it
+          localStorage.setItem('session', JSON.stringify(response.session));
+          
+          // Retry the original request
           return api(originalRequest);
         }
-        
-        // If refresh failed, redirect to login
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
         window.location.href = '/login';
-        return Promise.reject(error);
-      } finally {
-        isRefreshing = false;
+        return Promise.reject(refreshError);
       }
     }
     
