@@ -86,8 +86,11 @@ session_config = {
     'SESSION_COOKIE_SECURE': True,
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'None',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to a long time
-    'SESSION_REFRESH_EACH_REQUEST': True,  # Refresh session on each request
+    'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
+    'SESSION_COOKIE_PATH': '/',
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
+    'SESSION_REFRESH_EACH_REQUEST': True,
+    'SESSION_PROTECTION': 'strong',
 }
 
 app.config.update(**session_config)
@@ -147,75 +150,17 @@ def require_auth(f):
 
 @app.before_request
 def before_request():
-    """Debug request information and ensure session is configured."""
     print("\n=== Request Debug ===")
     print(f"Request path: {request.path}")
-    print(f"Request method: {request.method}")
-    print(f"Request headers: {dict(request.headers)}")
     print(f"Request cookies: {request.cookies}")
-    print(f"Current session before: {dict(session)}")
-    
-    # Ensure session is permanent
-    if not session.get('_permanent'):
-        session.permanent = True
-        
-    # Check if user is authenticated
-    if 'user_id' in session:
-        print("User is authenticated in session")
-        
-    # Debug session configuration
-    print("\n=== Session Configuration ===")
-    print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN')}")
-    print(f"SESSION_COOKIE_SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
-    print(f"SESSION_COOKIE_SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
-    print(f"SESSION_COOKIE_PATH: {app.config.get('SESSION_COOKIE_PATH')}")
-    print(f"SESSION_COOKIE_NAME: {app.config.get('SESSION_COOKIE_NAME')}")
-    print(f"Request is secure: {request.is_secure}")
-    print(f"Request scheme: {request.scheme}")
-    print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
+    print(f"Session before: {dict(session)}")
+    print(f"Headers: {dict(request.headers)}")
 
 @app.after_request
-def after_request(response):
-    """Modify response headers for CORS and security."""
-    origin = request.headers.get('Origin')
-    
-    # In production, always use the production URL
-    if os.getenv('FLASK_ENV') == 'production':
-        response.headers['Access-Control-Allow-Origin'] = 'https://vinyl-collection-manager.onrender.com'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Cookie'
-        response.headers['Access-Control-Expose-Headers'] = 'Set-Cookie'
-        
-        # Ensure cookie settings
-        if 'Set-Cookie' in response.headers:
-            cookie = response.headers['Set-Cookie']
-            if 'SameSite=' not in cookie:
-                cookie += '; SameSite=None'
-            if 'Secure' not in cookie:
-                cookie += '; Secure'
-            if 'HttpOnly' not in cookie:
-                cookie += '; HttpOnly'
-            if 'Domain=' not in cookie:
-                cookie += '; Domain=vinyl-collection-manager.onrender.com'
-            response.headers['Set-Cookie'] = cookie
-    
-    # Add security headers
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    
-    # Debug response
+def debug_session(response):
     print("\n=== Response Debug ===")
-    print(f"Origin: {origin}")
-    print(f"Environment: {os.getenv('FLASK_ENV')}")
-    print(f"Response headers: {dict(response.headers)}")
-    print(f"Response status: {response.status}")
-    print(f"Current session after: {dict(session)}")
-    
-    if 'Set-Cookie' in response.headers:
-        print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
-
+    print(f"Session after: {dict(session)}")
+    print(f"Response cookies: {response.headers.getlist('Set-Cookie')}")
     return response
 
 @app.before_request
@@ -339,18 +284,12 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    """Login a user."""
     print("\n=== Login Attempt ===")
-    print(f"Request Headers: {dict(request.headers)}")
-    print(f"Request Origin: {request.headers.get('Origin')}")
-    print(f"Previous session: {dict(session)}")
-    
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
     
     if not email or not password:
-        print("Error: Missing email or password")
         return jsonify({'success': False, 'error': 'Email and password required'}), 400
     
     result = login_user(email, password)
@@ -378,9 +317,21 @@ def login():
             }
         })
         
+        # Ensure cookie settings
+        response.set_cookie(
+            'session',
+            session.sid,
+            secure=True,
+            httponly=True,
+            samesite='None',
+            domain='vinyl-collection-manager.onrender.com',
+            path='/',
+            max_age=365 * 24 * 60 * 60  # 1 year
+        )
+        
         print(f"Session after login: {dict(session)}")
         print(f"Response Headers: {dict(response.headers)}")
-        return response, 200
+        return response
         
     return jsonify({'success': False, 'error': result['error']}), 401
 
