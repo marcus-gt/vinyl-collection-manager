@@ -62,26 +62,19 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        delete api.defaults.headers.common['Authorization'];
-        
-        const savedSession = localStorage.getItem('session');
-        if (savedSession) {
-          const response = await auth.getCurrentUser();
-          
-          if (response.success && response.session) {
-            api.defaults.headers.common['Authorization'] = 
-              `Bearer ${response.session.access_token}`;
-              
-            return api(originalRequest);
-          }
+        const response = await auth.getCurrentUser();
+        if (response.success && response.session) {
+          api.defaults.headers.common['Authorization'] = 
+            `Bearer ${response.session.access_token}`;
+          return api(originalRequest);
         }
-        
-        window.location.href = '/login';
-        return Promise.reject(error);
       } catch (err) {
-        window.location.href = '/login';
-        return Promise.reject(err);
+        console.error('Auth refresh failed:', err);
       }
+      
+      // If we get here, we need to log in again
+      localStorage.removeItem('session');
+      window.location.href = '/login';
     }
     
     // Don't log 401s from /api/auth/me as errors

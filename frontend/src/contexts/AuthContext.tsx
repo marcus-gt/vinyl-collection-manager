@@ -57,31 +57,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [checkAuth]);
 
-  // Update the refresh interval
+  // Only refresh session if we have a user and aren't already refreshing
   useEffect(() => {
-    const refreshInterval = setInterval(async () => {
-      if (user && !isRefreshing) {
-        setIsRefreshing(true);
-        try {
-          const response = await auth.getCurrentUser();
-          if (response.success && response.session) {
-            localStorage.setItem('session', JSON.stringify(response.session));
-          } else {
-            // Session invalid, clear it
-            setUser(null);
-            localStorage.removeItem('session');
-            window.location.href = '/login';
-          }
-        } catch (err) {
-          console.error('Session refresh failed:', err);
-        } finally {
-          setIsRefreshing(false);
-        }
-      }
-    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    let refreshTimer: NodeJS.Timeout;
 
-    return () => clearInterval(refreshInterval);
-  }, [user]);
+    if (user && !isRefreshing) {
+      refreshTimer = setInterval(checkAuth, 5 * 60 * 1000);
+    }
+
+    return () => {
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+      }
+    };
+  }, [user, isRefreshing, checkAuth]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);

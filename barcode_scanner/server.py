@@ -86,9 +86,10 @@ session_config = {
     'SESSION_COOKIE_SECURE': True,
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'None',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to a long time
-    'SESSION_REFRESH_EACH_REQUEST': True,  # Refresh session on each request
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
+    'SESSION_REFRESH_EACH_REQUEST': True,
     'SESSION_COOKIE_NAME': 'session',
+    'SESSION_PROTECTION': 'strong'
 }
 
 app.config.update(**session_config)
@@ -239,13 +240,18 @@ def make_session_permanent():
 @app.before_request
 def refresh_session():
     """Refresh the session token if needed."""
-    if 'user_id' in session and not request.path.endswith('/auth/me'):
+    # Skip refresh for auth endpoints to prevent loops
+    if request.path.startswith('/api/auth/'):
+        return
+
+    if 'user_id' in session:
         try:
             client = get_supabase_client()
             response = client.auth.get_user()
             if response.user:
                 session['access_token'] = response.session.access_token
                 session.modified = True
+                session.permanent = True
         except Exception as e:
             if 'JWT expired' in str(e):
                 session.clear()
