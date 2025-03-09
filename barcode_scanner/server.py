@@ -363,34 +363,50 @@ def login():
             'error': 'Email and password required'
         }), 400
     
-    result = login_user(email, password)
-    print(f"Login result: {result}")
-    
-    if result['success']:
-        # Set session data
-        session.permanent = True
-        session['user_id'] = result['session'].user.id
-        session['access_token'] = result['session'].access_token
-        session['refresh_token'] = result['session'].refresh_token
+    try:
+        result = login_user(email, password)
+        print(f"Login result: {result}")
         
-        print("\n=== Session After Login ===")
-        print(f"Session data: {dict(session)}")
-        
-        return jsonify({
-            'success': True,
-            'session': {
-                'access_token': result['session'].access_token,
-                'user': {
-                    'id': result['session'].user.id,
-                    'email': result['session'].user.email
+        if result['success'] and result['session']:
+            # Set session data BEFORE creating response
+            session.permanent = True
+            session['user_id'] = result['session'].user.id
+            session['access_token'] = result['session'].access_token
+            session['refresh_token'] = result['session'].refresh_token
+            session.modified = True  # Ensure Flask knows to save the session
+            
+            print("\n=== Session After Login ===")
+            print(f"Session data: {dict(session)}")
+            
+            response = jsonify({
+                'success': True,
+                'session': {
+                    'access_token': result['session'].access_token,
+                    'user': {
+                        'id': result['session'].user.id,
+                        'email': result['session'].user.email
+                    }
                 }
-            }
-        })
-    
-    return jsonify({
-        'success': False,
-        'error': result['error']
-    }), 401
+            })
+            
+            # Debug the cookie
+            print("\n=== Cookie Debug ===")
+            print(f"Session cookie: {session.get('user_id')}")
+            print(f"Response cookies: {response.headers.get('Set-Cookie')}")
+            
+            return response
+            
+        return jsonify({
+            'success': False,
+            'error': result.get('error', 'Login failed')
+        }), 401
+        
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -1191,7 +1207,9 @@ def debug_session():
     """Debug session state before each request."""
     print("\n=== Session Debug ===")
     print(f"Endpoint: {request.endpoint}")
+    print(f"Method: {request.method}")
     print(f"Session data: {dict(session)}")
+    print(f"User ID in session: {session.get('user_id')}")
     print(f"Request cookies: {request.cookies}")
     print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN')}")
 
