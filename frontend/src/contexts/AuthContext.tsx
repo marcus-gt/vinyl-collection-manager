@@ -18,64 +18,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const checkAuth = useCallback(async () => {
-    console.log('Checking authentication status...');
-    try {
-      const response = await auth.getCurrentUser();
-      console.log('Auth check response:', response);
-      
-      if (response.success && response.session && response.session.user) {
-        console.log('Setting user from session:', response.session.user);
-        setUser(response.session.user);
-        return true;
-      } else if (response.success && response.user) {
-        console.log('Setting user from direct response:', response.user);
-        setUser(response.user);
-        return true;
+  // Try to restore session on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      console.log('=== Initializing Auth ===');
+      setIsLoading(true);
+
+      try {
+        // First try to get session from localStorage
+        const savedSession = localStorage.getItem('session');
+        if (savedSession) {
+          const parsedSession = JSON.parse(savedSession);
+          console.log('Found saved session:', parsedSession);
+          
+          // Set user from saved session
+          if (parsedSession.user) {
+            setUser(parsedSession.user);
+          }
+        }
+
+        // Verify session with server
+        const response = await auth.getCurrentUser();
+        console.log('Server auth check response:', response);
+
+        if (response.success && response.session) {
+          // Update session in localStorage and state
+          localStorage.setItem('session', JSON.stringify(response.session));
+          setUser(response.session.user);
+        } else if (!response.success) {
+          // Clear invalid session
+          localStorage.removeItem('session');
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        localStorage.removeItem('session');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      // Handle the case where there's no valid session
-      console.log('No active session found');
-      setUser(null);
-      return false;
-    } catch (err) {
-      // This will now only be for unexpected errors
-      console.error('Unexpected auth check error:', err);
-      setUser(null);
-      return false;
-    }
+    };
+
+    initializeAuth();
   }, []);
 
-  useEffect(() => {
-    // Try to restore session from localStorage on mount
-    const savedSession = localStorage.getItem('session');
-    if (savedSession) {
-      try {
-        const parsedSession = JSON.parse(savedSession);
-        setUser(parsedSession.user);
-      } catch (err) {
-        console.error('Failed to parse saved session:', err);
-      }
-    }
-    
-    checkAuth().finally(() => {
-      setIsLoading(false);
-    });
-  }, [checkAuth]);
-
   const login = useCallback(async (email: string, password: string) => {
-    console.log('Attempting login...');
     setIsLoading(true);
     setError(null);
     try {
       const response = await auth.login(email, password);
-      console.log('Login response:', response);
       
       if (response.success && response.session) {
         // Save session to localStorage
         localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
       } else {
-        console.log('Login failed:', response.error);
         setError(response.error || 'Login failed');
         setUser(null);
       }
@@ -100,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Setting user after registration:', response.user);
         setUser(response.user);
         // Verify session is set
-        await checkAuth();
+        await login(email, password);
       } else {
         console.log('Registration failed:', response.error);
         setError(response.error || 'Registration failed');
@@ -113,17 +110,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [checkAuth]);
+  }, [login]);
 
   const logout = useCallback(async () => {
-    console.log('Attempting logout...');
     setIsLoading(true);
     setError(null);
     try {
       await auth.logout();
       // Clear session from localStorage
       localStorage.removeItem('session');
-      console.log('Logout successful, clearing user');
       setUser(null);
     } catch (err) {
       console.error('Logout error:', err);
