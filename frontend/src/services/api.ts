@@ -6,7 +6,8 @@ const API_URL = import.meta.env.PROD
   ? 'https://vinyl-collection-manager.onrender.com'
   : 'http://localhost:3000';
 
-const api = axios.create({
+// Export the api instance
+export const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: {
@@ -17,14 +18,14 @@ const api = axios.create({
 });
 
 // Add a flag to track refresh attempts
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+// let isRefreshing = false;
+// let refreshSubscribers: ((token: string) => void)[] = [];
 
-// Function to process queued requests
-const processQueue = (token: string) => {
-  refreshSubscribers.forEach(callback => callback(token));
-  refreshSubscribers = [];
-};
+// // Function to process queued requests
+// const processQueue = (token: string) => {
+//   refreshSubscribers.forEach(callback => callback(token));
+//   refreshSubscribers = [];
+// };
 
 // Add auth header to all requests if we have a session
 const savedSession = localStorage.getItem('session');
@@ -61,26 +62,20 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        // Clear existing auth header
         delete api.defaults.headers.common['Authorization'];
         
-        // Try to login again
         const savedSession = localStorage.getItem('session');
         if (savedSession) {
-          const session = JSON.parse(savedSession);
           const response = await auth.getCurrentUser();
           
           if (response.success && response.session) {
-            // Update auth header
             api.defaults.headers.common['Authorization'] = 
               `Bearer ${response.session.access_token}`;
               
-            // Retry original request
             return api(originalRequest);
           }
         }
         
-        // If we get here, we need to log in again
         window.location.href = '/login';
         return Promise.reject(error);
       } catch (err) {

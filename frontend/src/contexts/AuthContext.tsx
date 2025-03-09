@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -83,18 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(refreshInterval);
   }, [user]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
       const response = await auth.login(email, password);
       
       if (response.success && response.session) {
-        // Save session to localStorage
         localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
         
-        // Add the token to future API requests
         api.defaults.headers.common['Authorization'] = 
           `Bearer ${response.session.access_token}`;
           
