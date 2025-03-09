@@ -17,33 +17,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const checkAuth = useCallback(async () => {
-    console.log('Checking authentication status...');
+    if (isRefreshing) return false;
+    
+    setIsRefreshing(true);
     try {
       const response = await auth.getCurrentUser();
-      console.log('Auth check response:', response);
-      
-      if (response.success && response.session && response.session.user) {
-        console.log('Setting user from session:', response.session.user);
+      if (response.success && response.session) {
         setUser(response.session.user);
-        return true;
-      } else if (response.success && response.user) {
-        console.log('Setting user from direct response:', response.user);
-        setUser(response.user);
+        localStorage.setItem('session', JSON.stringify(response.session));
         return true;
       }
-      // Handle the case where there's no valid session
-      console.log('No active session found');
-      setUser(null);
       return false;
     } catch (err) {
-      // This will now only be for unexpected errors
-      console.error('Unexpected auth check error:', err);
-      setUser(null);
+      console.error('Auth check error:', err);
       return false;
+    } finally {
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [isRefreshing]);
 
   useEffect(() => {
     // Try to restore session from localStorage on mount
@@ -62,10 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [checkAuth]);
 
-  // Add session refresh interval
+  // Update the refresh interval
   useEffect(() => {
     const refreshInterval = setInterval(async () => {
-      if (user) {
+      if (user && !isRefreshing) {
+        setIsRefreshing(true);
         try {
           const response = await auth.getCurrentUser();
           if (response.success && response.session) {
@@ -78,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (err) {
           console.error('Session refresh failed:', err);
+        } finally {
+          setIsRefreshing(false);
         }
       }
     }, 5 * 60 * 1000); // Refresh every 5 minutes

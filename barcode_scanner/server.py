@@ -239,18 +239,15 @@ def make_session_permanent():
 @app.before_request
 def refresh_session():
     """Refresh the session token if needed."""
-    if 'user_id' in session:
+    if 'user_id' in session and not request.path.endswith('/auth/me'):
         try:
             client = get_supabase_client()
-            # Check if token needs refresh
             response = client.auth.get_user()
             if response.user:
-                # Update session with fresh token
                 session['access_token'] = response.session.access_token
                 session.modified = True
         except Exception as e:
             if 'JWT expired' in str(e):
-                # Clear invalid session
                 session.clear()
                 return jsonify({
                     'success': False,

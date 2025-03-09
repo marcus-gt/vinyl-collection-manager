@@ -16,6 +16,16 @@ const api = axios.create({
   xsrfHeaderName: 'X-XSRF-TOKEN',
 });
 
+// Add a flag to track refresh attempts
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+// Function to process queued requests
+const processQueue = (token: string) => {
+  refreshSubscribers.forEach(callback => callback(token));
+  refreshSubscribers = [];
+};
+
 // Add request interceptor for debugging
 api.interceptors.request.use((config) => {
   console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`, {
@@ -29,38 +39,48 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for debugging
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  response => response,
+  async error => {
     const originalRequest = error.config;
     
-    // Check for JWT expiration (401 or specific JWT expired message)
     if ((error.response?.status === 401 || 
          error.response?.data?.error?.includes('JWT expired')) && 
         !originalRequest._retry) {
-      originalRequest._retry = true;
       
+      if (isRefreshing) {
+        // Queue the request
+        return new Promise(resolve => {
+          refreshSubscribers.push((token: string) => {
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
       try {
-        // Try to refresh the session
         const response = await auth.getCurrentUser();
         
         if (response.success && response.session) {
-          // Update the token in localStorage
+          const token = response.session.access_token;
           localStorage.setItem('session', JSON.stringify(response.session));
           
-          // Update the request headers with new token
-          if (response.session.access_token) {
-            originalRequest.headers['Authorization'] = 
-              `Bearer ${response.session.access_token}`;
-          }
+          // Update the request headers
+          originalRequest.headers['Authorization'] = `Bearer ${token}`;
           
-          // Retry the original request
+          // Process queued requests
+          processQueue(token);
+          
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Clear invalid session
         localStorage.removeItem('session');
         window.location.href = '/login';
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     
