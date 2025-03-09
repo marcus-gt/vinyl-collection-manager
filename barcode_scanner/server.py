@@ -88,10 +88,9 @@ session_config = {
     'SESSION_COOKIE_SAMESITE': 'None',
     'SESSION_COOKIE_PATH': '/',
     'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
-    'SESSION_REFRESH_EACH_REQUEST': True,
+    'SESSION_REFRESH_EACH_REQUEST': True
 }
 
-# Add production-specific settings
 if os.getenv('FLASK_ENV') == 'production':
     session_config.update({
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
@@ -200,43 +199,17 @@ def after_request(response):
             'Access-Control-Expose-Headers': 'Set-Cookie'
         })
         
-        # Handle multiple Set-Cookie headers if present
+        # Ensure cookie settings are correct
         if 'Set-Cookie' in response.headers:
-            cookies = response.headers.getlist('Set-Cookie')
-            modified_cookies = []
-            
-            for cookie in cookies:
-                # Get the base cookie (name=value part)
-                base_cookie = cookie.split(';')[0]
-                
-                # Only modify session cookie
-                if base_cookie.startswith('session='):
-                    cookie_parts = [
-                        base_cookie,
-                        'Domain=vinyl-collection-manager.onrender.com',
-                        'Path=/',
-                        'Secure',
-                        'HttpOnly',
-                        'SameSite=None'
-                    ]
-                    modified_cookies.append('; '.join(cookie_parts))
-                else:
-                    # Leave other cookies unchanged
-                    modified_cookies.append(cookie)
-            
-            # Set all cookies back
-            response.headers.pop('Set-Cookie', None)  # Remove existing
-            for cookie in modified_cookies:
-                response.headers.add('Set-Cookie', cookie)
-            
-            # Debug logging
-            print("\n=== Cookie Debug ===")
-            print(f"Number of cookies: {len(modified_cookies)}")
-            for i, cookie in enumerate(modified_cookies):
-                print(f"Cookie {i + 1}: {cookie}")
-            print(f"Request origin: {origin}")
-            print(f"Request host: {request.host}")
-            print(f"Session config: {app.config['SESSION_COOKIE_DOMAIN']}")
+            cookie_parts = [
+                response.headers['Set-Cookie'].split(';')[0],  # Keep the session value
+                'Domain=vinyl-collection-manager.onrender.com',
+                'Path=/',
+                'Secure',
+                'HttpOnly',
+                'SameSite=None'
+            ]
+            response.headers['Set-Cookie'] = '; '.join(cookie_parts)
     
     # Add security headers
     response.headers.update({
@@ -244,6 +217,14 @@ def after_request(response):
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN'
     })
+    
+    # Debug logging for cookie issues
+    if 'Set-Cookie' in response.headers:
+        print("\n=== Cookie Debug ===")
+        print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
+        print(f"Request origin: {origin}")
+        print(f"Request host: {request.host}")
+        print(f"Session config: {app.config['SESSION_COOKIE_DOMAIN']}")
     
     return response
 
@@ -371,32 +352,31 @@ def login():
     """Login a user."""
     print("\n=== Login Attempt ===")
     print(f"Request Headers: {dict(request.headers)}")
-    print(f"Request Origin: {request.headers.get('Origin')}")
-    print(f"Previous session: {dict(session)}")
     
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
     
     if not email or not password:
-        print("Error: Missing email or password")
-        return jsonify({'success': False, 'error': 'Email and password required'}), 400
+        return jsonify({
+            'success': False,
+            'error': 'Email and password required'
+        }), 400
     
     result = login_user(email, password)
     print(f"Login result: {result}")
     
     if result['success']:
-        # Clear any existing session data
-        session.clear()
-        
-        # Set new session data
+        # Set session data
+        session.permanent = True
         session['user_id'] = result['session'].user.id
         session['access_token'] = result['session'].access_token
         session['refresh_token'] = result['session'].refresh_token
-        session.permanent = True
-        session.modified = True
         
-        response = jsonify({
+        print("\n=== Session After Login ===")
+        print(f"Session data: {dict(session)}")
+        
+        return jsonify({
             'success': True,
             'session': {
                 'access_token': result['session'].access_token,
@@ -406,12 +386,11 @@ def login():
                 }
             }
         })
-        
-        print(f"Session after login: {dict(session)}")
-        print(f"Response Headers: {dict(response.headers)}")
-        return response, 200
-        
-    return jsonify({'success': False, 'error': result['error']}), 401
+    
+    return jsonify({
+        'success': False,
+        'error': result['error']
+    }), 401
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -419,62 +398,49 @@ def logout():
     session.clear()
     return jsonify({'success': True}), 200
 
-@app.route('/api/auth/me', methods=['GET'])
+@app.route('/api/auth/me')
 def get_current_user():
-    """Get the current authenticated user."""
-    print("\n=== Checking Current User ===")
+    """Get current authenticated user."""
+    print("\n=== Auth Check ===")
     print(f"Session data: {dict(session)}")
     print(f"Request cookies: {request.cookies}")
     
     user_id = session.get('user_id')
-    access_token = session.get('access_token')
     
-    if not user_id or not access_token:
-        print("No authenticated user found in session")
-        # Instead of returning 401, create a new session
-        session.clear()
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    if not user_id:
+        # Don't clear the session, just return 401
+        return jsonify({
+            'success': False,
+            'error': 'Not authenticated'
+        }), 401
     
-    # Get user email from JWT token
     try:
-        import jwt
-        decoded = jwt.decode(access_token, options={"verify_signature": False})
-        email = decoded.get('email')
-        if not email:
-            print("No email found in JWT token")
-            email = 'unknown@email.com'
-    except ImportError:
-        print("JWT package not installed")
-        email = 'unknown@email.com'
+        client = get_supabase_client()
+        response = client.table('users').select('*').eq('id', user_id).single().execute()
+        
+        if response.data:
+            return jsonify({
+                'success': True,
+                'user': response.data,
+                'session': {
+                    'user': response.data,
+                    'access_token': session.get('access_token')
+                }
+            })
+        
+        # User not found but had session - don't clear, let frontend handle
+        return jsonify({
+            'success': False,
+            'error': 'User not found'
+        }), 401
+        
     except Exception as e:
-        print(f"Error decoding JWT: {str(e)}")
-        email = 'unknown@email.com'
-    
-    # Return the current user's information with session data
-    response_data = {
-        'success': True,
-        'user': {
-            'id': user_id,
-            'email': email
-        },
-        'session': {
-            'access_token': access_token,
-            'user': {
-                'id': user_id,
-                'email': email
-            }
-        }
-    }
-    
-    # Ensure session is permanent and refresh it
-    session.permanent = True
-    session.modified = True
-    
-    print(f"Returning user data: {response_data}")
-    print(f"Final session state: {dict(session)}")
-    
-    response = jsonify(response_data)
-    return response, 200
+        print(f"Error getting current user: {str(e)}")
+        # Don't clear session on error
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/records', methods=['GET'])
 @require_auth
@@ -1218,6 +1184,16 @@ def automated_sync_playlists():
             'success': False,
             'error': 'Failed to sync playlists'
         }), 500
+
+# Add session debug middleware
+@app.before_request
+def debug_session():
+    """Debug session state before each request."""
+    print("\n=== Session Debug ===")
+    print(f"Endpoint: {request.endpoint}")
+    print(f"Session data: {dict(session)}")
+    print(f"Request cookies: {request.cookies}")
+    print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN')}")
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
