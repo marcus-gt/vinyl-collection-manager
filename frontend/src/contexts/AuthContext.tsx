@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { auth } from '../services/api';
 import type { User } from '../types';
+import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -83,26 +84,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
-    console.log('Attempting login...');
     setIsLoading(true);
     setError(null);
     try {
       const response = await auth.login(email, password);
-      console.log('Login response:', response);
       
       if (response.success && response.session) {
         // Save session to localStorage
         localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
+        
+        // Add the token to future API requests
+        api.defaults.headers.common['Authorization'] = 
+          `Bearer ${response.session.access_token}`;
+          
+        return true;
       } else {
-        console.log('Login failed:', response.error);
         setError(response.error || 'Login failed');
         setUser(null);
+        return false;
       }
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
       setUser(null);
+      return false;
     } finally {
       setIsLoading(false);
     }

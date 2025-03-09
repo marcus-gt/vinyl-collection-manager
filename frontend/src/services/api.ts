@@ -26,6 +26,20 @@ const processQueue = (token: string) => {
   refreshSubscribers = [];
 };
 
+// Add auth header to all requests if we have a session
+const savedSession = localStorage.getItem('session');
+if (savedSession) {
+  try {
+    const session = JSON.parse(savedSession);
+    if (session.access_token) {
+      api.defaults.headers.common['Authorization'] = 
+        `Bearer ${session.access_token}`;
+    }
+  } catch (err) {
+    console.error('Failed to parse saved session:', err);
+  }
+}
+
 // Add request interceptor for debugging
 api.interceptors.request.use((config) => {
   console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`, {
@@ -43,44 +57,35 @@ api.interceptors.response.use(
   async error => {
     const originalRequest = error.config;
     
-    if ((error.response?.status === 401 || 
-         error.response?.data?.error?.includes('JWT expired')) && 
-        !originalRequest._retry) {
-      
-      if (isRefreshing) {
-        // Queue the request
-        return new Promise(resolve => {
-          refreshSubscribers.push((token: string) => {
-            originalRequest.headers['Authorization'] = `Bearer ${token}`;
-            resolve(api(originalRequest));
-          });
-        });
-      }
-
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      isRefreshing = true;
-
+      
       try {
-        const response = await auth.getCurrentUser();
+        // Clear existing auth header
+        delete api.defaults.headers.common['Authorization'];
         
-        if (response.success && response.session) {
-          const token = response.session.access_token;
-          localStorage.setItem('session', JSON.stringify(response.session));
+        // Try to login again
+        const savedSession = localStorage.getItem('session');
+        if (savedSession) {
+          const session = JSON.parse(savedSession);
+          const response = await auth.getCurrentUser();
           
-          // Update the request headers
-          originalRequest.headers['Authorization'] = `Bearer ${token}`;
-          
-          // Process queued requests
-          processQueue(token);
-          
-          return api(originalRequest);
+          if (response.success && response.session) {
+            // Update auth header
+            api.defaults.headers.common['Authorization'] = 
+              `Bearer ${response.session.access_token}`;
+              
+            // Retry original request
+            return api(originalRequest);
+          }
         }
-      } catch (refreshError) {
-        localStorage.removeItem('session');
+        
+        // If we get here, we need to log in again
         window.location.href = '/login';
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
+        return Promise.reject(error);
+      } catch (err) {
+        window.location.href = '/login';
+        return Promise.reject(err);
       }
     }
     
