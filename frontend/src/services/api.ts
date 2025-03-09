@@ -18,14 +18,7 @@ export const api = axios.create({
 });
 
 // Add a flag to track refresh attempts
-// let isRefreshing = false;
-// let refreshSubscribers: ((token: string) => void)[] = [];
-
-// // Function to process queued requests
-// const processQueue = (token: string) => {
-//   refreshSubscribers.forEach(callback => callback(token));
-//   refreshSubscribers = [];
-// };
+let isRefreshing = false;
 
 // Add auth header to all requests if we have a session
 const savedSession = localStorage.getItem('session');
@@ -59,22 +52,29 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     
     if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
+      if (isRefreshing) {
+        // If already refreshing, redirect to login
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
       try {
+        isRefreshing = true;
+        originalRequest._retry = true;
+        
         const response = await auth.getCurrentUser();
         if (response.success && response.session) {
           api.defaults.headers.common['Authorization'] = 
             `Bearer ${response.session.access_token}`;
           return api(originalRequest);
         }
-      } catch (err) {
-        console.error('Auth refresh failed:', err);
+        
+        // If refresh failed, redirect to login
+        window.location.href = '/login';
+        return Promise.reject(error);
+      } finally {
+        isRefreshing = false;
       }
-      
-      // If we get here, we need to log in again
-      localStorage.removeItem('session');
-      window.location.href = '/login';
     }
     
     // Don't log 401s from /api/auth/me as errors

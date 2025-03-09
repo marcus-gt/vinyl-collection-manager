@@ -23,25 +23,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = useCallback(async () => {
     if (isRefreshing) return false;
     
-    setIsRefreshing(true);
     try {
+      setIsRefreshing(true);
       const response = await auth.getCurrentUser();
+      
       if (response.success && response.session) {
         setUser(response.session.user);
         localStorage.setItem('session', JSON.stringify(response.session));
         return true;
       }
+      
+      // Clear invalid session
+      setUser(null);
+      localStorage.removeItem('session');
       return false;
     } catch (err) {
       console.error('Auth check error:', err);
+      setUser(null);
+      localStorage.removeItem('session');
       return false;
     } finally {
       setIsRefreshing(false);
     }
-  }, [isRefreshing]);
+  }, []);
 
+  // Only check auth on mount
   useEffect(() => {
-    // Try to restore session from localStorage on mount
     const savedSession = localStorage.getItem('session');
     if (savedSession) {
       try {
@@ -56,21 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
   }, [checkAuth]);
-
-  // Only refresh session if we have a user and aren't already refreshing
-  useEffect(() => {
-    let refreshTimer: NodeJS.Timeout;
-
-    if (user && !isRefreshing) {
-      refreshTimer = setInterval(checkAuth, 5 * 60 * 1000);
-    }
-
-    return () => {
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
-      }
-    };
-  }, [user, isRefreshing, checkAuth]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);

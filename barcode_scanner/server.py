@@ -240,26 +240,34 @@ def make_session_permanent():
 @app.before_request
 def refresh_session():
     """Refresh the session token if needed."""
-    # Skip refresh for auth endpoints to prevent loops
-    if request.path.startswith('/api/auth/'):
+    # Skip refresh for auth endpoints and when no user
+    if request.path.startswith('/api/auth/') or 'user_id' not in session:
         return
 
-    if 'user_id' in session:
-        try:
-            client = get_supabase_client()
-            response = client.auth.get_user()
-            if response.user:
-                session['access_token'] = response.session.access_token
-                session.modified = True
-                session.permanent = True
-        except Exception as e:
-            if 'JWT expired' in str(e):
-                session.clear()
-                return jsonify({
-                    'success': False,
-                    'error': 'Session expired',
-                    'needs_auth': True
-                }), 401
+    try:
+        client = get_supabase_client()
+        response = client.auth.get_user()
+        
+        if response.user:
+            session['access_token'] = response.session.access_token
+            session.modified = True
+            session.permanent = True
+            return
+            
+        # If no user, clear session
+        session.clear()
+        return jsonify({
+            'success': False,
+            'error': 'Session expired',
+            'needs_auth': True
+        }), 401
+    except Exception as e:
+        session.clear()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'needs_auth': True
+        }), 401
 
 # Frontend routes - these must be before API routes
 @app.route('/')
