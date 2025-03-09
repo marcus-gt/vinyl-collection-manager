@@ -52,8 +52,6 @@ app = Flask(__name__,
 )
 
 app.secret_key = os.getenv('FLASK_SECRET_KEY')
-if not app.secret_key:
-    raise RuntimeError('FLASK_SECRET_KEY must be set')
 
 # Define allowed origins based on environment
 allowed_origins = [
@@ -88,20 +86,23 @@ session_config = {
     'SESSION_COOKIE_SECURE': True,
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'None',
-    'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
     'SESSION_COOKIE_PATH': '/',
     'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
     'SESSION_REFRESH_EACH_REQUEST': True,
-    'SESSION_PROTECTION': 'strong',
-    'SESSION_TYPE': 'filesystem',
-    'SESSION_FILE_DIR': '/tmp/flask_session/',
-    'SESSION_KEY_PREFIX': 'vinyl_'
 }
 
-app.config.update(**session_config)
+# Add production-specific settings
+if os.getenv('FLASK_ENV') == 'production':
+    session_config.update({
+        'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
+        'SESSION_COOKIE_NAME': 'session',
+        'REMEMBER_COOKIE_SECURE': True,
+        'REMEMBER_COOKIE_HTTPONLY': True,
+        'REMEMBER_COOKIE_SAMESITE': 'None',
+        'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com'
+    })
 
-# Ensure session directory exists
-os.makedirs('/tmp/flask_session/', exist_ok=True)
+app.config.update(**session_config)
 
 print("\n=== Session Configuration ===")
 print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set - using request host')}")
@@ -157,29 +158,93 @@ def require_auth(f):
     return decorated_function
 
 @app.before_request
-def log_request():
-    print("\n=== Request Details ===")
-    print(f"Path: {request.path}")
-    print(f"Method: {request.method}")
-    print(f"Headers: {dict(request.headers)}")
-    print(f"Cookies: {request.cookies}")
-    print(f"Session: {dict(session)}")
-    print(f"Is HTTPS: {request.is_secure}")
-    print(f"Host: {request.host}")
-
-@app.before_request
 def before_request():
+    """Debug request information and ensure session is configured."""
     print("\n=== Request Debug ===")
     print(f"Request path: {request.path}")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {dict(request.headers)}")
     print(f"Request cookies: {request.cookies}")
-    print(f"Session before: {dict(session)}")
-    print(f"Headers: {dict(request.headers)}")
+    print(f"Current session before: {dict(session)}")
+    
+    # Ensure session is permanent
+    if not session.get('_permanent'):
+        session.permanent = True
+        
+    # Check if user is authenticated
+    if 'user_id' in session:
+        print("User is authenticated in session")
+        
+    # Debug session configuration
+    print("\n=== Session Configuration ===")
+    print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN')}")
+    print(f"SESSION_COOKIE_SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
+    print(f"SESSION_COOKIE_SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
+    print(f"SESSION_COOKIE_PATH: {app.config.get('SESSION_COOKIE_PATH')}")
+    print(f"SESSION_COOKIE_NAME: {app.config.get('SESSION_COOKIE_NAME')}")
+    print(f"Request is secure: {request.is_secure}")
+    print(f"Request scheme: {request.scheme}")
+    print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
 
 @app.after_request
-def debug_session(response):
-    print("\n=== Response Debug ===")
-    print(f"Session after: {dict(session)}")
-    print(f"Response cookies: {response.headers.getlist('Set-Cookie')}")
+def after_request(response):
+    """Modify response headers for CORS and security."""
+    origin = request.headers.get('Origin')
+    
+    if os.getenv('FLASK_ENV') == 'production':
+        response.headers.update({
+            'Access-Control-Allow-Origin': 'https://vinyl-collection-manager.onrender.com',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+            'Access-Control-Expose-Headers': 'Set-Cookie'
+        })
+        
+        # Handle multiple Set-Cookie headers if present
+        if 'Set-Cookie' in response.headers:
+            cookies = response.headers.getlist('Set-Cookie')
+            modified_cookies = []
+            
+            for cookie in cookies:
+                # Get the base cookie (name=value part)
+                base_cookie = cookie.split(';')[0]
+                
+                # Only modify session cookie
+                if base_cookie.startswith('session='):
+                    cookie_parts = [
+                        base_cookie,
+                        'Domain=vinyl-collection-manager.onrender.com',
+                        'Path=/',
+                        'Secure',
+                        'HttpOnly',
+                        'SameSite=None'
+                    ]
+                    modified_cookies.append('; '.join(cookie_parts))
+                else:
+                    # Leave other cookies unchanged
+                    modified_cookies.append(cookie)
+            
+            # Set all cookies back
+            response.headers.pop('Set-Cookie', None)  # Remove existing
+            for cookie in modified_cookies:
+                response.headers.add('Set-Cookie', cookie)
+            
+            # Debug logging
+            print("\n=== Cookie Debug ===")
+            print(f"Number of cookies: {len(modified_cookies)}")
+            for i, cookie in enumerate(modified_cookies):
+                print(f"Cookie {i + 1}: {cookie}")
+            print(f"Request origin: {origin}")
+            print(f"Request host: {request.host}")
+            print(f"Session config: {app.config['SESSION_COOKIE_DOMAIN']}")
+    
+    # Add security headers
+    response.headers.update({
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN'
+    })
+    
     return response
 
 @app.before_request
@@ -303,12 +368,18 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
+    """Login a user."""
     print("\n=== Login Attempt ===")
+    print(f"Request Headers: {dict(request.headers)}")
+    print(f"Request Origin: {request.headers.get('Origin')}")
+    print(f"Previous session: {dict(session)}")
+    
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
     
     if not email or not password:
+        print("Error: Missing email or password")
         return jsonify({'success': False, 'error': 'Email and password required'}), 400
     
     result = login_user(email, password)
@@ -336,21 +407,9 @@ def login():
             }
         })
         
-        # Ensure cookie settings
-        response.set_cookie(
-            'session',
-            session.sid,
-            secure=True,
-            httponly=True,
-            samesite='None',
-            domain='vinyl-collection-manager.onrender.com',
-            path='/',
-            max_age=365 * 24 * 60 * 60  # 1 year
-        )
-        
         print(f"Session after login: {dict(session)}")
         print(f"Response Headers: {dict(response.headers)}")
-        return response
+        return response, 200
         
     return jsonify({'success': False, 'error': result['error']}), 401
 
@@ -1159,35 +1218,6 @@ def automated_sync_playlists():
             'success': False,
             'error': 'Failed to sync playlists'
         }), 500
-
-@app.after_request
-def after_request(response):
-    if os.getenv('FLASK_ENV') == 'production':
-        response.headers.update({
-            'Access-Control-Allow-Origin': 'https://vinyl-collection-manager.onrender.com',
-            'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
-            'Access-Control-Expose-Headers': 'Set-Cookie'
-        })
-        
-        # Fix cookie settings
-        if 'Set-Cookie' in response.headers:
-            cookies = response.headers.getlist('Set-Cookie')
-            new_cookies = []
-            for cookie in cookies:
-                if 'session' in cookie:
-                    cookie = cookie.replace('SameSite=Lax', 'SameSite=None')
-                    if 'Secure' not in cookie:
-                        cookie += '; Secure'
-                    if 'Domain' not in cookie:
-                        cookie += f'; Domain=vinyl-collection-manager.onrender.com'
-                new_cookies.append(cookie)
-            response.headers.pop('Set-Cookie')
-            for cookie in new_cookies:
-                response.headers.add('Set-Cookie', cookie)
-    
-    return response
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
