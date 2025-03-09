@@ -88,6 +88,7 @@ session_config = {
     'SESSION_COOKIE_SAMESITE': 'None',
     'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to a long time
     'SESSION_REFRESH_EACH_REQUEST': True,  # Refresh session on each request
+    'SESSION_COOKIE_NAME': 'session',
 }
 
 app.config.update(**session_config)
@@ -234,6 +235,28 @@ def make_session_permanent():
     print(f"Current session: {dict(session)}")
     print(f"Session cookie name: {app.config.get('SESSION_COOKIE_NAME', 'session')}")
     print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
+
+@app.before_request
+def refresh_session():
+    """Refresh the session token if needed."""
+    if 'user_id' in session:
+        try:
+            client = get_supabase_client()
+            # Check if token needs refresh
+            response = client.auth.get_user()
+            if response.user:
+                # Update session with fresh token
+                session['access_token'] = response.session.access_token
+                session.modified = True
+        except Exception as e:
+            if 'JWT expired' in str(e):
+                # Clear invalid session
+                session.clear()
+                return jsonify({
+                    'success': False,
+                    'error': 'Session expired',
+                    'needs_auth': True
+                }), 401
 
 # Frontend routes - these must be before API routes
 @app.route('/')

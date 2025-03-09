@@ -29,19 +29,14 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for debugging
 api.interceptors.response.use(
-  (response) => {
-    console.log(`Response from ${response.config.url}:`, {
-      status: response.status,
-      data: response.data,
-      headers: response.headers
-    });
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // If the error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Check for JWT expiration (401 or specific JWT expired message)
+    if ((error.response?.status === 401 || 
+         error.response?.data?.error?.includes('JWT expired')) && 
+        !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
@@ -49,14 +44,21 @@ api.interceptors.response.use(
         const response = await auth.getCurrentUser();
         
         if (response.success && response.session) {
-          // Update the token in localStorage if you're using it
+          // Update the token in localStorage
           localStorage.setItem('session', JSON.stringify(response.session));
+          
+          // Update the request headers with new token
+          if (response.session.access_token) {
+            originalRequest.headers['Authorization'] = 
+              `Bearer ${response.session.access_token}`;
+          }
           
           // Retry the original request
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // If refresh fails, redirect to login
+        // Clear invalid session
+        localStorage.removeItem('session');
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }

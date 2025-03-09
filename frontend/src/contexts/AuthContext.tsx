@@ -62,6 +62,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [checkAuth]);
 
+  // Add session refresh interval
+  useEffect(() => {
+    const refreshInterval = setInterval(async () => {
+      if (user) {
+        try {
+          const response = await auth.getCurrentUser();
+          if (response.success && response.session) {
+            localStorage.setItem('session', JSON.stringify(response.session));
+          } else {
+            // Session invalid, clear it
+            setUser(null);
+            localStorage.removeItem('session');
+            window.location.href = '/login';
+          }
+        } catch (err) {
+          console.error('Session refresh failed:', err);
+        }
+      }
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
+
+    return () => clearInterval(refreshInterval);
+  }, [user]);
+
   const login = useCallback(async (email: string, password: string) => {
     console.log('Attempting login...');
     setIsLoading(true);
