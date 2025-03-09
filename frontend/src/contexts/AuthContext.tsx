@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const parsedSession = JSON.parse(savedSession);
           console.log('Found saved session:', parsedSession);
           
-          // Set user from saved session
+          // Set user from saved session temporarily
           if (parsedSession.user) {
             setUser(parsedSession.user);
           }
@@ -41,16 +41,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await auth.getCurrentUser();
         console.log('Server auth check response:', response);
 
-        if (response.success && response.session) {
+        if (response.success && response.session?.user) {
           // Update session in localStorage and state
           localStorage.setItem('session', JSON.stringify(response.session));
           setUser(response.session.user);
-        } else if (!response.success) {
+        } else {
           // Clear invalid session
           localStorage.removeItem('session');
           setUser(null);
         }
       } catch (err) {
+        // On error, keep the user logged in if we have a saved session
+        const savedSession = localStorage.getItem('session');
+        if (savedSession) {
+          try {
+            const parsedSession = JSON.parse(savedSession);
+            if (parsedSession.user) {
+              setUser(parsedSession.user);
+              return; // Keep existing session
+            }
+          } catch (e) {
+            console.error('Failed to parse saved session:', e);
+          }
+        }
+        
+        // Otherwise clear everything
         console.error('Auth initialization error:', err);
         localStorage.removeItem('session');
         setUser(null);

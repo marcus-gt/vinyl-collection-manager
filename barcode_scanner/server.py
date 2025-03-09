@@ -421,41 +421,53 @@ def get_current_user():
     print(f"Session data: {dict(session)}")
     print(f"Request cookies: {request.cookies}")
     
-    user_id = session.get('user_id')
-    
-    if not user_id:
-        # Don't clear the session, just return 401
-        return jsonify({
-            'success': False,
-            'error': 'Not authenticated'
-        }), 401
-    
     try:
-        client = get_supabase_client()
-        response = client.table('users').select('*').eq('id', user_id).single().execute()
+        user_id = session.get('user_id')
         
-        if response.data:
+        if not user_id:
+            # Don't clear the session, just return 401
             return jsonify({
-                'success': True,
-                'user': response.data,
-                'session': {
+                'success': False,
+                'error': 'Not authenticated'
+            }), 401
+        
+        client = get_supabase_client()
+        
+        try:
+            response = client.table('users').select('*').eq('id', user_id).single().execute()
+            
+            if response.data:
+                # Return both user data and session info
+                return jsonify({
+                    'success': True,
                     'user': response.data,
-                    'access_token': session.get('access_token')
-                }
-            })
-        
-        # User not found but had session - don't clear, let frontend handle
-        return jsonify({
-            'success': False,
-            'error': 'User not found'
-        }), 401
-        
+                    'session': {
+                        'user': response.data,
+                        'access_token': session.get('access_token')
+                    }
+                })
+            
+            # User not found in database
+            return jsonify({
+                'success': False,
+                'error': 'User not found'
+            }), 401
+            
+        except Exception as db_error:
+            print(f"Database error: {str(db_error)}")
+            return jsonify({
+                'success': False,
+                'error': 'Database error'
+            }), 500
+            
     except Exception as e:
-        print(f"Error getting current user: {str(e)}")
-        # Don't clear session on error
+        print(f"Unexpected error in get_current_user: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Server error'
         }), 500
 
 @app.route('/api/records', methods=['GET'])
