@@ -23,8 +23,15 @@ export function ActiveFilters({ filters, columns, onClearFilter }: ActiveFilters
           ? filter.value.join(', ')
           : filter.value;
       case 'dateRange':
-        const range = filter.value as { start: Date; end: Date };
-        return `${range.start?.toLocaleDateString()} - ${range.end?.toLocaleDateString()}`;
+        if (filter.value && typeof filter.value === 'object') {
+          const range = filter.value as { start: Date | null; end: Date | null };
+          const start = range.start ? new Date(range.start).toLocaleDateString() : '';
+          const end = range.end ? new Date(range.end).toLocaleDateString() : '';
+          return start && end ? `${start} - ${end}` : start || end;
+        }
+        return '';
+      case 'boolean':
+        return filter.value ? 'Yes' : 'No';
       default:
         return String(filter.value);
     }

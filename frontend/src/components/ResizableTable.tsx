@@ -63,7 +63,7 @@ export type ExtendedColumnDef<T> = ColumnDef<T> & {
   filter?: ColumnFilter;
   accessorKey?: string;
   meta?: {
-    type?: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean';
+    type?: 'text' | 'number' | 'single-select' | 'multi-select' | 'boolean' | 'dateRange';
     options?: string[];
     customColumn?: CustomColumnData;
     labelMap?: Record<string, string>;
