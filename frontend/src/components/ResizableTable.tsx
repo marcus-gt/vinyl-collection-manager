@@ -127,10 +127,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           value
         }));
         setColumnFilters(tableFilters);
+        
+        // Notify parent of filter changes
+        if (onColumnFiltersChange) {
+          onColumnFiltersChange(tableFilters);
+        }
       }
     };
     loadFilters();
-  }, []);
+  }, [onColumnFiltersChange]);
 
   // Save filters when they change
   useEffect(() => {
@@ -470,22 +475,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnResizeMode,
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
-    onColumnFiltersChange: (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
-      let newFilters: ColumnFiltersState;
-      if (typeof updater === 'function') {
-        newFilters = updater(columnFilters);
-      } else {
-        newFilters = updater;
-      }
-
-      // Update local filter state
+    onColumnFiltersChange: (updater) => {
+      const newFilters = typeof updater === 'function' 
+        ? updater(columnFilters)
+        : updater;
+      
       setColumnFilters(newFilters);
-
-      // Notify parent component of filter change and reset page
       if (onColumnFiltersChange) {
         onColumnFiltersChange(newFilters);
       }
-      onPageChange(1);  // Always reset to page 1 when filters change
     },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -498,7 +496,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     filterFns: {
       text: textFilter,
       dateRange: dateRangeFilter,
-      'multi-select': multiSelectFilter
+      'multi-select': multiSelectFilter,
+      number: numberFilter,
+      singleSelect: singleSelectFilter,
+      boolean: booleanFilter
     } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
