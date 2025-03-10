@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -27,6 +27,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import minMax from 'dayjs/plugin/minMax';
 import { MyCustomPagination } from './MyCustomPagination';
+import { columnFilters } from '../services/api';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -114,6 +115,39 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const columnHeaderHeight = 32;
   const filterRowHeight = 40;
+
+  // Load saved filters on mount
+  useEffect(() => {
+    const loadFilters = async () => {
+      const response = await columnFilters.getAll();
+      if (response.success && response.data) {
+        // Convert saved filters to table format
+        const tableFilters = Object.entries(response.data).map(([id, value]) => ({
+          id,
+          value
+        }));
+        setColumnFilters(tableFilters);
+      }
+    };
+    loadFilters();
+  }, []);
+
+  // Save filters when they change
+  useEffect(() => {
+    const saveFilters = async () => {
+      // Convert table filters to storage format
+      const filterData = columnFilters.reduce((acc, filter) => ({
+        ...acc,
+        [filter.id]: filter.value
+      }), {});
+      
+      await columnFilters.update(filterData);
+    };
+    
+    // Debounce to avoid too many saves
+    const timeoutId = setTimeout(saveFilters, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [columnFilters]);
 
   const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: string): boolean => {
     const cellValue = row.getValue(columnId);

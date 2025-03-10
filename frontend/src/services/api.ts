@@ -588,4 +588,26 @@ export const spotify = {
       };
     }
   }
+};
+
+export const columnFilters = {
+  getAll: async (): Promise<ApiResponse<Record<string, any>>> => {
+    try {
+      const response = await api.get<ApiResponse<Record<string, any>>>('/api/column-filters');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get column filters:', err);
+      return { success: false, error: 'Failed to get column filters' };
+    }
+  },
+
+  update: async (filters: Record<string, any>): Promise<ApiResponse<void>> => {
+    try {
+      const response = await api.put<ApiResponse<void>>('/api/column-filters', filters);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to update column filters:', err);
+      return { success: false, error: 'Failed to update column filters' };
+    }
+  }
 }; 

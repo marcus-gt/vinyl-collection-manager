@@ -1225,6 +1225,72 @@ def debug_session():
     print(f"Request cookies: {request.cookies}")
     print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN')}")
 
+@app.route('/api/column-filters', methods=['GET'])
+@require_auth
+def get_column_filters():
+    """Get user's column filter preferences."""
+    try:
+        client = get_supabase_client()
+        response = client.table('column_filters').select('*').eq(
+            'user_id', session['user_id']
+        ).execute()
+        
+        if response.data:
+            # Convert to column_id: filter_value format
+            filters = {
+                item['column_id']: item['filter_value'] 
+                for item in response.data
+            }
+            return jsonify({
+                'success': True,
+                'data': filters
+            })
+        return jsonify({
+            'success': True,
+            'data': {}
+        })
+    except Exception as e:
+        print(f"Error fetching filters: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/column-filters', methods=['PUT'])
+@require_auth
+def update_column_filters():
+    """Update user's column filter preferences."""
+    try:
+        filters = request.get_json()
+        client = get_supabase_client()
+        
+        # Delete existing filters
+        client.table('column_filters').delete().eq(
+            'user_id', session['user_id']
+        ).execute()
+        
+        # Insert new filters
+        if filters:
+            records = [
+                {
+                    'user_id': session['user_id'],
+                    'column_id': col_id,
+                    'filter_value': value
+                }
+                for col_id, value in filters.items()
+                if value is not None  # Only store non-null filters
+            ]
+            if records:
+                client.table('column_filters').insert(records).execute()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error updating filters: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
     port = int(os.environ.get('PORT', 10000))
