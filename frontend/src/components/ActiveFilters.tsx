@@ -1,4 +1,3 @@
-import React from 'react';
 import { Group, Badge, Text, Box } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { ColumnFiltersState } from '@tanstack/react-table';

@@ -58,8 +58,8 @@ interface CustomColumnData {
   applyToAll?: boolean;
 }
 
-// Extend ColumnDef to include our custom properties
-type ExtendedColumnDef<T> = ColumnDef<T> & {
+// Export the type
+export type ExtendedColumnDef<T> = ColumnDef<T> & {
   filter?: ColumnFilter;
   accessorKey?: string;
   meta?: {
