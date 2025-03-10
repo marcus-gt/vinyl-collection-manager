@@ -121,12 +121,33 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     const loadFilters = async () => {
       const response = await columnFiltersApi.getAll();
       if (response.success && response.data) {
+        console.log('Loading saved filters:', response.data);
+        
         // Convert saved filters to table format
-        const tableFilters = Object.entries(response.data).map(([id, value]) => ({
-          id,
-          value
-        }));
+        const tableFilters = Object.entries(response.data).map(([id, value]) => {
+          // For custom columns, ensure the filter value matches expected format
+          const column = columns.find(col => col.id === id);
+          if (column?.meta?.customColumn) {
+            // Handle custom column filter value based on type
+            switch (column.meta.type) {
+              case 'multi-select':
+                return { id, value: Array.isArray(value) ? value : [value].filter(Boolean) };
+              case 'single-select':
+                return { id, value: value || '' };
+              default:
+                return { id, value };
+            }
+          }
+          return { id, value };
+        });
+
+        console.log('Converted filters:', tableFilters);
+        
+        // Set filters in state
         setColumnFilters(tableFilters);
+        
+        // Force table to recompute filtered rows
+        table.setColumnFilters(tableFilters);
         
         // Notify parent of filter changes
         if (onColumnFiltersChange) {
@@ -135,7 +156,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       }
     };
     loadFilters();
-  }, [onColumnFiltersChange]);
+  }, [columns, onColumnFiltersChange]);
 
   // Save filters when they change
   useEffect(() => {
@@ -318,11 +339,137 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     console.log('Initial columns:', JSON.stringify(columns, null, 2));
     console.log('Available custom columns:', customColumns);
     
-    return columns.map(col => ({
-      ...col,
-      enableColumnFilter: true,
-      filterFn: col.meta?.type || 'text', // Explicitly set filter type
-    }));
+    return columns.map(column => {
+      const columnId = String(column.accessorKey || column.id);
+
+      console.log(`\n=== Processing column ${columnId} ===`);
+      console.log('Raw column data:', {
+        meta: JSON.stringify(column.meta, null, 2),
+        accessorKey: column.accessorKey,
+        id: column.id,
+        fullColumn: JSON.stringify(column, null, 2)
+      });
+      
+      // Special case for created_at
+      if (columnId === 'created_at') {
+        const result = {
+          ...column,
+          id: columnId,
+          enableColumnFilter: true,
+          filterFn: dateRangeFilter,
+          filter: { type: 'dateRange' as const }
+        };
+        return result;
+      }
+        
+      // For custom columns, the columnId starts with 'customValues.' followed by the column ID
+      const isCustomColumn = columnId.startsWith('customValues.');
+      const customColumnId = isCustomColumn ? columnId.split('.')[1] : null;
+
+      console.log('Custom column check:', {
+        isCustomColumn,
+        customColumnId,
+        hasMetadata: !!column.meta,
+        metaType: column.meta?.type,
+        metaOptions: column.meta?.options,
+        customColumnData: column.meta?.customColumn
+      });
+
+      // Determine filter type based on column metadata
+      let filterType: FilterType = 'text';
+      let options: string[] = [];
+
+      // Check meta.type first, regardless of whether it's a custom column
+      if (column.meta?.type) {
+        filterType = column.meta.type as FilterType;
+        options = column.meta.options || [];
+      }
+
+      // For custom columns, we might need additional processing
+      if (isCustomColumn && customColumnId && column.meta) {
+        // Get options from the meta object if not already set
+        if (!options.length) {
+          if (column.meta.customColumn?.options) {
+            // If we have the full custom column data, use it
+            options = [...column.meta.customColumn.options];
+            console.log('Using options from customColumn:', {
+              source: 'customColumn',
+              options,
+              customColumn: column.meta.customColumn
+            });
+          } else if (Array.isArray(column.meta.options)) {
+            // Fallback to direct options if available
+            options = [...column.meta.options];
+            console.log('Using options from direct meta:', {
+              source: 'meta.options',
+              options,
+              metaOptions: column.meta.options
+            });
+          } else {
+            // Try to find the custom column data from the API response
+            const customColumn = customColumns.find((col: CustomColumnData) => col.id === customColumnId);
+            if (customColumn) {
+              options = [...(customColumn.options || [])];
+              // Update the meta to include the full custom column data
+              column.meta.customColumn = customColumn;
+              console.log('Found options from API data:', {
+                source: 'api',
+                options,
+                customColumn
+              });
+            } else {
+              console.log('No valid options found:', {
+                metaType: typeof column.meta.options,
+                metaOptions: column.meta.options,
+                fullMeta: column.meta
+              });
+            }
+          }
+        }
+
+        console.log('Column metadata:', {
+          originalType: column.meta.type,
+          resolvedFilterType: filterType,
+          hasCustomColumn: !!column.meta.customColumn,
+          hasDirectOptions: Array.isArray(column.meta.options),
+          metaContent: JSON.stringify(column.meta, null, 2)
+        });
+      }
+
+      const result = {
+        ...column,
+        id: columnId,
+        enableColumnFilter: true,
+        filterFn: filterType === 'multi-select' ? multiSelectFilter :
+                  filterType === 'single-select' ? singleSelectFilter :
+                  filterType === 'number' ? numberFilter :
+                  filterType === 'boolean' ? booleanFilter :
+                  textFilter,
+        filter: {
+          type: filterType,
+          options: options
+        },
+        meta: {
+          ...column.meta,
+          type: filterType,
+          options: options,
+          customColumn: column.meta?.customColumn
+        }
+      };
+
+      console.log('Final column configuration:', {
+        id: result.id,
+        filterType,
+        optionsLength: options.length,
+        options,
+        metaType: result.meta.type,
+        metaOptions: result.meta.options,
+        filterOptions: result.filter.options,
+        hasCustomColumn: !!result.meta.customColumn
+      });
+
+      return result;
+    });
   }, [columns, customColumns]);
 
   // When processing data for the table
@@ -354,12 +501,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         ? updater(columnFilters)
         : updater;
       
-      console.log('Filter change:', {
-        previous: columnFilters,
-        new: newFilters
-      });
-      
+      console.log('Filter change:', newFilters);
       setColumnFilters(newFilters);
+      
       if (onColumnFiltersChange) {
         onColumnFiltersChange(newFilters);
       }
@@ -379,26 +523,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       number: numberFilter,
       singleSelect: singleSelectFilter,
       boolean: booleanFilter
-    },
+    } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
       size: 150,
       maxSize: 1000,
       enableColumnFilter: true,
-      enableSorting: true,
-      filterFn: 'text' // Default to text filter if not specified
+      enableSorting: true
     }
   });
-
-  // Debug logging for filter state
-  useEffect(() => {
-    console.log('Current filter state:', {
-      columnFilters,
-      appliedFilters: table.getState().columnFilters,
-      filteredRows: table.getFilteredRowModel().rows.length,
-      totalRows: data.length
-    });
-  }, [columnFilters, table, data]);
 
   // Get all filtered and sorted rows
   const allFilteredRows = table.getFilteredRowModel().rows;
@@ -753,6 +886,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         );
     }
   };
+
+  // Add debug logging for filter application
+  useEffect(() => {
+    console.log('Current filters:', columnFilters);
+    console.log('Filtered rows:', table.getFilteredRowModel().rows.length);
+  }, [columnFilters, table]);
 
   return (
     <Box>
