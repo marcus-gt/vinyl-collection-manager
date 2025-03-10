@@ -27,7 +27,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import minMax from 'dayjs/plugin/minMax';
 import { MyCustomPagination } from './MyCustomPagination';
-import { columnFilters } from '../services/api';
+import { columnFilters as columnFiltersApi } from '../services/api';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -119,7 +119,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   // Load saved filters on mount
   useEffect(() => {
     const loadFilters = async () => {
-      const response = await columnFilters.getAll();
+      const response = await columnFiltersApi.getAll();
       if (response.success && response.data) {
         // Convert saved filters to table format
         const tableFilters = Object.entries(response.data).map(([id, value]) => ({
@@ -141,7 +141,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         [filter.id]: filter.value
       }), {});
       
-      await columnFilters.update(filterData);
+      await columnFiltersApi.update(filterData);
     };
     
     // Debounce to avoid too many saves
