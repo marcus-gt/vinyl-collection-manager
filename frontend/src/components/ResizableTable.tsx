@@ -28,6 +28,7 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import minMax from 'dayjs/plugin/minMax';
 import { MyCustomPagination } from './MyCustomPagination';
 import { columnFilters as columnFiltersApi } from '../services/api';
+import { ActiveFilters } from './ActiveFilters';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -893,8 +894,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     console.log('Filtered rows:', table.getFilteredRowModel().rows.length);
   }, [columnFilters, table]);
 
+  const handleClearFilter = (columnId: string) => {
+    const newFilters = columnFilters.filter(f => f.id !== columnId);
+    setColumnFilters(newFilters);
+    if (onColumnFiltersChange) {
+      onColumnFiltersChange(newFilters);
+    }
+  };
+
   return (
     <Box>
+      <ActiveFilters 
+        filters={columnFilters}
+        columns={columns}
+        onClearFilter={handleClearFilter}
+      />
+
       <Box style={{ 
         width: '100%',
         overflowX: 'auto',
