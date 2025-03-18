@@ -33,35 +33,41 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If the error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle both 401 and 500 errors that might be session-related
+    if ((error.response?.status === 401 || error.response?.status === 500) && !originalRequest._retry) {
       // Only try to refresh if we're not already on /api/auth/me
       if (originalRequest.url !== '/api/auth/me') {
         originalRequest._retry = true;
         
         try {
+          // Try to use saved session first
+          const savedSession = localStorage.getItem('session');
+          if (savedSession) {
+            const parsedSession = JSON.parse(savedSession);
+            if (parsedSession.access_token) {
+              // Try the request again with the saved token
+              api.defaults.headers.common['Authorization'] = `Bearer ${parsedSession.access_token}`;
+              return api(originalRequest);
+            }
+          }
+
+          // If saved session didn't work, try to refresh
           const response = await auth.getCurrentUser();
           
           if (response.success && response.session) {
-            // Update the token in localStorage
             localStorage.setItem('session', JSON.stringify(response.session));
-            
-            // Retry the original request
+            api.defaults.headers.common['Authorization'] = `Bearer ${response.session.access_token}`;
             return api(originalRequest);
           }
         } catch (refreshError) {
-          // If refresh fails, redirect to login
-          localStorage.removeItem('session');
-          window.location.href = '/login';
+          // Only redirect to login if we're really sure the session is invalid
+          if (refreshError.response?.status === 401) {
+            localStorage.removeItem('session');
+            window.location.href = '/login';
+          }
           return Promise.reject(refreshError);
         }
       }
-    }
-    
-    // For /api/auth/me 401s, just return the error
-    if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
-      console.log('Auth check: No active session');
-      return Promise.reject(error);
     }
     
     return Promise.reject(error);

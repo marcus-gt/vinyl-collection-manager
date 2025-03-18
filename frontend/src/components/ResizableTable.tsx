@@ -120,42 +120,48 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   // Load saved filters on mount
   useEffect(() => {
     const loadFilters = async () => {
-      const response = await columnFiltersApi.getAll();
-      if (response.success && response.data) {
-        console.log('Loading saved filters:', response.data);
-        
-        // Convert saved filters to table format
-        const tableFilters = Object.entries(response.data).map(([id, value]) => {
-          // For custom columns, ensure the filter value matches expected format
-          const column = columns.find(col => col.id === id);
-          if (column?.meta?.customColumn) {
-            // Handle custom column filter value based on type
-            switch (column.meta.type) {
-              case 'multi-select':
-                return { id, value: Array.isArray(value) ? value : [value].filter(Boolean) };
-              case 'single-select':
-                return { id, value: value || '' };
-              default:
-                return { id, value };
+      try {
+        const response = await columnFiltersApi.getAll();
+        if (response.success && response.data) {
+          console.log('Loading saved filters:', response.data);
+          
+          // Convert saved filters to table format
+          const tableFilters = Object.entries(response.data).map(([id, value]) => {
+            // For custom columns, ensure the filter value matches expected format
+            const column = columns.find(col => col.id === id);
+            if (column?.meta?.customColumn) {
+              // Handle custom column filter value based on type
+              switch (column.meta.type) {
+                case 'multi-select':
+                  return { id, value: Array.isArray(value) ? value : [value].filter(Boolean) };
+                case 'single-select':
+                  return { id, value: value || '' };
+                default:
+                  return { id, value };
+              }
             }
-          }
-          return { id, value };
-        });
+            return { id, value };
+          });
 
-        console.log('Converted filters:', tableFilters);
-        
-        // Set filters in state
-        setColumnFilters(tableFilters);
-        
-        // Force table to recompute filtered rows
-        table.setColumnFilters(tableFilters);
-        
-        // Notify parent of filter changes
-        if (onColumnFiltersChange) {
-          onColumnFiltersChange(tableFilters);
+          console.log('Converted filters:', tableFilters);
+          
+          // Set filters in state
+          setColumnFilters(tableFilters);
+          
+          // Force table to recompute filtered rows
+          table.setColumnFilters(tableFilters);
+          
+          // Notify parent of filter changes
+          if (onColumnFiltersChange) {
+            onColumnFiltersChange(tableFilters);
+          }
         }
+      } catch (err) {
+        console.error('Failed to load filters:', err);
+        // If it's a session error, the API interceptor will handle it
       }
     };
+
     loadFilters();
   }, [columns, onColumnFiltersChange]);
 

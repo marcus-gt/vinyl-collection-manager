@@ -87,7 +87,7 @@ session_config = {
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'None',
     'SESSION_COOKIE_PATH': '/',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=365 * 10),  # Set to a very long time
     'SESSION_REFRESH_EACH_REQUEST': True
 }
 
@@ -98,7 +98,8 @@ if os.getenv('FLASK_ENV') == 'production':
         'REMEMBER_COOKIE_SECURE': True,
         'REMEMBER_COOKIE_HTTPONLY': True,
         'REMEMBER_COOKIE_SAMESITE': 'None',
-        'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com'
+        'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=365 * 10)  # Ensure it's set in production too
     })
 
 app.config.update(**session_config)
@@ -1230,13 +1231,20 @@ def debug_session():
 def get_column_filters():
     """Get user's column filter preferences."""
     try:
+        # Verify session is still valid
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({
+                'success': False,
+                'error': 'Session expired'
+            }), 401
+
         client = get_supabase_client()
         response = client.table('column_filters').select('*').eq(
-            'user_id', session['user_id']
+            'user_id', user_id
         ).execute()
         
         if response.data:
-            # Convert to column_id: filter_value format
             filters = {
                 item['column_id']: item['filter_value'] 
                 for item in response.data
@@ -1251,6 +1259,12 @@ def get_column_filters():
         })
     except Exception as e:
         print(f"Error fetching filters: {str(e)}")
+        # Return 401 if it's a session issue
+        if 'Session expired' in str(e) or 'Not authenticated' in str(e):
+            return jsonify({
+                'success': False,
+                'error': 'Session expired'
+            }), 401
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1261,24 +1275,32 @@ def get_column_filters():
 def update_column_filters():
     """Update user's column filter preferences."""
     try:
+        # Verify session is still valid
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({
+                'success': False,
+                'error': 'Session expired'
+            }), 401
+
         filters = request.get_json()
         client = get_supabase_client()
         
         # Delete existing filters
         client.table('column_filters').delete().eq(
-            'user_id', session['user_id']
+            'user_id', user_id
         ).execute()
         
         # Insert new filters
         if filters:
             records = [
                 {
-                    'user_id': session['user_id'],
+                    'user_id': user_id,
                     'column_id': col_id,
                     'filter_value': value
                 }
                 for col_id, value in filters.items()
-                if value is not None  # Only store non-null filters
+                if value is not None
             ]
             if records:
                 client.table('column_filters').insert(records).execute()
@@ -1286,6 +1308,12 @@ def update_column_filters():
         return jsonify({'success': True})
     except Exception as e:
         print(f"Error updating filters: {str(e)}")
+        # Return 401 if it's a session issue
+        if 'Session expired' in str(e) or 'Not authenticated' in str(e):
+            return jsonify({
+                'success': False,
+                'error': 'Session expired'
+            }), 401
         return jsonify({
             'success': False,
             'error': str(e)
