@@ -59,13 +59,13 @@ api.interceptors.response.use(
             api.defaults.headers.common['Authorization'] = `Bearer ${response.session.access_token}`;
             return api(originalRequest);
           }
-        } catch (refreshError) {
+        } catch (error: any) {  // Type as 'any' to access response property
           // Only redirect to login if we're really sure the session is invalid
-          if (refreshError.response?.status === 401) {
+          if (error.response?.status === 401) {
             localStorage.removeItem('session');
             window.location.href = '/login';
           }
-          return Promise.reject(refreshError);
+          return Promise.reject(error);
         }
       }
     }
