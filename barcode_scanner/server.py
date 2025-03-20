@@ -1231,43 +1231,67 @@ def debug_session():
 def get_column_filters():
     """Get user's column filter preferences."""
     try:
+        # Add detailed logging
+        print("\n=== Column Filters Request ===")
+        print(f"Session: {dict(session)}")
+        print(f"User ID: {session.get('user_id')}")
+        print(f"Request Headers: {dict(request.headers)}")
+
         # Verify session is still valid
         user_id = session.get('user_id')
         if not user_id:
+            print("No user_id in session")
             return jsonify({
                 'success': False,
                 'error': 'Session expired'
             }), 401
 
-        client = get_supabase_client()
-        response = client.table('column_filters').select('*').eq(
-            'user_id', user_id
-        ).execute()
-        
-        if response.data:
-            filters = {
-                item['column_id']: item['filter_value'] 
-                for item in response.data
-            }
+        try:
+            client = get_supabase_client()
+            print("Supabase client created successfully")
+            
+            response = client.table('column_filters').select('*').eq(
+                'user_id', user_id
+            ).execute()
+            print(f"Database response: {response}")
+            
+            if response.data:
+                filters = {
+                    item['column_id']: item['filter_value'] 
+                    for item in response.data
+                }
+                return jsonify({
+                    'success': True,
+                    'data': filters
+                })
             return jsonify({
                 'success': True,
-                'data': filters
+                'data': {}
             })
-        return jsonify({
-            'success': True,
-            'data': {}
-        })
-    except Exception as e:
-        print(f"Error fetching filters: {str(e)}")
-        # Return 401 if it's a session issue
-        if 'Session expired' in str(e) or 'Not authenticated' in str(e):
+        except Exception as db_error:
+            print(f"Database error: {str(db_error)}")
+            print(f"Error type: {type(db_error)}")
+            import traceback
+            traceback.print_exc()
+            # Return 401 for auth errors, 500 for other errors
+            if 'auth' in str(db_error).lower():
+                return jsonify({
+                    'success': False,
+                    'error': 'Authentication failed'
+                }), 401
             return jsonify({
                 'success': False,
-                'error': 'Session expired'
-            }), 401
+                'error': f'Database error: {str(db_error)}'
+            }), 500
+            
+    except Exception as e:
+        print(f"Unexpected error in get_column_filters: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': 'Server error'
         }), 500
 
 @app.route('/api/column-filters', methods=['PUT'])
@@ -1314,6 +1338,40 @@ def update_column_filters():
                 'success': False,
                 'error': 'Session expired'
             }), 401
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/auth/check-session', methods=['GET'])
+def check_session():
+    """Check if the session is still valid."""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({
+                'success': False,
+                'error': 'No session'
+            }), 401
+
+        client = get_supabase_client()
+        response = client.table('users').select('*').eq('id', user_id).single().execute()
+        
+        if response.data:
+            return jsonify({
+                'success': True,
+                'session': {
+                    'user': response.data,
+                    'access_token': session.get('access_token')
+                }
+            })
+        
+        return jsonify({
+            'success': False,
+            'error': 'Invalid session'
+        }), 401
+    except Exception as e:
+        print(f"Session check error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

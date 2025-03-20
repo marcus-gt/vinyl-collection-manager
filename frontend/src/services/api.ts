@@ -33,6 +33,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    console.log('API Error:', {
+      status: error.response?.status,
+      url: originalRequest?.url,
+      error: error.response?.data
+    });
+    
     // Handle both 401 and 500 errors that might be session-related
     if ((error.response?.status === 401 || error.response?.status === 500) && !originalRequest._retry) {
       // Only try to refresh if we're not already on /api/auth/me
@@ -45,22 +51,29 @@ api.interceptors.response.use(
           if (savedSession) {
             const parsedSession = JSON.parse(savedSession);
             if (parsedSession.access_token) {
-              // Try the request again with the saved token
+              console.log('Retrying with saved token');
               api.defaults.headers.common['Authorization'] = `Bearer ${parsedSession.access_token}`;
               return api(originalRequest);
             }
           }
 
-          // If saved session didn't work, try to refresh
+          console.log('Attempting to refresh session');
           const response = await auth.getCurrentUser();
+          console.log('Refresh response:', response);
           
           if (response.success && response.session) {
             localStorage.setItem('session', JSON.stringify(response.session));
             api.defaults.headers.common['Authorization'] = `Bearer ${response.session.access_token}`;
             return api(originalRequest);
           }
-        } catch (error: any) {  // Type as 'any' to access response property
-          // Only redirect to login if we're really sure the session is invalid
+
+          // If we get here, the refresh failed
+          console.log('Session refresh failed');
+          localStorage.removeItem('session');
+          window.location.href = '/login';
+          return Promise.reject(error);
+        } catch (error: any) {
+          console.error('Error during refresh:', error);
           if (error.response?.status === 401) {
             localStorage.removeItem('session');
             window.location.href = '/login';
