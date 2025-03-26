@@ -29,7 +29,7 @@ import minMax from 'dayjs/plugin/minMax';
 import { MyCustomPagination } from './MyCustomPagination';
 import { columnFilters as columnFiltersApi } from '../services/api';
 import { ActiveFilters } from './ActiveFilters';
-import { auth } from '../services/auth';
+import { auth } from '../services/api';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
