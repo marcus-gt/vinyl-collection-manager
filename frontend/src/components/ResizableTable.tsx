@@ -29,6 +29,7 @@ import minMax from 'dayjs/plugin/minMax';
 import { MyCustomPagination } from './MyCustomPagination';
 import { columnFilters as columnFiltersApi } from '../services/api';
 import { ActiveFilters } from './ActiveFilters';
+import { auth } from '../services/auth';
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -907,6 +908,39 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       onColumnFiltersChange(newFilters);
     }
   };
+
+  // Add a session refresh mechanism
+  useEffect(() => {
+    const refreshSession = async () => {
+      try {
+        // Check if we need to refresh the session
+        const response = await auth.getCurrentUser();
+        if (response.success) {
+          console.log('Session refreshed successfully');
+        } else {
+          console.log('Session refresh failed, will retry on user interaction');
+        }
+      } catch (err) {
+        console.error('Session refresh error:', err);
+      }
+    };
+    
+    // Refresh session when component mounts
+    refreshSession();
+    
+    // Add event listeners to refresh session on user interaction
+    const handleUserInteraction = () => {
+      refreshSession();
+    };
+    
+    window.addEventListener('click', handleUserInteraction);
+    window.addEventListener('keydown', handleUserInteraction);
+    
+    return () => {
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, []);
 
   return (
     <Box>

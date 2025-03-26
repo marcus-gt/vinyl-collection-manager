@@ -609,13 +609,48 @@ export const spotify = {
   }
 };
 
+// Add a connection health check
+export const checkConnection = async (): Promise<boolean> => {
+  try {
+    const response = await api.get('/api/auth/check-session');
+    return response.data.success;
+  } catch (error) {
+    console.error('Connection check failed:', error);
+    return false;
+  }
+};
+
+// Update the columnFilters service
 export const columnFilters = {
   getAll: async (): Promise<ApiResponse<Record<string, any>>> => {
     try {
+      // Try to check connection first
+      const isConnected = await checkConnection();
+      if (!isConnected) {
+        // If not connected, try to refresh the page
+        console.log('Connection lost, refreshing session...');
+        await auth.getCurrentUser();
+      }
+      
       const response = await api.get<ApiResponse<Record<string, any>>>('/api/column-filters');
       return response.data;
     } catch (err) {
       console.error('Failed to get column filters:', err);
+      
+      // If it's a server error, try to refresh the session
+      if (axios.isAxiosError(err) && err.response?.status === 500) {
+        try {
+          console.log('Server error, trying to refresh session...');
+          await auth.getCurrentUser();
+          
+          // Try the request again
+          const retryResponse = await api.get<ApiResponse<Record<string, any>>>('/api/column-filters');
+          return retryResponse.data;
+        } catch (retryErr) {
+          console.error('Retry failed:', retryErr);
+        }
+      }
+      
       return { success: false, error: 'Failed to get column filters' };
     }
   },
@@ -626,6 +661,21 @@ export const columnFilters = {
       return response.data;
     } catch (err) {
       console.error('Failed to update column filters:', err);
+      
+      // If it's a server error, try to refresh the session
+      if (axios.isAxiosError(err) && err.response?.status === 500) {
+        try {
+          console.log('Server error, trying to refresh session...');
+          await auth.getCurrentUser();
+          
+          // Try the request again
+          const retryResponse = await api.put<ApiResponse<void>>('/api/column-filters', filters);
+          return retryResponse.data;
+        } catch (retryErr) {
+          console.error('Retry failed:', retryErr);
+        }
+      }
+      
       return { success: false, error: 'Failed to update column filters' };
     }
   }

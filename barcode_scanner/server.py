@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import timedelta, datetime
 import requests
 from functools import wraps
+import time
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -145,6 +146,32 @@ if os.getenv('FLASK_ENV') == 'production':
         sys.exit(1)
 
 print("\nConfiguration validated successfully")
+
+# Add a connection pool manager
+supabase_clients = {}
+last_connection_time = {}
+
+def get_fresh_supabase_client(force_new=False):
+    """Get a fresh Supabase client, creating a new one if needed."""
+    user_id = session.get('user_id')
+    client_key = user_id or 'anonymous'
+    
+    current_time = time.time()
+    last_time = last_connection_time.get(client_key, 0)
+    
+    # If it's been more than 1 hour or we're forcing a new connection
+    if force_new or client_key not in supabase_clients or (current_time - last_time) > 3600:
+        print(f"Creating new Supabase client for {client_key}")
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            raise ValueError("Missing Supabase credentials")
+            
+        supabase_clients[client_key] = create_client(supabase_url, supabase_key)
+        last_connection_time[client_key] = current_time
+    
+    return supabase_clients[client_key]
 
 def require_auth(f):
     @wraps(f)
@@ -1235,8 +1262,7 @@ def get_column_filters():
         print("\n=== Column Filters Request ===")
         print(f"Session: {dict(session)}")
         print(f"User ID: {session.get('user_id')}")
-        print(f"Request Headers: {dict(request.headers)}")
-
+        
         # Verify session is still valid
         user_id = session.get('user_id')
         if not user_id:
@@ -1247,13 +1273,22 @@ def get_column_filters():
             }), 401
 
         try:
-            client = get_supabase_client()
-            print("Supabase client created successfully")
+            # Try with a fresh client first
+            client = get_fresh_supabase_client()
+            print("Using fresh Supabase client")
             
-            response = client.table('column_filters').select('*').eq(
-                'user_id', user_id
-            ).execute()
-            print(f"Database response: {response}")
+            try:
+                response = client.table('column_filters').select('*').eq(
+                    'user_id', user_id
+                ).execute()
+                print(f"Database response successful")
+            except Exception as conn_error:
+                # If that fails, force a new connection
+                print(f"Connection error: {str(conn_error)}, forcing new connection")
+                client = get_fresh_supabase_client(force_new=True)
+                response = client.table('column_filters').select('*').eq(
+                    'user_id', user_id
+                ).execute()
             
             if response.data:
                 filters = {
@@ -1270,23 +1305,28 @@ def get_column_filters():
             })
         except Exception as db_error:
             print(f"Database error: {str(db_error)}")
-            print(f"Error type: {type(db_error)}")
             import traceback
             traceback.print_exc()
-            # Return 401 for auth errors, 500 for other errors
-            if 'auth' in str(db_error).lower():
+            
+            # Try to refresh the session
+            if 'auth' in str(db_error).lower() or 'token' in str(db_error).lower():
+                # Clear the client and try to refresh the auth
+                if user_id in supabase_clients:
+                    del supabase_clients[user_id]
+                
                 return jsonify({
                     'success': False,
-                    'error': 'Authentication failed'
+                    'error': 'Authentication failed',
+                    'needs_auth': True
                 }), 401
+                
             return jsonify({
                 'success': False,
                 'error': f'Database error: {str(db_error)}'
             }), 500
             
     except Exception as e:
-        print(f"Unexpected error in get_column_filters: {str(e)}")
-        print(f"Error type: {type(e)}")
+        print(f"Unexpected error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
