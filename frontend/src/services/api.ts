@@ -125,38 +125,81 @@ export const auth = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
     try {
       const response = await api.post<AuthResponse>('/api/auth/login', { email, password });
+      
+      if (response.data.success && response.data.session) {
+        localStorage.setItem('session', JSON.stringify(response.data.session));
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.session.access_token}`;
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('Login error:', error instanceof Error ? error.message : 'Unknown error');
-      throw error;
+      console.error('Login error:', error);
+      return { success: false, error: 'Login failed' };
     }
   },
 
   logout: async (): Promise<void> => {
     try {
       await api.post('/api/auth/logout');
-    } catch (error) {
-      console.error('Logout error:', error instanceof Error ? error.message : 'Unknown error');
-      throw error;
+    } finally {
+      localStorage.removeItem('session');
+      delete api.defaults.headers.common['Authorization'];
     }
   },
 
   getCurrentUser: async (): Promise<AuthResponse> => {
     try {
-      const response = await api.get<AuthResponse>('/api/auth/me');
-      return response.data;
-    } catch (error: any) {
-      // If it's a 401, return a standardized response instead of throwing
-      if (error.response?.status === 401) {
-        console.log('No active session found');
-        return {
-          success: false,
-          error: 'Not authenticated'
-        };
+      // First try with the saved token
+      const savedSession = localStorage.getItem('session');
+      if (savedSession) {
+        const parsedSession = JSON.parse(savedSession);
+        if (parsedSession.access_token) {
+          api.defaults.headers.common['Authorization'] = `Bearer ${parsedSession.access_token}`;
+        }
       }
-      // For other errors, log and throw
-      console.error('Get current user error:', error instanceof Error ? error.message : 'Unknown error');
-      throw error;
+      
+      const response = await api.get<AuthResponse>('/api/auth/me');
+      
+      if (response.data.success && response.data.session) {
+        localStorage.setItem('session', JSON.stringify(response.data.session));
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.session.access_token}`;
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      
+      // If it's a server error (500), try one more time with a fresh request
+      if (axios.isAxiosError(error) && error.response?.status === 500) {
+        try {
+          console.log('Server error, trying with a fresh request...');
+          // Clear the authorization header and try again
+          delete api.defaults.headers.common['Authorization'];
+          
+          // Try to get a new session
+          const savedSession = localStorage.getItem('session');
+          if (savedSession) {
+            const parsedSession = JSON.parse(savedSession);
+            if (parsedSession.access_token) {
+              api.defaults.headers.common['Authorization'] = `Bearer ${parsedSession.access_token}`;
+            }
+          }
+          
+          const retryResponse = await api.get<AuthResponse>('/api/auth/me');
+          
+          if (retryResponse.data.success && retryResponse.data.session) {
+            localStorage.setItem('session', JSON.stringify(retryResponse.data.session));
+            api.defaults.headers.common['Authorization'] = `Bearer ${retryResponse.data.session.access_token}`;
+          }
+          
+          return retryResponse.data;
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+          return { success: false, error: 'Authentication failed' };
+        }
+      }
+      
+      return { success: false, error: 'Authentication failed' };
     }
   },
 };
@@ -609,13 +652,43 @@ export const spotify = {
   }
 };
 
-// Add a connection health check
-export const checkConnection = async (): Promise<boolean> => {
+// Add a connection health check with retry
+export const checkConnection = async (retries = 1): Promise<boolean> => {
   try {
+    console.log('Checking connection health...');
     const response = await api.get('/api/auth/check-session');
+    console.log('Connection check response:', response.data);
     return response.data.success;
   } catch (error) {
     console.error('Connection check failed:', error);
+    
+    if (retries > 0) {
+      console.log(`Retrying connection check (${retries} attempts left)...`);
+      // Wait a moment before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        // Try to refresh the auth token first
+        await auth.getCurrentUser();
+        return checkConnection(retries - 1);
+      } catch (refreshError) {
+        console.error('Auth refresh failed during connection check:', refreshError);
+        return false;
+      }
+    }
+    
+    return false;
+  }
+};
+
+// Add a function to handle session refresh
+export const refreshSession = async (): Promise<boolean> => {
+  try {
+    console.log('Refreshing session...');
+    const response = await auth.getCurrentUser();
+    return response.success;
+  } catch (error) {
+    console.error('Session refresh failed:', error);
     return false;
   }
 };

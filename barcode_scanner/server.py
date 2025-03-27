@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 import requests
 from functools import wraps
 import time
+import traceback
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -147,31 +148,36 @@ if os.getenv('FLASK_ENV') == 'production':
 
 print("\nConfiguration validated successfully")
 
-# Add a connection pool manager
-supabase_clients = {}
-last_connection_time = {}
+# Global variables for connection management
+last_connection_refresh = 0
+CONNECTION_REFRESH_INTERVAL = 3600  # 1 hour
 
-def get_fresh_supabase_client(force_new=False):
-    """Get a fresh Supabase client, creating a new one if needed."""
-    user_id = session.get('user_id')
-    client_key = user_id or 'anonymous'
+def get_supabase_client():
+    """Get a Supabase client with automatic refresh."""
+    global last_connection_refresh
     
     current_time = time.time()
-    last_time = last_connection_time.get(client_key, 0)
+    force_refresh = (current_time - last_connection_refresh) > CONNECTION_REFRESH_INTERVAL
     
-    # If it's been more than 1 hour or we're forcing a new connection
-    if force_new or client_key not in supabase_clients or (current_time - last_time) > 3600:
-        print(f"Creating new Supabase client for {client_key}")
+    if force_refresh:
+        print(f"Refreshing Supabase connection after {(current_time - last_connection_refresh) / 60:.1f} minutes")
+        # Clear any cached clients
+        if 'supabase_client' in globals():
+            del globals()['supabase_client']
+    
+    # Create a new client if needed
+    if 'supabase_client' not in globals():
         supabase_url = os.getenv('SUPABASE_URL')
         supabase_key = os.getenv('SUPABASE_KEY')
         
         if not supabase_url or not supabase_key:
             raise ValueError("Missing Supabase credentials")
             
-        supabase_clients[client_key] = create_client(supabase_url, supabase_key)
-        last_connection_time[client_key] = current_time
+        globals()['supabase_client'] = create_client(supabase_url, supabase_key)
+        last_connection_refresh = current_time
+        print("Created new Supabase client")
     
-    return supabase_clients[client_key]
+    return globals()['supabase_client']
 
 def require_auth(f):
     @wraps(f)
@@ -1274,7 +1280,7 @@ def get_column_filters():
 
         try:
             # Try with a fresh client first
-            client = get_fresh_supabase_client()
+            client = get_supabase_client()
             print("Using fresh Supabase client")
             
             try:
@@ -1285,7 +1291,7 @@ def get_column_filters():
             except Exception as conn_error:
                 # If that fails, force a new connection
                 print(f"Connection error: {str(conn_error)}, forcing new connection")
-                client = get_fresh_supabase_client(force_new=True)
+                client = get_supabase_client()
                 response = client.table('column_filters').select('*').eq(
                     'user_id', user_id
                 ).execute()
@@ -1311,8 +1317,8 @@ def get_column_filters():
             # Try to refresh the session
             if 'auth' in str(db_error).lower() or 'token' in str(db_error).lower():
                 # Clear the client and try to refresh the auth
-                if user_id in supabase_clients:
-                    del supabase_clients[user_id]
+                if user_id in globals():
+                    del globals()[user_id]
                 
                 return jsonify({
                     'success': False,
@@ -1387,31 +1393,68 @@ def update_column_filters():
 def check_session():
     """Check if the session is still valid."""
     try:
+        print("\n=== Checking Session ===")
+        print(f"Session data: {dict(session)}")
+        
         user_id = session.get('user_id')
         if not user_id:
+            print("No user_id in session")
             return jsonify({
                 'success': False,
                 'error': 'No session'
             }), 401
 
-        client = get_supabase_client()
-        response = client.table('users').select('*').eq('id', user_id).single().execute()
-        
-        if response.data:
+        try:
+            client = get_supabase_client()
+            response = client.table('users').select('*').eq('id', user_id).single().execute()
+            
+            if response.data:
+                print("Session valid, user found")
+                return jsonify({
+                    'success': True,
+                    'session': {
+                        'user': response.data,
+                        'access_token': session.get('access_token')
+                    }
+                })
+            
+            print("User not found in database")
             return jsonify({
-                'success': True,
-                'session': {
-                    'user': response.data,
-                    'access_token': session.get('access_token')
-                }
-            })
-        
-        return jsonify({
-            'success': False,
-            'error': 'Invalid session'
-        }), 401
+                'success': False,
+                'error': 'Invalid session'
+            }), 401
+        except Exception as e:
+            print(f"Error checking session: {str(e)}")
+            traceback.print_exc()
+            
+            # Try with a fresh connection
+            try:
+                # Force refresh the connection
+                if 'supabase_client' in globals():
+                    del globals()['supabase_client']
+                
+                client = get_supabase_client()
+                response = client.table('users').select('*').eq('id', user_id).single().execute()
+                
+                if response.data:
+                    print("Session valid after connection refresh")
+                    return jsonify({
+                        'success': True,
+                        'session': {
+                            'user': response.data,
+                            'access_token': session.get('access_token')
+                        }
+                    })
+            except Exception as retry_error:
+                print(f"Retry failed: {str(retry_error)}")
+            
+            return jsonify({
+                'success': False,
+                'error': 'Session check failed'
+            }), 401
     except Exception as e:
-        print(f"Session check error: {str(e)}")
+        print(f"Unexpected error in check_session: {str(e)}")
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)

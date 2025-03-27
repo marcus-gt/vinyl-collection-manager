@@ -8,6 +8,8 @@ import Collection from './pages/Collection';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { Notifications } from '@mantine/notifications';
+import { useEffect } from 'react';
+import { refreshSession } from './services/api';
 
 // Create custom theme
 const theme = createTheme({
@@ -85,6 +87,40 @@ const theme = createTheme({
 });
 
 function App() {
+  // Add periodic session refresh
+  useEffect(() => {
+    // Refresh session on load
+    refreshSession();
+    
+    // Set up periodic refresh (every 30 minutes)
+    const refreshInterval = setInterval(() => {
+      refreshSession();
+    }, 30 * 60 * 1000);
+    
+    // Also refresh on user activity
+    const handleUserActivity = () => {
+      // Debounce to avoid too many refreshes
+      if (!window.sessionRefreshTimeout) {
+        window.sessionRefreshTimeout = setTimeout(() => {
+          refreshSession();
+          window.sessionRefreshTimeout = null;
+        }, 5000);
+      }
+    };
+    
+    window.addEventListener('click', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('click', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      if (window.sessionRefreshTimeout) {
+        clearTimeout(window.sessionRefreshTimeout);
+      }
+    };
+  }, []);
+
   return (
     <MantineProvider defaultColorScheme="dark" theme={theme}>
       <Notifications />
