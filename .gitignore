@@ -13,6 +13,7 @@ dist/
 # IDE
 .vscode/
 .idea/
+.cursor/
 
 # Build files
 frontend/dist/
