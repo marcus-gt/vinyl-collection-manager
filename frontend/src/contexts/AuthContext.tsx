@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshToken: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -17,6 +18,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Function to refresh the token
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    console.log('=== Refreshing Auth Token ===');
+    try {
+      const response = await auth.refreshToken();
+      
+      if (response.success) {
+        console.log('Token refreshed successfully');
+        // If we got a new session with user data, update it
+        if (response.session?.user) {
+          localStorage.setItem('session', JSON.stringify(response.session));
+          setUser(response.session.user);
+        }
+        return true;
+      } else {
+        console.warn('Token refresh failed:', response.error);
+        return false;
+      }
+    } catch (err) {
+      console.error('Token refresh error:', err);
+      return false;
+    }
+  }, []);
 
   // Try to restore session on mount
   useEffect(() => {
@@ -35,9 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (parsedSession.user) {
             setUser(parsedSession.user);
           }
+          
+          // Try to refresh the token first
+          const refreshed = await refreshToken();
+          if (refreshed) {
+            console.log('Session refreshed during initialization');
+            setIsLoading(false);
+            return;
+          }
         }
 
-        // Verify session with server
+        // If no saved session or refresh failed, verify session with server
         const response = await auth.getCurrentUser();
         console.log('Server auth check response:', response);
 
@@ -58,6 +91,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const parsedSession = JSON.parse(savedSession);
             if (parsedSession.user) {
               setUser(parsedSession.user);
+              // Try to refresh the token
+              refreshToken().catch(e => 
+                console.error('Background token refresh failed:', e)
+              );
               return; // Keep existing session
             }
           } catch (e) {
@@ -75,7 +112,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initializeAuth();
-  }, []);
+    
+    // Set up periodic token refresh (every 30 minutes)
+    const tokenRefreshInterval = setInterval(() => {
+      console.log('Running scheduled token refresh');
+      if (user) {
+        refreshToken().catch(e => 
+          console.error('Scheduled token refresh failed:', e)
+        );
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+    
+    return () => clearInterval(tokenRefreshInterval);
+  }, [refreshToken]);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -146,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   console.log('Current auth state:', { user, isLoading, error });
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, error, login, register, logout, refreshToken }}>
       {children}
     </AuthContext.Provider>
   );

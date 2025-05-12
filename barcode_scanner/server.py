@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from datetime import timedelta, datetime
 import requests
 from functools import wraps
+import jwt  # Add JWT import for token decoding
 
 # Load environment variables first
 parent_dir = str(Path(__file__).resolve().parent.parent)
@@ -27,7 +28,8 @@ from .db import (
     add_record_to_collection,
     get_user_collection,
     remove_record_from_collection,
-    get_supabase_client
+    get_supabase_client,
+    refresh_session_token
 )
 from .spotify import (
     get_spotify_auth_url,
@@ -81,13 +83,13 @@ print("\n=== Flask Configuration ===")
 print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
 
-# Update session configuration
+# Update session configuration with much longer lifetime
 session_config = {
     'SESSION_COOKIE_SECURE': True,
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'None',
     'SESSION_COOKIE_PATH': '/',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
+    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to 1 year
     'SESSION_REFRESH_EACH_REQUEST': True
 }
 
@@ -156,6 +158,51 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def check_token_expiration():
+    """Check if the token is expired and refresh if needed"""
+    try:
+        # Only check if we have a token in the session
+        if 'access_token' in session:
+            # Try to decode the token to get expiry time
+            # Note: This assumes JWT token format from Supabase
+            token = session['access_token']
+            try:
+                # Just check if the token can be decoded
+                decoded = jwt.decode(token, options={"verify_signature": False})
+                
+                # Check if token is about to expire (within 30 minutes)
+                exp = decoded.get('exp')
+                if exp:
+                    now = datetime.utcnow().timestamp()
+                    # If token expires in less than 30 minutes, refresh it
+                    if exp - now < 1800:  # 30 minutes in seconds
+                        print("Token about to expire, refreshing...")
+                        refresh_result = refresh_session_token(session.get('refresh_token'))
+                        if refresh_result['success']:
+                            session['access_token'] = refresh_result['access_token']
+                            session['refresh_token'] = refresh_result['refresh_token']
+                            session.modified = True
+                            print("Token refreshed successfully")
+                        else:
+                            print("Failed to refresh token")
+            except jwt.PyJWTError as e:
+                # If token is invalid, try to refresh it
+                print(f"Invalid token: {str(e)}, attempting refresh...")
+                refresh_result = refresh_session_token(session.get('refresh_token'))
+                if refresh_result['success']:
+                    session['access_token'] = refresh_result['access_token']
+                    session['refresh_token'] = refresh_result['refresh_token']
+                    session.modified = True
+                    print("Token refreshed successfully after error")
+                else:
+                    print("Failed to refresh token after error")
+                    # If refresh fails, clear the session to force re-login
+                    session.pop('user_id', None)
+                    session.pop('access_token', None)
+                    session.pop('refresh_token', None)
+    except Exception as e:
+        print(f"Error checking token expiration: {str(e)}")
+
 @app.before_request
 def before_request():
     """Debug request information and ensure session is configured."""
@@ -170,9 +217,9 @@ def before_request():
     if not session.get('_permanent'):
         session.permanent = True
         
-    # Check if user is authenticated
-    if 'user_id' in session:
-        print("User is authenticated in session")
+    # Check and refresh token if needed
+    if 'user_id' in session and request.method != 'OPTIONS':
+        check_token_expiration()
         
     # Debug session configuration
     print("\n=== Session Configuration ===")
@@ -207,7 +254,8 @@ def after_request(response):
                 'Path=/',
                 'Secure',
                 'HttpOnly',
-                'SameSite=None'
+                'SameSite=None',
+                'Max-Age=31536000'  # Add one year expiration
             ]
             response.headers['Set-Cookie'] = '; '.join(cookie_parts)
     
@@ -1289,6 +1337,47 @@ def update_column_filters():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+# Add a new API endpoint to refresh token
+@app.route('/api/auth/refresh', methods=['POST'])
+def refresh_auth_token():
+    """Refresh the authentication token"""
+    try:
+        refresh_token = session.get('refresh_token')
+        if not refresh_token:
+            return jsonify({
+                'success': False,
+                'error': 'No refresh token available'
+            }), 401
+            
+        result = refresh_session_token(refresh_token)
+        if result['success']:
+            # Update session with new tokens
+            session['access_token'] = result['access_token']
+            session['refresh_token'] = result['refresh_token']
+            session.modified = True
+            
+            return jsonify({
+                'success': True,
+                'message': 'Token refreshed successfully'
+            })
+        else:
+            # If refresh fails, clear session
+            session.pop('user_id', None)
+            session.pop('access_token', None) 
+            session.pop('refresh_token', None)
+            session.modified = True
+            
+            return jsonify({
+                'success': False,
+                'error': 'Failed to refresh token'
+            }), 401
+    except Exception as e:
+        print(f"Error refreshing token: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Server error'
         }), 500
 
 if __name__ == '__main__':

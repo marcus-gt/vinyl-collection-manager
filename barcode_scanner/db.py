@@ -3,6 +3,8 @@ from supabase import create_client, Client
 from typing import Optional, Dict, Any
 from datetime import datetime
 from flask import session
+import requests
+import json
 
 def get_supabase_client() -> Client:
     """Get a Supabase client with the current access token if available."""
@@ -43,6 +45,61 @@ supabase: Client = create_client(
     os.getenv("SUPABASE_URL"),
     os.getenv("SUPABASE_KEY")
 )
+
+def refresh_session_token(refresh_token: str) -> Dict[str, Any]:
+    """Refresh the Supabase session token using the refresh token"""
+    try:
+        if not refresh_token:
+            print("No refresh token provided")
+            return {"success": False, "error": "No refresh token provided"}
+            
+        url = os.getenv("SUPABASE_URL")
+        if not url:
+            print("Missing Supabase URL")
+            return {"success": False, "error": "Missing Supabase configuration"}
+            
+        # Make a direct API call to Supabase Auth refresh endpoint
+        refresh_url = f"{url}/auth/v1/token?grant_type=refresh_token"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "ApiKey": os.getenv("SUPABASE_KEY")
+        }
+        
+        payload = {
+            "refresh_token": refresh_token
+        }
+        
+        print(f"Refreshing token using URL: {refresh_url}")
+        response = requests.post(refresh_url, headers=headers, json=payload)
+        
+        print(f"Refresh token response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            print("Token refreshed successfully")
+            return {
+                "success": True,
+                "access_token": data["access_token"],
+                "refresh_token": data["refresh_token"],
+                "user": data.get("user", {})
+            }
+        else:
+            error_msg = f"Failed to refresh token: {response.status_code}"
+            try:
+                error_data = response.json()
+                error_msg = f"{error_msg} - {error_data.get('error', 'Unknown error')}"
+            except:
+                pass
+                
+            print(error_msg)
+            return {"success": False, "error": error_msg}
+            
+    except Exception as e:
+        print(f"Error refreshing token: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
 
 def create_user(email: str, password: str) -> Dict[str, Any]:
     """Create a new user account."""

@@ -33,23 +33,37 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If the error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Only try to refresh if we're not already on /api/auth/me
-      if (originalRequest.url !== '/api/auth/me') {
+    // If the error is 401 or 500 and we haven't tried to refresh yet
+    if ((error.response?.status === 401 || error.response?.status === 500) && 
+        !originalRequest._retry) {
+      // Only try to refresh if we're not already on /api/auth/me or /api/auth/refresh
+      if (originalRequest.url !== '/api/auth/me' && originalRequest.url !== '/api/auth/refresh') {
+        console.log(`Received ${error.response?.status} error, attempting token refresh...`);
         originalRequest._retry = true;
         
         try {
-          const response = await auth.getCurrentUser();
+          // Try to refresh the token first
+          const refreshResult = await auth.refreshToken();
           
-          if (response.success && response.session) {
-            // Update the token in localStorage
-            localStorage.setItem('session', JSON.stringify(response.session));
-            
-            // Retry the original request
+          if (refreshResult.success) {
+            console.log('Token refreshed successfully, retrying request');
+            // Retry the original request after successful token refresh
             return api(originalRequest);
+          } else {
+            // If explicit refresh fails, try getting the current user
+            const response = await auth.getCurrentUser();
+            
+            if (response.success && response.session) {
+              console.log('Session still valid via getCurrentUser, retrying request');
+              // Update the token in localStorage
+              localStorage.setItem('session', JSON.stringify(response.session));
+              
+              // Retry the original request
+              return api(originalRequest);
+            }
           }
         } catch (refreshError) {
+          console.error('Auth refresh failed:', refreshError);
           // If refresh fails, redirect to login
           localStorage.removeItem('session');
           window.location.href = '/login';
@@ -138,6 +152,22 @@ export const auth = {
       // For other errors, log and throw
       console.error('Get current user error:', error instanceof Error ? error.message : 'Unknown error');
       throw error;
+    }
+  },
+
+  refreshToken: async (): Promise<AuthResponse> => {
+    try {
+      console.log('Explicitly refreshing token...');
+      const response = await api.post<AuthResponse>('/api/auth/refresh');
+      console.log('Token refresh response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Token refresh error:', error instanceof Error ? error.message : 'Unknown error');
+      // Return standardized error response
+      return {
+        success: false,
+        error: 'Failed to refresh token'
+      };
     }
   },
 };
