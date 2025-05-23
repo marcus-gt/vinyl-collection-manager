@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { auth, spotify } from '../services/api';
+import { auth } from '../services/api';
 import type { User } from '../types';
 
 interface AuthContextType {
