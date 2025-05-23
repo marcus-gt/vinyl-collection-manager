@@ -18,7 +18,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  
+  // Initialize lastSyncTime from localStorage if available
+  const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
+  const initialLastSyncTime = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(initialLastSyncTime);
 
   // Function to refresh the token
   const refreshToken = useCallback(async (): Promise<boolean> => {
@@ -53,9 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentTime = Date.now();
       const sixHoursMs = 6 * 60 * 60 * 1000;
       
+      // Get last sync time from localStorage instead of state
+      const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
+      const lastSyncTimeMs = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
+      
       // Skip if we've synced in the last 6 hours
-      if (lastSyncTime && (currentTime - lastSyncTime < sixHoursMs)) {
-        console.log(`Skipping playlist sync - last sync was ${Math.round((currentTime - lastSyncTime) / (60 * 1000))} minutes ago`);
+      if (lastSyncTimeMs && (currentTime - lastSyncTimeMs < sixHoursMs)) {
+        console.log(`Skipping playlist sync - last sync was ${Math.round((currentTime - lastSyncTimeMs) / (60 * 1000))} minutes ago`);
         return;
       }
       
@@ -63,11 +71,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const syncResponse = await auth.autoSyncPlaylists();
       
       if (syncResponse.success) {
-        console.log(`Playlist synced successfully. Added ${syncResponse.data?.total_added || 0} albums.`);
+        const newAlbumsAdded = syncResponse.data?.total_added && syncResponse.data.total_added > 0;
+        
+        console.log(`Playlist sync result: ${newAlbumsAdded ? `Added ${syncResponse.data.total_added} albums` : 'No new albums'}`);
+        
+        // Store the current time in localStorage
+        localStorage.setItem('lastSpotifySyncTime', currentTime.toString());
+        // Also update state for the current session
         setLastSyncTime(currentTime);
         
         // If any albums were added, dispatch an event to refresh the collection
-        if (syncResponse.data?.total_added && syncResponse.data.total_added > 0) {
+        if (newAlbumsAdded) {
           console.log('Dispatching table refresh event');
           const refreshEvent = new CustomEvent('vinyl-collection-table-refresh');
           window.dispatchEvent(refreshEvent);
@@ -78,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Error during auto-sync:', err);
     }
-  }, [lastSyncTime]);
+  }, []);
 
   // Try to restore session on mount
   useEffect(() => {
