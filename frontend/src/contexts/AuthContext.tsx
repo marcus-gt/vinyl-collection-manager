@@ -19,7 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Initialize lastSyncTime from localStorage if available
+  // We're still using the state for tracking in the current session,
+  // but primarily relying on localStorage for persistence
   const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
   const initialLastSyncTime = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(initialLastSyncTime);
@@ -61,6 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
       const lastSyncTimeMs = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
       
+      // Log the current lastSyncTime from state for debugging
+      console.log(`Current lastSyncTime state: ${lastSyncTime}, from localStorage: ${lastSyncTimeMs}`);
+      
       // Skip if we've synced in the last 6 hours
       if (lastSyncTimeMs && (currentTime - lastSyncTimeMs < sixHoursMs)) {
         console.log(`Skipping playlist sync - last sync was ${Math.round((currentTime - lastSyncTimeMs) / (60 * 1000))} minutes ago`);
@@ -92,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Error during auto-sync:', err);
     }
-  }, []);
+  }, [lastSyncTime]);
 
   // Try to restore session on mount
   useEffect(() => {
