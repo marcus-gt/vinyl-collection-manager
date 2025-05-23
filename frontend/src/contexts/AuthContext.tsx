@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { auth } from '../services/api';
+import { auth, spotify } from '../services/api';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
 
   // Function to refresh the token
   const refreshToken = useCallback(async (): Promise<boolean> => {
@@ -43,6 +44,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Function to sync playlists automatically
+  const syncSpotifyPlaylists = useCallback(async () => {
+    try {
+      console.log('=== Auto-syncing Spotify Playlists ===');
+      
+      // Check if we should sync based on last sync time (sync once every 6 hours)
+      const currentTime = Date.now();
+      const sixHoursMs = 6 * 60 * 60 * 1000;
+      
+      // Skip if we've synced in the last 6 hours
+      if (lastSyncTime && (currentTime - lastSyncTime < sixHoursMs)) {
+        console.log(`Skipping playlist sync - last sync was ${Math.round((currentTime - lastSyncTime) / (60 * 1000))} minutes ago`);
+        return;
+      }
+      
+      // Use the auth.autoSyncPlaylists endpoint to trigger sync on the server
+      const syncResponse = await auth.autoSyncPlaylists();
+      
+      if (syncResponse.success) {
+        console.log(`Playlist synced successfully. Added ${syncResponse.data?.total_added || 0} albums.`);
+        setLastSyncTime(currentTime);
+        
+        // If any albums were added, dispatch an event to refresh the collection
+        if (syncResponse.data?.total_added && syncResponse.data.total_added > 0) {
+          console.log('Dispatching table refresh event');
+          const refreshEvent = new CustomEvent('vinyl-collection-table-refresh');
+          window.dispatchEvent(refreshEvent);
+        }
+      } else {
+        console.log('Playlist sync failed or no subscribed playlist found');
+      }
+    } catch (err) {
+      console.error('Error during auto-sync:', err);
+    }
+  }, [lastSyncTime]);
+
   // Try to restore session on mount
   useEffect(() => {
     const initializeAuth = async () => {
@@ -65,6 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const refreshed = await refreshToken();
           if (refreshed) {
             console.log('Session refreshed during initialization');
+            // Trigger playlist sync after successful refresh
+            syncSpotifyPlaylists();
             setIsLoading(false);
             return;
           }
@@ -78,6 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Update session in localStorage and state
           localStorage.setItem('session', JSON.stringify(response.session));
           setUser(response.session.user);
+          
+          // Trigger playlist sync after successful auth
+          syncSpotifyPlaylists();
         } else {
           // Clear invalid session
           localStorage.removeItem('session');
@@ -95,6 +137,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               refreshToken().catch(e => 
                 console.error('Background token refresh failed:', e)
               );
+              // Try to sync playlists
+              syncSpotifyPlaylists();
               return; // Keep existing session
             }
           } catch (e) {
@@ -123,8 +167,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }, 30 * 60 * 1000); // 30 minutes
     
-    return () => clearInterval(tokenRefreshInterval);
-  }, [refreshToken]);
+    // Set up periodic playlist sync (every 6 hours)
+    const playlistSyncInterval = setInterval(() => {
+      console.log('Running scheduled playlist sync');
+      if (user) {
+        syncSpotifyPlaylists().catch(e => 
+          console.error('Scheduled playlist sync failed:', e)
+        );
+      }
+    }, 6 * 60 * 60 * 1000); // 6 hours
+    
+    return () => {
+      clearInterval(tokenRefreshInterval);
+      clearInterval(playlistSyncInterval);
+    };
+  }, [refreshToken, syncSpotifyPlaylists]);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
@@ -136,6 +193,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Save session to localStorage
         localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
+        
+        // Trigger playlist sync on login
+        syncSpotifyPlaylists();
       } else {
         setError(response.error || 'Login failed');
         setUser(null);
@@ -147,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [syncSpotifyPlaylists]);
 
   const register = useCallback(async (email: string, password: string) => {
     console.log('Attempting registration...');

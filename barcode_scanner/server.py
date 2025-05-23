@@ -518,6 +518,24 @@ def get_current_user():
             'error': 'Server error'
         }), 500
 
+@app.route('/api/auth/auto-sync', methods=['POST'])
+@require_auth
+def auto_sync_playlists():
+    """Automatically sync Spotify playlists when a user logs in or returns after being idle"""
+    print("\n=== Auto-Sync Playlists ===")
+    
+    try:
+        # Just use the existing sync functionality
+        return sync_playlists()
+    except Exception as e:
+        print(f"Error in auto-sync: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': 'Failed to auto-sync playlists'
+        }), 500
+
 @app.route('/api/records', methods=['GET'])
 @require_auth
 def get_records():

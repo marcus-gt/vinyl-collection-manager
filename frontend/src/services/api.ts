@@ -170,6 +170,20 @@ export const auth = {
       };
     }
   },
+  
+  autoSyncPlaylists: async (): Promise<ApiResponse<any>> => {
+    try {
+      console.log('Triggering auto-sync of playlists...');
+      const response = await api.post<ApiResponse<any>>('/api/auth/auto-sync');
+      return response.data;
+    } catch (error) {
+      console.error('Auto-sync error:', error instanceof Error ? error.message : 'Unknown error');
+      return {
+        success: false,
+        error: 'Failed to auto-sync playlists'
+      };
+    }
+  }
 };
 
 export interface RecordsService {
