@@ -555,6 +555,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  // Add useEffect to check if Spotify authentication is forcing syncs
+  useEffect(() => {
+    if (opened) {
+      // Check for any URL parameters that might be part of a Spotify auth flow
+      const urlParams = new URLSearchParams(window.location.search);
+      const spotifyCode = urlParams.get('code');
+      
+      if (spotifyCode) {
+        console.log('Detected Spotify auth code - clearing URL to prevent auth loops');
+        // Clear URL parameters without refreshing the page to avoid auth loops
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [opened]);
+
   // Update the useEffect to handle Spotify auth callback
   useEffect(() => {
     // Check for Spotify callback code
@@ -563,16 +578,22 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     const returnPath = localStorage.getItem('spotify_auth_return_path');
     
     if (spotifyCode) {
-      // Clear the URL parameters
+      console.log('Processing Spotify auth callback');
+      // Clear the URL parameters without triggering navigation
       window.history.replaceState({}, document.title, window.location.pathname);
       // Clear stored return path
       localStorage.removeItem('spotify_auth_return_path');
-      // Load playlists since we just authenticated
-      checkSpotifyAuth();
-      // Return to previous location if available
-      if (returnPath) {
-        window.location.href = returnPath;
-      }
+      
+      // Add a delay before loading playlists to avoid race conditions with auth context
+      setTimeout(() => {
+        // Load playlists since we just authenticated
+        checkSpotifyAuth();
+        
+        // Return to previous location if available, but only if not already on the correct page
+        if (returnPath && window.location.pathname !== returnPath) {
+          window.location.href = returnPath;
+        }
+      }, 2000);
     }
   }, []);
 
