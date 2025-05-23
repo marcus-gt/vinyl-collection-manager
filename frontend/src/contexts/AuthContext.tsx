@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 import { auth } from '../services/api';
 import type { User } from '../types';
 
@@ -24,6 +24,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
   const initialLastSyncTime = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(initialLastSyncTime);
+  
+  // Add a sync lock to prevent multiple syncs from happening simultaneously
+  const isSyncing = useRef(false);
 
   // Function to refresh the token
   const refreshToken = useCallback(async (): Promise<boolean> => {
@@ -51,17 +54,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Function to sync playlists automatically
   const syncSpotifyPlaylists = useCallback(async (forceSync = false) => {
+    // If already syncing, don't start another sync
+    if (isSyncing.current) {
+      console.log('Sync already in progress, skipping');
+      return;
+    }
+    
+    // Get last sync time from localStorage
+    const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
+    const lastSyncTimeMs = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
+    const currentTime = Date.now();
+    
+    // If not forcing and we synced in the last 5 minutes, skip as a safeguard against rapid sync calls
+    const fiveMinutesMs = 5 * 60 * 1000;
+    if (!forceSync && lastSyncTimeMs && (currentTime - lastSyncTimeMs < fiveMinutesMs)) {
+      console.log(`Safeguard: Skipping sync - last sync was only ${Math.round((currentTime - lastSyncTimeMs) / 1000)} seconds ago`);
+      return;
+    }
+    
     try {
+      // Set the syncing lock
+      isSyncing.current = true;
       console.log('=== Auto-syncing Spotify Playlists ===');
       console.log(`Force sync: ${forceSync}`);
       
       // Check if we should sync based on last sync time (sync once every 6 hours)
-      const currentTime = Date.now();
       const sixHoursMs = 6 * 60 * 60 * 1000;
-      
-      // Get last sync time from localStorage instead of state
-      const storedLastSyncTime = localStorage.getItem('lastSpotifySyncTime');
-      const lastSyncTimeMs = storedLastSyncTime ? parseInt(storedLastSyncTime, 10) : null;
       
       // Log the current lastSyncTime from state for debugging
       console.log(`Current lastSyncTime state: ${lastSyncTime}, from localStorage: ${lastSyncTimeMs}`);
@@ -96,6 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error('Error during auto-sync:', err);
+    } finally {
+      // Always release the sync lock
+      isSyncing.current = false;
     }
   }, [lastSyncTime]);
 
@@ -104,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       console.log('=== Initializing Auth ===');
       setIsLoading(true);
+      let didSync = false;
 
       try {
         // First try to get session from localStorage
@@ -121,8 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const refreshed = await refreshToken();
           if (refreshed) {
             console.log('Session refreshed during initialization');
-            // Trigger playlist sync after successful refresh - force sync on session refresh
-            syncSpotifyPlaylists(true);
+            // Only sync if we haven't synced yet in this initialization
+            if (!didSync) {
+              syncSpotifyPlaylists(true);
+              didSync = true;
+            }
             setIsLoading(false);
             return;
           }
@@ -137,8 +162,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('session', JSON.stringify(response.session));
           setUser(response.session.user);
           
-          // Trigger playlist sync after successful auth - force sync on initial auth
-          syncSpotifyPlaylists(true);
+          // Only sync if we haven't synced yet in this initialization
+          if (!didSync) {
+            syncSpotifyPlaylists(true);
+            didSync = true;
+          }
         } else {
           // Clear invalid session
           localStorage.removeItem('session');
@@ -156,8 +184,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               refreshToken().catch(e => 
                 console.error('Background token refresh failed:', e)
               );
-              // Try to sync playlists
-              syncSpotifyPlaylists();
+              // Try to sync playlists only if we haven't already
+              if (!didSync) {
+                syncSpotifyPlaylists(true);
+                didSync = true;
+              }
               return; // Keep existing session
             }
           } catch (e) {
@@ -213,8 +244,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('session', JSON.stringify(response.session));
         setUser(response.session.user);
         
-        // Trigger playlist sync on login, always force sync on login
-        syncSpotifyPlaylists(true);
+        // Schedule the sync with a small delay to avoid initialization loops
+        setTimeout(() => {
+          syncSpotifyPlaylists(true);
+        }, 1000);
       } else {
         setError(response.error || 'Login failed');
         setUser(null);
