@@ -1406,6 +1406,183 @@ def refresh_auth_token():
             'error': 'Server error'
         }), 500
 
+@app.route('/api/musician-network', methods=['GET'])
+@require_auth
+def get_musician_network():
+    """Get musician network analysis data for the user's collection."""
+    print("\n=== Getting Musician Network Analysis ===")
+    
+    user_id = session.get('user_id')
+    print(f"User ID: {user_id}")
+    
+    if not user_id:
+        return jsonify({
+            'success': False,
+            'error': 'User not authenticated'
+        }), 401
+    
+    try:
+        # Import analysis modules
+        try:
+            from .data_processor import (
+                create_network_data,
+                create_echarts_network_data,
+                get_custom_filter_data
+            )
+            from .analysis import (
+                analyze_top_musicians,
+                get_session_musicians,
+                get_collaboration_stats
+            )
+        except ImportError:
+            from data_processor import (
+                create_network_data,
+                create_echarts_network_data,
+                get_custom_filter_data
+            )
+            from analysis import (
+                analyze_top_musicians,
+                get_session_musicians,
+                get_collaboration_stats
+            )
+        
+        import pandas as pd
+        
+        # Get user's collection with musician data
+        supabase = get_supabase_client()
+        result = supabase.table('vinyl_records').select('*').eq('user_id', user_id).execute()
+        
+        if not result.data:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'nodes': [],
+                    'links': [],
+                    'categories': [],
+                    'genres': [],
+                    'styles': [],
+                    'clean_roles': [],
+                    'musician_stats': [],
+                    'session_musicians': [],
+                    'stats': {}
+                },
+                'message': 'No records found in collection'
+            })
+        
+        # Convert to DataFrame
+        records = result.data
+        collection_df = pd.DataFrame(records)
+        
+        
+        # Rename columns to match the analysis format
+        column_mapping = {
+            'artist': 'Artist',
+            'album': 'Album',
+            'musicians': 'Musicians',
+            'genres': 'Genres',
+            'styles': 'Styles'
+        }
+        collection_df = collection_df.rename(columns=column_mapping)
+        
+        # Filter out records without musician data
+        collection_df = collection_df[collection_df['Musicians'].notna()]
+        
+        if len(collection_df) == 0:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'nodes': [],
+                    'links': [],
+                    'categories': [],
+                    'genres': [],
+                    'styles': [],
+                    'clean_roles': [],
+                    'musician_stats': [],
+                    'session_musicians': [],
+                    'stats': {}
+                },
+                'message': 'No musician data found in collection'
+            })
+        
+        print(f"Processing {len(collection_df)} records with musician data")
+        
+        # Step 1: Create network data
+        network_df = create_network_data(collection_df)
+        print(f"Created network with {len(network_df)} connections")
+        
+        # Step 2: Create ECharts network data
+        echarts_data = create_echarts_network_data(network_df, collection_df)
+        print(f"Generated visualization data: {len(echarts_data['nodes'])} nodes, {len(echarts_data['links'])} links")
+        
+        # Step 3: Analyze musicians
+        musician_stats_df = analyze_top_musicians(network_df, collection_df)
+        session_musicians_df = get_session_musicians(
+            musician_stats_df,
+            min_records=2,
+            min_session_ratio=0.7
+        )
+        
+        # Step 4: Get collaboration stats
+        stats = get_collaboration_stats(network_df)
+        
+        # Step 5: Get custom filter data
+        custom_filter_data = get_custom_filter_data(collection_df)
+        
+        # Convert DataFrames to dictionaries for JSON serialization
+        # Use orient='records' to get list of dicts, then convert to pure Python types
+        musician_stats_data = []
+        for _, row in musician_stats_df.iterrows():
+            record = {}
+            for col in musician_stats_df.columns:
+                val = row[col]
+                # Convert numpy/pandas types to Python types
+                if isinstance(val, (list, tuple)):
+                    record[col] = list(val)
+                elif pd.isna(val):
+                    record[col] = None
+                else:
+                    record[col] = val
+            musician_stats_data.append(record)
+        
+        session_musicians_data = []
+        for _, row in session_musicians_df.iterrows():
+            record = {}
+            for col in session_musicians_df.columns:
+                val = row[col]
+                # Convert numpy/pandas types to Python types
+                if isinstance(val, (list, tuple)):
+                    record[col] = list(val)
+                elif pd.isna(val):
+                    record[col] = None
+                else:
+                    record[col] = val
+            session_musicians_data.append(record)
+        
+        print(f"Analysis complete: {len(musician_stats_data)} musicians, {len(session_musicians_data)} session musicians")
+        
+        # Build response data
+        response_data = {
+            'success': True,
+            'data': {
+                **echarts_data,
+                'musician_stats': musician_stats_data,
+                'session_musicians': session_musicians_data,
+                'stats': stats,
+                'custom_filters': custom_filter_data
+            }
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error generating musician network: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to generate musician network: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
     # Use port 3000 in development to match frontend expectations, 10000 in production
