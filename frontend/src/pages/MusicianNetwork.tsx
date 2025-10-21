@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper, SegmentedControl, TextInput } from '@mantine/core';
+import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper, SegmentedControl } from '@mantine/core';
 import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp, IconSearch } from '@tabler/icons-react';
 import { musicianNetwork, type MusicianNetworkData, type MusicianStats } from '../services/api';
 import NetworkGraph from '../components/NetworkGraph';
@@ -877,7 +877,11 @@ function TopMusiciansChart({ data, sortBy, onSortByChange }: TopMusiciansChartPr
 }
 
 // Session Scatter Chart Component
-function SessionScatterChart({ data }: TopMusiciansChartProps) {
+interface SessionScatterChartProps {
+  data: MusicianNetworkData;
+}
+
+function SessionScatterChart({ data }: SessionScatterChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -1051,7 +1055,7 @@ function SessionScatterChart({ data }: TopMusiciansChartProps) {
         {
           name: 'Pure Session Musicians',
           type: 'scatter',
-          data: Array.from(pureSessionGroups.entries()).map(([key, musicians]) => {
+          data: Array.from(pureSessionGroups.entries()).map(([, musicians]) => {
             const totalRecords = Math.max(...musicians.map(m => m.total_records));
             return [
               musicians[0].as_main_artist,
@@ -1071,7 +1075,7 @@ function SessionScatterChart({ data }: TopMusiciansChartProps) {
         {
           name: 'Balanced Artists',
           type: 'scatter',
-          data: Array.from(balancedGroups.entries()).map(([key, musicians]) => {
+          data: Array.from(balancedGroups.entries()).map(([, musicians]) => {
             const totalRecords = Math.max(...musicians.map(m => m.total_records));
             return [
               musicians[0].as_main_artist,
@@ -1091,7 +1095,7 @@ function SessionScatterChart({ data }: TopMusiciansChartProps) {
         {
           name: 'Pure Main Artists',
           type: 'scatter',
-          data: Array.from(pureMainGroups.entries()).map(([key, musicians]) => {
+          data: Array.from(pureMainGroups.entries()).map(([, musicians]) => {
             const totalRecords = Math.max(...musicians.map(m => m.total_records));
             return [
               musicians[0].as_main_artist,
