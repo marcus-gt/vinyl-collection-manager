@@ -1,0 +1,25 @@
+[project]
+name = "vinyl-collection-manager"
+version = "0.1.0"
+description = "A web app to manage vinyl record collection"
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+readme = "README.md"
+requires-python = "^3.9"
+dependencies = [
+    "flask (==3.0.0)",
+    "flask-cors (==4.0.0)",
+    "flask-login (==0.6.3)",
+    "python3-discogs-client (==2.7.1)",
+    "supabase (==1.2.0)",
+    "python-dotenv (==1.0.0)",
+    "gunicorn (==21.2.0)",
+    "requests (==2.31.0)",
+    "pyjwt (==2.10.1)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

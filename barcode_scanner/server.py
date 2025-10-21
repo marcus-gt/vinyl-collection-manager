@@ -84,24 +84,32 @@ print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
 print(f"Running in {'production' if os.getenv('FLASK_ENV') == 'production' else 'development'} mode")
 
 # Update session configuration with much longer lifetime
-session_config = {
-    'SESSION_COOKIE_SECURE': True,
-    'SESSION_COOKIE_HTTPONLY': True,
-    'SESSION_COOKIE_SAMESITE': 'None',
-    'SESSION_COOKIE_PATH': '/',
-    'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to 1 year
-    'SESSION_REFRESH_EACH_REQUEST': True
-}
-
+# In development, use less strict settings to work with HTTP
 if os.getenv('FLASK_ENV') == 'production':
-    session_config.update({
+    session_config = {
+        'SESSION_COOKIE_SECURE': True,
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': 'None',
+        'SESSION_COOKIE_PATH': '/',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to 1 year
+        'SESSION_REFRESH_EACH_REQUEST': True,
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_NAME': 'session',
         'REMEMBER_COOKIE_SECURE': True,
         'REMEMBER_COOKIE_HTTPONLY': True,
         'REMEMBER_COOKIE_SAMESITE': 'None',
         'REMEMBER_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com'
-    })
+    }
+else:
+    # Development mode - allow cookies over HTTP
+    session_config = {
+        'SESSION_COOKIE_SECURE': False,  # Allow HTTP in development
+        'SESSION_COOKIE_HTTPONLY': True,
+        'SESSION_COOKIE_SAMESITE': 'Lax',  # More permissive for local development
+        'SESSION_COOKIE_PATH': '/',
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
+        'SESSION_REFRESH_EACH_REQUEST': True
+    }
 
 app.config.update(**session_config)
 
@@ -1400,7 +1408,9 @@ def refresh_auth_token():
 
 if __name__ == '__main__':
     is_production = os.getenv('FLASK_ENV') == 'production'
-    port = int(os.environ.get('PORT', 10000))
+    # Use port 3000 in development to match frontend expectations, 10000 in production
+    default_port = 10000 if is_production else 3000
+    port = int(os.environ.get('PORT', default_port))
 
     if is_production:
         import gunicorn.app.base

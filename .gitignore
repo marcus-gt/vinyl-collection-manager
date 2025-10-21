@@ -4,6 +4,11 @@ __pycache__/
 *$py.class
 venv/
 .env
+.evnrc
+poetry.lock
+poetry.toml
+poetry.lock
+poetry.toml
 
 # Node.js
 node_modules/
