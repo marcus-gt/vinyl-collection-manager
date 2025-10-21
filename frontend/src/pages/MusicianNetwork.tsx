@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge } from '@mantine/core';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper } from '@mantine/core';
 import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { musicianNetwork, type MusicianNetworkData, type MusicianStats } from '../services/api';
 import NetworkGraph from '../components/NetworkGraph';
+import * as echarts from 'echarts';
 
 interface CustomFilter {
   id: number;
@@ -382,31 +383,28 @@ export default function MusicianNetwork() {
         </Tabs.Panel>
 
         <Tabs.Panel value="top" pt="xl">
-          <Title order={3} mb="md">Top Musicians by Record Appearances</Title>
+          <Title order={3} mb="md">🏆 Top Musicians by Record Count</Title>
+          <Text size="sm" c="dimmed" mb="lg">
+            Musicians ranked by total record appearances, showing main artist vs session work
+          </Text>
           
-          <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-            {(filteredData?.musician_stats || data.musician_stats).slice(0, 20).map((musician, idx) => (
-              <div 
-                key={musician.musician}
-                style={{
-                  padding: '12px',
-                  borderBottom: '1px solid #eee',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <Text fw={500}>
-                    {idx + 1}. {musician.musician}
-                  </Text>
-                  <Text size="sm" c="dimmed">
-                    {musician.total_records} records • {musician.as_main_artist} as main artist • {musician.as_session_musician} as session
-                  </Text>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Paper
+            p="md"
+            style={{
+              backgroundColor: '#2e2e2e',
+              borderRadius: '8px',
+            }}
+          >
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '20px',
+              width: '100%'
+            }}>
+              <TopMusiciansChart data={filteredData || data} />
+              <SessionScatterChart data={filteredData || data} />
+            </div>
+          </Paper>
         </Tabs.Panel>
 
         <Tabs.Panel value="session" pt="xl">
@@ -447,6 +445,432 @@ export default function MusicianNetwork() {
         </Tabs.Panel>
       </Tabs>
     </Container>
+  );
+}
+
+// Top Musicians Chart Component
+interface TopMusiciansChartProps {
+  data: MusicianNetworkData;
+}
+
+function TopMusiciansChart({ data }: TopMusiciansChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstance = useRef<echarts.ECharts | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Check visibility
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      });
+    });
+
+    observer.observe(chartRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!chartRef.current || !isVisible) return;
+
+    // Initialize ECharts
+    if (!chartInstance.current) {
+      chartInstance.current = echarts.init(chartRef.current, 'dark');
+      console.log('Top Musicians Chart initialized');
+    }
+
+    // Get top 15 musicians
+    const topMusicians = data.musician_stats
+      .sort((a, b) => b.total_records - a.total_records)
+      .slice(0, 15);
+
+    console.log('Top musicians data:', topMusicians.length, 'musicians');
+
+    const option: echarts.EChartsOption = {
+      backgroundColor: '#1e1e1e',
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
+        },
+        formatter: (params: any) => {
+          const data = params[0];
+          const musician = topMusicians[data.dataIndex];
+          return `
+            <div style="font-weight: bold; margin-bottom: 8px;">${data.name}</div>
+            <div>Total Records: <span style="color: #3498db; font-weight: bold;">${data.value}</span></div>
+            <div>Main Artist: <span style="color: #27ae60; font-weight: bold;">${musician.as_main_artist}</span></div>
+            <div>Session Work: <span style="color: #e74c3c; font-weight: bold;">${musician.as_session_musician}</span></div>
+            <div>Session Ratio: <span style="color: #f39c12; font-weight: bold;">${(musician.session_ratio * 100).toFixed(1)}%</span></div>
+          `;
+        },
+        backgroundColor: 'rgba(45, 45, 45, 0.95)',
+        borderColor: '#555',
+        borderWidth: 1,
+        textStyle: {
+          color: '#e0e0e0'
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '5%',
+        bottom: '5%',
+        top: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'value',
+        name: 'Total Records',
+        nameLocation: 'middle',
+        nameGap: 30,
+        nameTextStyle: {
+          fontSize: 12,
+          fontWeight: 'bold',
+          color: '#e0e0e0'
+        },
+        splitLine: {
+          lineStyle: {
+            color: '#404040'
+          }
+        },
+        axisLabel: {
+          color: '#e0e0e0'
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#555'
+          }
+        }
+      },
+      yAxis: {
+        type: 'category',
+        data: topMusicians.map(m => m.musician).reverse(),
+        axisLabel: {
+          fontSize: 11,
+          interval: 0,
+          color: '#e0e0e0',
+          formatter: (value: string) => {
+            return value.length > 25 ? value.substring(0, 25) + '...' : value;
+          }
+        },
+        axisTick: {
+          alignWithLabel: true
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#555'
+          }
+        }
+      },
+      series: [{
+        name: 'Total Records',
+        type: 'bar',
+        data: topMusicians.map((m, index) => {
+          // Create a gradient from blue to purple based on position
+          const ratio = index / Math.max(topMusicians.length - 1, 1);
+          const r = Math.floor(52 + ratio * 100);
+          const g = Math.floor(152 - ratio * 50);
+          const b = Math.floor(219 - ratio * 20);
+          const color = `rgba(${r}, ${g}, ${b}, 0.8)`;
+          
+          return {
+            value: m.total_records,
+            itemStyle: {
+              color: color
+            }
+          };
+        }).reverse(),
+        barWidth: '60%',
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          }
+        },
+        animationDelay: (idx: number) => idx * 50
+      }],
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
+    };
+
+    chartInstance.current.setOption(option);
+
+    // Force multiple resizes to ensure proper sizing
+    setTimeout(() => chartInstance.current?.resize(), 0);
+    setTimeout(() => chartInstance.current?.resize(), 100);
+    setTimeout(() => chartInstance.current?.resize(), 300);
+
+    // Handle window resize
+    const handleResize = () => {
+      chartInstance.current?.resize();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [data, isVisible]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.dispose();
+        chartInstance.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ width: '100%' }}>
+      <Title order={4} mb="sm">Most Active Musicians</Title>
+      <Text size="xs" c="dimmed" mb="md">
+        Hover for details • Bar colors show ranking gradient
+      </Text>
+      <div
+        ref={chartRef}
+        style={{
+          width: '100%',
+          height: '600px',
+        }}
+      />
+    </div>
+  );
+}
+
+// Session Scatter Chart Component
+function SessionScatterChart({ data }: TopMusiciansChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstance = useRef<echarts.ECharts | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Check visibility
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      });
+    });
+
+    observer.observe(chartRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!chartRef.current || !isVisible) return;
+
+    // Initialize ECharts
+    if (!chartInstance.current) {
+      chartInstance.current = echarts.init(chartRef.current, 'dark');
+      console.log('Session Scatter Chart initialized');
+    }
+
+    // Categorize musicians
+    const pureSessionMusicians = data.musician_stats.filter(m => m.as_main_artist === 0 && m.as_session_musician > 0);
+    const balancedMusicians = data.musician_stats.filter(m => m.as_main_artist > 0 && m.as_session_musician > 0);
+    const pureMainArtists = data.musician_stats.filter(m => m.as_main_artist > 0 && m.as_session_musician === 0);
+
+    const maxTotal = Math.max(...data.musician_stats.map(m => m.total_records));
+
+    // Helper function to get size based on total records
+    const getSizeByTotal = (total: number) => {
+      const minSize = 8;
+      const maxSize = 40;
+      return minSize + (maxSize - minSize) * (total / maxTotal);
+    };
+
+    const option: echarts.EChartsOption = {
+      backgroundColor: '#1e1e1e',
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: any) => {
+          const data = params.data;
+          return `
+            <div style="font-weight: bold; margin-bottom: 8px;">${data[3]}</div>
+            <div>Category: <span style="color: ${params.color}; font-weight: bold;">${params.seriesName}</span></div>
+            <div>Total Records: <span style="color: #e74c3c; font-weight: bold;">${data[4]}</span></div>
+            <div>Main Artist: <span style="color: #27ae60; font-weight: bold;">${data[0]}</span></div>
+            <div>Session Work: <span style="color: #3498db; font-weight: bold;">${data[1]}</span></div>
+            <div>Session Ratio: <span style="color: #f39c12; font-weight: bold;">${(data[5] * 100).toFixed(1)}%</span></div>
+          `;
+        },
+        backgroundColor: 'rgba(45, 45, 45, 0.95)',
+        borderColor: '#555',
+        borderWidth: 1,
+        textStyle: {
+          color: '#e0e0e0'
+        }
+      },
+      legend: {
+        data: ['Pure Session Musicians', 'Balanced Artists', 'Pure Main Artists'],
+        top: '5%',
+        textStyle: {
+          color: '#e0e0e0'
+        }
+      },
+      grid: {
+        left: '10%',
+        right: '5%',
+        bottom: '5%',
+        top: '12%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'value',
+        name: 'Main Artist Records',
+        nameLocation: 'middle',
+        nameGap: 30,
+        nameTextStyle: {
+          fontSize: 12,
+          fontWeight: 'bold',
+          color: '#e0e0e0'
+        },
+        splitLine: {
+          lineStyle: {
+            color: '#404040'
+          }
+        },
+        axisLabel: {
+          color: '#e0e0e0'
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#555'
+          }
+        }
+      },
+      yAxis: {
+        type: 'value',
+        name: 'Session Work Records',
+        nameLocation: 'middle',
+        nameGap: 50,
+        nameTextStyle: {
+          fontSize: 12,
+          fontWeight: 'bold',
+          color: '#e0e0e0'
+        },
+        splitLine: {
+          lineStyle: {
+            color: '#404040'
+          }
+        },
+        axisLabel: {
+          color: '#e0e0e0'
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#555'
+          }
+        }
+      },
+      series: [
+        {
+          name: 'Pure Session Musicians',
+          type: 'scatter',
+          data: pureSessionMusicians.map(m => [
+            m.as_main_artist,
+            m.as_session_musician,
+            getSizeByTotal(m.total_records),
+            m.musician,
+            m.total_records,
+            m.session_ratio
+          ]),
+          symbolSize: (val: any) => val[2],
+          itemStyle: {
+            color: 'rgba(231, 76, 60, 0.8)'
+          }
+        },
+        {
+          name: 'Balanced Artists',
+          type: 'scatter',
+          data: balancedMusicians.map(m => [
+            m.as_main_artist,
+            m.as_session_musician,
+            getSizeByTotal(m.total_records),
+            m.musician,
+            m.total_records,
+            m.session_ratio
+          ]),
+          symbolSize: (val: any) => val[2],
+          itemStyle: {
+            color: 'rgba(243, 156, 18, 0.8)'
+          }
+        },
+        {
+          name: 'Pure Main Artists',
+          type: 'scatter',
+          data: pureMainArtists.map(m => [
+            m.as_main_artist,
+            m.as_session_musician,
+            getSizeByTotal(m.total_records),
+            m.musician,
+            m.total_records,
+            m.session_ratio
+          ]),
+          symbolSize: (val: any) => val[2],
+          itemStyle: {
+            color: 'rgba(39, 174, 96, 0.8)'
+          }
+        }
+      ],
+      animation: true,
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
+    };
+
+    chartInstance.current.setOption(option);
+
+    // Force multiple resizes to ensure proper sizing
+    setTimeout(() => chartInstance.current?.resize(), 0);
+    setTimeout(() => chartInstance.current?.resize(), 100);
+    setTimeout(() => chartInstance.current?.resize(), 300);
+
+    // Handle window resize
+    const handleResize = () => {
+      chartInstance.current?.resize();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [data, isVisible]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.dispose();
+        chartInstance.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div style={{ width: '100%' }}>
+      <Title order={4} mb="sm">Main Artist vs Session Work</Title>
+      <Text size="xs" c="dimmed" mb="md">
+        Scatter plot showing musician work balance • Bubble size = total records
+      </Text>
+      <div
+        ref={chartRef}
+        style={{
+          width: '100%',
+          height: '600px',
+        }}
+      />
+    </div>
   );
 }
 
