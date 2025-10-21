@@ -1473,6 +1473,36 @@ def get_musician_network():
         records = result.data
         collection_df = pd.DataFrame(records)
         
+        # Expand custom_values_cache into separate columns
+        if 'custom_values_cache' in collection_df.columns:
+            # Extract custom column data and add as new columns
+            custom_data = collection_df['custom_values_cache'].apply(lambda x: x if isinstance(x, dict) else {})
+            
+            # Get all unique custom column IDs across all records
+            all_custom_columns = set()
+            for custom_vals in custom_data:
+                if isinstance(custom_vals, dict):
+                    all_custom_columns.update(custom_vals.keys())
+            
+            # Fetch custom column names from the database
+            custom_column_names = {}
+            if all_custom_columns:
+                try:
+                    custom_cols_result = supabase.table('custom_columns').select('id, name').eq('user_id', user_id).execute()
+                    if custom_cols_result.data:
+                        custom_column_names = {col['id']: col['name'] for col in custom_cols_result.data}
+                        print(f"Fetched {len(custom_column_names)} custom column names: {custom_column_names}")
+                except Exception as e:
+                    print(f"Warning: Could not fetch custom column names: {e}")
+            
+            # Add each custom column to the DataFrame with readable names
+            for col_id in all_custom_columns:
+                # Use the actual column name if available, otherwise use the ID
+                col_name = custom_column_names.get(col_id, f"custom_{col_id}")
+                collection_df[col_name] = custom_data.apply(
+                    lambda x: x.get(col_id) if isinstance(x, dict) else None
+                )
+                print(f"Added custom column: {col_name}")
         
         # Rename columns to match the analysis format
         column_mapping = {
@@ -1526,7 +1556,9 @@ def get_musician_network():
         stats = get_collaboration_stats(network_df)
         
         # Step 5: Get custom filter data
+        print(f"Collection DataFrame columns: {list(collection_df.columns)}")
         custom_filter_data = get_custom_filter_data(collection_df)
+        print(f"Custom filter data keys: {list(custom_filter_data.keys())}")
         
         # Convert DataFrames to dictionaries for JSON serialization
         # Use orient='records' to get list of dicts, then convert to pure Python types
