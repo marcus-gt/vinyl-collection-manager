@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper } from '@mantine/core';
+import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper, SegmentedControl } from '@mantine/core';
 import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { musicianNetwork, type MusicianNetworkData, type MusicianStats } from '../services/api';
 import NetworkGraph from '../components/NetworkGraph';
@@ -383,28 +383,7 @@ export default function MusicianNetwork() {
         </Tabs.Panel>
 
         <Tabs.Panel value="top" pt="xl">
-          <Title order={3} mb="md">🏆 Top Musicians by Record Count</Title>
-          <Text size="sm" c="dimmed" mb="lg">
-            Musicians ranked by total record appearances, showing main artist vs session work
-          </Text>
-          
-          <Paper
-            p="md"
-            style={{
-              backgroundColor: '#2e2e2e',
-              borderRadius: '8px',
-            }}
-          >
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '20px',
-              width: '100%'
-            }}>
-              <TopMusiciansChart data={filteredData || data} />
-              <SessionScatterChart data={filteredData || data} />
-            </div>
-          </Paper>
+          <TopMusiciansPanel data={filteredData || data} />
         </Tabs.Panel>
 
         <Tabs.Panel value="session" pt="xl">
@@ -448,12 +427,50 @@ export default function MusicianNetwork() {
   );
 }
 
-// Top Musicians Chart Component
-interface TopMusiciansChartProps {
+// Top Musicians Panel with Toggle
+interface TopMusiciansPanelProps {
   data: MusicianNetworkData;
 }
 
-function TopMusiciansChart({ data }: TopMusiciansChartProps) {
+function TopMusiciansPanel({ data }: TopMusiciansPanelProps) {
+  const [sortBy, setSortBy] = useState<'total' | 'main' | 'session'>('total');
+
+  return (
+    <>
+      <Title order={3} mb="md">🏆 Top 15</Title>
+      <Text size="sm" c="dimmed" mb="lg">
+        Musicians ranked by record count, showing main artist vs session work breakdown
+      </Text>
+
+      <Paper
+        p="md"
+        style={{
+          backgroundColor: '#2e2e2e',
+          borderRadius: '8px',
+        }}
+      >
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr', 
+          gap: '20px',
+          width: '100%'
+        }}>
+          <TopMusiciansChart data={data} sortBy={sortBy} onSortByChange={setSortBy} />
+          <SessionScatterChart data={data} />
+        </div>
+      </Paper>
+    </>
+  );
+}
+
+// Top Musicians Chart Component
+interface TopMusiciansChartProps {
+  data: MusicianNetworkData;
+  sortBy: 'total' | 'main' | 'session';
+  onSortByChange: (value: 'total' | 'main' | 'session') => void;
+}
+
+function TopMusiciansChart({ data, sortBy, onSortByChange }: TopMusiciansChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -484,12 +501,20 @@ function TopMusiciansChart({ data }: TopMusiciansChartProps) {
       console.log('Top Musicians Chart initialized');
     }
 
-    // Get top 15 musicians
+    // Get top 15 musicians based on sort criteria
     const topMusicians = data.musician_stats
-      .sort((a, b) => b.total_records - a.total_records)
+      .sort((a, b) => {
+        if (sortBy === 'main') {
+          return b.as_main_artist - a.as_main_artist;
+        } else if (sortBy === 'session') {
+          return b.as_session_musician - a.as_session_musician;
+        } else {
+          return b.total_records - a.total_records;
+        }
+      })
       .slice(0, 15);
 
-    console.log('Top musicians data:', topMusicians.length, 'musicians');
+    console.log('Top musicians data:', topMusicians.length, 'musicians, sorted by:', sortBy);
 
     const option: echarts.EChartsOption = {
       backgroundColor: '#1e1e1e',
@@ -499,14 +524,15 @@ function TopMusiciansChart({ data }: TopMusiciansChartProps) {
           type: 'shadow'
         },
         formatter: (params: any) => {
-          const data = params[0];
-          const musician = topMusicians[data.dataIndex];
+          const musicianName = params[0].name;
+          const reversedIndex = topMusicians.length - 1 - params[0].dataIndex;
+          const musician = topMusicians[reversedIndex];
           return `
-            <div style="font-weight: bold; margin-bottom: 8px;">${data.name}</div>
-            <div>Total Records: <span style="color: #3498db; font-weight: bold;">${data.value}</span></div>
-            <div>Main Artist: <span style="color: #27ae60; font-weight: bold;">${musician.as_main_artist}</span></div>
-            <div>Session Work: <span style="color: #e74c3c; font-weight: bold;">${musician.as_session_musician}</span></div>
-            <div>Session Ratio: <span style="color: #f39c12; font-weight: bold;">${(musician.session_ratio * 100).toFixed(1)}%</span></div>
+            <div style="font-weight: bold; margin-bottom: 8px;">${musicianName}</div>
+            <div>Total Records: <span style="color: #5dade2; font-weight: bold;">${musician.total_records}</span></div>
+            <div>Main Artist: <span style="color: #3498db; font-weight: bold;">${musician.as_main_artist}</span></div>
+            <div>Session Work: <span style="color: #9b59b6; font-weight: bold;">${musician.as_session_musician}</span></div>
+            <div>Session Ratio: <span style="color: #1abc9c; font-weight: bold;">${(musician.session_ratio * 100).toFixed(1)}%</span></div>
           `;
         },
         backgroundColor: 'rgba(45, 45, 45, 0.95)',
@@ -516,11 +542,18 @@ function TopMusiciansChart({ data }: TopMusiciansChartProps) {
           color: '#e0e0e0'
         }
       },
+      legend: {
+        data: ['Main Artist', 'Session Work'],
+        top: '2%',
+        textStyle: {
+          color: '#e0e0e0'
+        }
+      },
       grid: {
         left: '3%',
         right: '5%',
         bottom: '5%',
-        top: '3%',
+        top: '10%',
         containLabel: true
       },
       xAxis: {
@@ -567,33 +600,40 @@ function TopMusiciansChart({ data }: TopMusiciansChartProps) {
           }
         }
       },
-      series: [{
-        name: 'Total Records',
-        type: 'bar',
-        data: topMusicians.map((m, index) => {
-          // Create a gradient from blue to purple based on position
-          const ratio = index / Math.max(topMusicians.length - 1, 1);
-          const r = Math.floor(52 + ratio * 100);
-          const g = Math.floor(152 - ratio * 50);
-          const b = Math.floor(219 - ratio * 20);
-          const color = `rgba(${r}, ${g}, ${b}, 0.8)`;
-          
-          return {
-            value: m.total_records,
-            itemStyle: {
-              color: color
-            }
-          };
-        }).reverse(),
-        barWidth: '60%',
-        emphasis: {
+      series: [
+        {
+          name: 'Main Artist',
+          type: 'bar',
+          stack: 'total',
+          data: topMusicians.map(m => m.as_main_artist).reverse(),
           itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.3)'
-          }
+            color: 'rgba(52, 152, 219, 0.8)' // Blue
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.3)'
+            }
+          },
+          animationDelay: (idx: number) => idx * 50
         },
-        animationDelay: (idx: number) => idx * 50
-      }],
+        {
+          name: 'Session Work',
+          type: 'bar',
+          stack: 'total',
+          data: topMusicians.map(m => m.as_session_musician).reverse(),
+          itemStyle: {
+            color: 'rgba(155, 89, 182, 0.8)' // Purple
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.3)'
+            }
+          },
+          animationDelay: (idx: number) => idx * 50
+        }
+      ],
       animation: true,
       animationDuration: 1000,
       animationEasing: 'cubicOut'
@@ -615,7 +655,7 @@ function TopMusiciansChart({ data }: TopMusiciansChartProps) {
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [data, isVisible]);
+  }, [data, isVisible, sortBy]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -629,9 +669,23 @@ function TopMusiciansChart({ data }: TopMusiciansChartProps) {
 
   return (
     <div style={{ width: '100%' }}>
-      <Title order={4} mb="sm">Most Active Musicians</Title>
+      <Group justify="space-between" align="center" mb="sm">
+        <Title order={4}>
+          {sortBy === 'main' ? 'Top Main Artists' : sortBy === 'session' ? 'Top Session Musicians' : 'Most Active Musicians'}
+        </Title>
+        <SegmentedControl
+          value={sortBy}
+          onChange={(value) => onSortByChange(value as 'total' | 'main' | 'session')}
+          data={[
+            { label: 'Total', value: 'total' },
+            { label: 'Main', value: 'main' },
+            { label: 'Session', value: 'session' },
+          ]}
+          size="xs"
+        />
+      </Group>
       <Text size="xs" c="dimmed" mb="md">
-        Hover for details • Bar colors show ranking gradient
+        Hover for details • Stacked bars show main artist (blue) vs session work (purple)
       </Text>
       <div
         ref={chartRef}
@@ -685,10 +739,34 @@ function SessionScatterChart({ data }: TopMusiciansChartProps) {
 
     // Helper function to get size based on total records
     const getSizeByTotal = (total: number) => {
-      const minSize = 8;
-      const maxSize = 40;
+      const minSize = 10;
+      const maxSize = 50;
       return minSize + (maxSize - minSize) * (total / maxTotal);
     };
+
+    console.log('Scatter plot data counts:', {
+      pureSession: pureSessionMusicians.length,
+      balanced: balancedMusicians.length,
+      pureMain: pureMainArtists.length,
+      total: data.musician_stats.length
+    });
+
+    // Group musicians by coordinates to detect overlaps
+    const groupByCoordinates = (musicians: any[]) => {
+      const groups = new Map<string, any[]>();
+      musicians.forEach(m => {
+        const key = `${m.as_main_artist},${m.as_session_musician}`;
+        if (!groups.has(key)) {
+          groups.set(key, []);
+        }
+        groups.get(key)!.push(m);
+      });
+      return groups;
+    };
+
+    const pureSessionGroups = groupByCoordinates(pureSessionMusicians);
+    const balancedGroups = groupByCoordinates(balancedMusicians);
+    const pureMainGroups = groupByCoordinates(pureMainArtists);
 
     const option: echarts.EChartsOption = {
       backgroundColor: '#1e1e1e',
@@ -696,14 +774,31 @@ function SessionScatterChart({ data }: TopMusiciansChartProps) {
         trigger: 'item',
         formatter: (params: any) => {
           const data = params.data;
-          return `
-            <div style="font-weight: bold; margin-bottom: 8px;">${data[3]}</div>
-            <div>Category: <span style="color: ${params.color}; font-weight: bold;">${params.seriesName}</span></div>
-            <div>Total Records: <span style="color: #e74c3c; font-weight: bold;">${data[4]}</span></div>
-            <div>Main Artist: <span style="color: #27ae60; font-weight: bold;">${data[0]}</span></div>
-            <div>Session Work: <span style="color: #3498db; font-weight: bold;">${data[1]}</span></div>
-            <div>Session Ratio: <span style="color: #f39c12; font-weight: bold;">${(data[5] * 100).toFixed(1)}%</span></div>
-          `;
+          const musicians = data[6]; // Array of musicians at this coordinate
+          
+          if (musicians.length === 1) {
+            const m = musicians[0];
+            return `
+              <div style="font-weight: bold; margin-bottom: 8px;">${m.musician}</div>
+              <div>Category: <span style="color: ${params.color}; font-weight: bold;">${params.seriesName}</span></div>
+              <div>Total Records: <span style="color: #5dade2; font-weight: bold;">${m.total_records}</span></div>
+              <div>Main Artist: <span style="color: #3498db; font-weight: bold;">${m.as_main_artist}</span></div>
+              <div>Session Work: <span style="color: #9b59b6; font-weight: bold;">${m.as_session_musician}</span></div>
+              <div>Session Ratio: <span style="color: #1abc9c; font-weight: bold;">${(m.session_ratio * 100).toFixed(1)}%</span></div>
+            `;
+          } else {
+            let tooltip = `<div style="font-weight: bold; margin-bottom: 8px;">${musicians.length} Musicians at this position</div>`;
+            tooltip += `<div>Category: <span style="color: ${params.color}; font-weight: bold;">${params.seriesName}</span></div>`;
+            tooltip += `<div>Main Artist: <span style="color: #3498db; font-weight: bold;">${data[0]}</span></div>`;
+            tooltip += `<div>Session Work: <span style="color: #9b59b6; font-weight: bold;">${data[1]}</span></div>`;
+            tooltip += `<div style="margin-top: 8px; font-weight: bold;">Musicians:</div>`;
+            tooltip += `<div style="max-height: 150px; overflow-y: auto;">`;
+            musicians.forEach((m: any) => {
+              tooltip += `<div style="font-size: 11px;">• ${m.musician} (${m.total_records} records)</div>`;
+            });
+            tooltip += `</div>`;
+            return tooltip;
+          }
         },
         backgroundColor: 'rgba(45, 45, 45, 0.95)',
         borderColor: '#555',
@@ -778,49 +873,61 @@ function SessionScatterChart({ data }: TopMusiciansChartProps) {
         {
           name: 'Pure Session Musicians',
           type: 'scatter',
-          data: pureSessionMusicians.map(m => [
-            m.as_main_artist,
-            m.as_session_musician,
-            getSizeByTotal(m.total_records),
-            m.musician,
-            m.total_records,
-            m.session_ratio
-          ]),
+          data: Array.from(pureSessionGroups.entries()).map(([key, musicians]) => {
+            const totalRecords = Math.max(...musicians.map(m => m.total_records));
+            return [
+              musicians[0].as_main_artist,
+              musicians[0].as_session_musician,
+              getSizeByTotal(totalRecords) * (1 + Math.log(musicians.length) * 0.2), // Larger for overlaps
+              musicians[0].musician,
+              totalRecords,
+              musicians[0].session_ratio,
+              musicians // Include all musicians at this position
+            ];
+          }),
           symbolSize: (val: any) => val[2],
           itemStyle: {
-            color: 'rgba(231, 76, 60, 0.8)'
+            color: 'rgba(155, 89, 182, 0.8)' // Purple (session work)
           }
         },
         {
           name: 'Balanced Artists',
           type: 'scatter',
-          data: balancedMusicians.map(m => [
-            m.as_main_artist,
-            m.as_session_musician,
-            getSizeByTotal(m.total_records),
-            m.musician,
-            m.total_records,
-            m.session_ratio
-          ]),
+          data: Array.from(balancedGroups.entries()).map(([key, musicians]) => {
+            const totalRecords = Math.max(...musicians.map(m => m.total_records));
+            return [
+              musicians[0].as_main_artist,
+              musicians[0].as_session_musician,
+              getSizeByTotal(totalRecords) * (1 + Math.log(musicians.length) * 0.2),
+              musicians[0].musician,
+              totalRecords,
+              musicians[0].session_ratio,
+              musicians
+            ];
+          }),
           symbolSize: (val: any) => val[2],
           itemStyle: {
-            color: 'rgba(243, 156, 18, 0.8)'
+            color: 'rgba(26, 188, 156, 0.8)' // Teal (balanced)
           }
         },
         {
           name: 'Pure Main Artists',
           type: 'scatter',
-          data: pureMainArtists.map(m => [
-            m.as_main_artist,
-            m.as_session_musician,
-            getSizeByTotal(m.total_records),
-            m.musician,
-            m.total_records,
-            m.session_ratio
-          ]),
+          data: Array.from(pureMainGroups.entries()).map(([key, musicians]) => {
+            const totalRecords = Math.max(...musicians.map(m => m.total_records));
+            return [
+              musicians[0].as_main_artist,
+              musicians[0].as_session_musician,
+              getSizeByTotal(totalRecords) * (1 + Math.log(musicians.length) * 0.2),
+              musicians[0].musician,
+              totalRecords,
+              musicians[0].session_ratio,
+              musicians
+            ];
+          }),
           symbolSize: (val: any) => val[2],
           itemStyle: {
-            color: 'rgba(39, 174, 96, 0.8)'
+            color: 'rgba(52, 152, 219, 0.8)' // Blue (main artist)
           }
         }
       ],
