@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress } from '@mantine/core';
-import { IconDownload, IconUpload } from '@tabler/icons-react';
+import { IconDownload, IconUpload, IconNetwork } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
@@ -212,9 +212,27 @@ function Layout() {
   };
 
   const isCollectionPage = location.pathname === '/collection';
+  const isMusicianNetworkPage = location.pathname === '/musician-network';
 
   const NavLinks = () => (
     <>
+      {!isMusicianNetworkPage && (
+        <Button 
+          variant="light" 
+          onClick={() => { navigate('/musician-network'); close(); }} 
+          leftSection={<IconNetwork size={16} />}
+        >
+          Musician Network
+        </Button>
+      )}
+      {!isCollectionPage && (
+        <Button 
+          variant="light" 
+          onClick={() => { navigate('/collection'); close(); }}
+        >
+          Collection
+        </Button>
+      )}
       {isCollectionPage && (
         <Group gap="xs">
           <Button variant="light" onClick={handleExportCSV} leftSection={<IconDownload size={16} />}>

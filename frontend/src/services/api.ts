@@ -654,4 +654,71 @@ export const columnFilters = {
       return { success: false, error: 'Failed to update column filters' };
     }
   }
+};
+
+// Musician Network API
+export interface MusicianNetworkNode {
+  id: string;
+  name: string;
+  category: 'musician' | 'artist';
+  symbolSize: number;
+  value: number;
+  genres: string[];
+  styles: string[];
+  albums?: string[];
+  collaborations?: string[];
+  roles: string[];
+}
+
+export interface MusicianNetworkLink {
+  source: string;
+  target: string;
+  value: number;
+  roles: string[];
+  clean_roles: string[];
+  albums: string[];
+  genres: string[];
+  styles: string[];
+}
+
+export interface MusicianStats {
+  musician: string;
+  total_records: number;
+  as_main_artist: number;
+  as_session_musician: number;
+  session_ratio: number;
+  records: string[];
+}
+
+export interface MusicianNetworkData {
+  nodes: MusicianNetworkNode[];
+  links: MusicianNetworkLink[];
+  categories: Array<{ name: string; itemStyle: { color: string } }>;
+  genres: string[];
+  styles: string[];
+  clean_roles: string[];
+  musician_stats: MusicianStats[];
+  session_musicians: MusicianStats[];
+  stats: {
+    total_connections: number;
+    unique_musicians: number;
+    unique_artists: number;
+    unique_albums: number;
+    unique_roles: number;
+    most_collaborative_musician: string;
+    most_collaborative_artist: string;
+  };
+  custom_filters: Record<string, string[]>;
+}
+
+export const musicianNetwork = {
+  getData: async (): Promise<ApiResponse<MusicianNetworkData>> => {
+    try {
+      const response = await api.get<ApiResponse<MusicianNetworkData>>('/api/musician-network');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get musician network data:', err);
+      return { success: false, error: 'Failed to get musician network data' };
+    }
+  }
 }; 

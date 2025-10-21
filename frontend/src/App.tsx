@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Collection from './pages/Collection';
+import MusicianNetwork from './pages/MusicianNetwork';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { Notifications } from '@mantine/notifications';
@@ -100,6 +101,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Collection />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="musician-network"
+                element={
+                  <PrivateRoute>
+                    <MusicianNetwork />
                   </PrivateRoute>
                 }
               />
