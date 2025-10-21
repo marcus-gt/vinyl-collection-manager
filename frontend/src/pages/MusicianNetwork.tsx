@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box } from '@mantine/core';
-import { IconNetworkOff, IconAlertCircle, IconPlus, IconX } from '@tabler/icons-react';
+import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge } from '@mantine/core';
+import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { musicianNetwork, type MusicianNetworkData, type MusicianStats } from '../services/api';
 import NetworkGraph from '../components/NetworkGraph';
 
@@ -19,6 +19,7 @@ export default function MusicianNetwork() {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [customFilters, setCustomFilters] = useState<CustomFilter[]>([]);
   const [nextFilterId, setNextFilterId] = useState(1);
+  const [filtersOpened, setFiltersOpened] = useState(false);
 
   useEffect(() => {
     loadNetworkData();
@@ -223,82 +224,127 @@ export default function MusicianNetwork() {
         </Button>
       </Group>
 
-      {/* Filters - shared across all tabs */}
-      <Stack gap="md" mb="xl" p="md" style={{ backgroundColor: '#2e2e2e', borderRadius: '8px' }}>
-        <Text size="sm" fw={500}>Filters</Text>
-        
-        {/* Role Filter */}
-        <Box>
-          <MultiSelect
-            label="Filter by Role"
-            placeholder="All roles"
-            data={data?.clean_roles || []}
-            value={selectedRoles}
-            onChange={setSelectedRoles}
-            searchable
-            clearable
-            style={{ maxWidth: '400px' }}
-          />
-        </Box>
+      {/* Collapsible Filters */}
+      <Box mb="lg">
+        <Button
+          variant="light"
+          size="sm"
+          onClick={() => setFiltersOpened(!filtersOpened)}
+          rightSection={filtersOpened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
+          leftSection={<IconFilter size={16} />}
+          fullWidth={false}
+        >
+          Filters
+          {(selectedRoles.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) && (
+            <Badge size="sm" ml="xs" variant="filled" color="blue">
+              {selectedRoles.length + customFilters.filter(f => f.selectedValues.length > 0).length}
+            </Badge>
+          )}
+        </Button>
 
-        {/* Custom Filters */}
-        <Box>
-          <Group justify="space-between" mb="xs">
-            <Text size="sm" fw={500}>Custom Filters</Text>
-            <Button
-              size="xs"
-              leftSection={<IconPlus size={14} />}
-              onClick={addCustomFilter}
-              variant="light"
-            >
-              Add Filter
-            </Button>
-          </Group>
+        <Collapse in={filtersOpened}>
+          <Box 
+            mt="sm"
+            p="md" 
+            style={{ 
+              backgroundColor: 'var(--mantine-color-dark-6)',
+              borderRadius: '8px',
+              border: '1px solid var(--mantine-color-dark-4)',
+            }}
+          >
+            <Stack gap="md">
+              {/* Role Filter */}
+              <MultiSelect
+                label="Role"
+                placeholder="All roles"
+                data={data?.clean_roles || []}
+                value={selectedRoles}
+                onChange={setSelectedRoles}
+                searchable
+                clearable
+                size="sm"
+              />
 
-          <Stack gap="sm">
-            {customFilters.map((filter) => (
-              <Group key={filter.id} gap="sm" style={{ flexWrap: 'nowrap' }}>
-                <Select
-                  placeholder="Select column..."
-                  data={availableColumns}
-                  value={filter.column}
-                  onChange={(value) => updateCustomFilter(filter.id, value || '', [])}
-                  searchable
-                  clearable
-                  style={{ minWidth: '150px' }}
-                />
-                {filter.column && data && (
-                  <MultiSelect
-                    placeholder="Select values..."
-                    data={data.custom_filters[filter.column] || []}
-                    value={filter.selectedValues}
-                    onChange={(values) => updateCustomFilter(filter.id, filter.column, values)}
-                    searchable
-                    clearable
-                    style={{ flex: 1, minWidth: '200px' }}
-                  />
-                )}
-                <Button
-                  size="xs"
-                  color="red"
-                  variant="light"
-                  onClick={() => removeCustomFilter(filter.id)}
-                >
-                  <IconX size={14} />
-                </Button>
-              </Group>
-            ))}
-          </Stack>
-        </Box>
+              {/* Custom Filters */}
+              <Box>
+                <Group justify="space-between" mb="xs">
+                  <Text size="sm" fw={500}>Custom Filters</Text>
+                  <Button
+                    size="xs"
+                    variant="light"
+                    onClick={addCustomFilter}
+                    leftSection={<IconPlus size={14} />}
+                  >
+                    Add Filter
+                  </Button>
+                </Group>
 
-        {/* Info text */}
-        <Text size="sm" c="dimmed">
-          {(selectedRoles.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) 
-            ? `Filtered view: Showing ${filteredData?.nodes.length || 0} nodes and ${filteredData?.links.length || 0} connections`
-            : `Showing all ${data?.nodes.length || 0} nodes and ${data?.links.length || 0} connections`
-          }
-        </Text>
-      </Stack>
+                <Stack gap="sm">
+                  {customFilters.map((filter) => (
+                    <Group key={filter.id} gap="sm" wrap="nowrap">
+                      <Select
+                        placeholder="Column..."
+                        data={availableColumns}
+                        value={filter.column}
+                        onChange={(value) => updateCustomFilter(filter.id, value || '', [])}
+                        searchable
+                        clearable
+                        size="sm"
+                        style={{ minWidth: '150px', flex: '0 0 auto' }}
+                      />
+                      {filter.column && data && (
+                        <MultiSelect
+                          placeholder="Values..."
+                          data={data.custom_filters[filter.column] || []}
+                          value={filter.selectedValues}
+                          onChange={(values) => updateCustomFilter(filter.id, filter.column, values)}
+                          searchable
+                          clearable
+                          size="sm"
+                          style={{ flex: '1 1 auto', minWidth: '200px' }}
+                        />
+                      )}
+                      <Button
+                        size="sm"
+                        color="red"
+                        variant="subtle"
+                        onClick={() => removeCustomFilter(filter.id)}
+                        px={8}
+                      >
+                        <IconX size={16} />
+                      </Button>
+                    </Group>
+                  ))}
+                  {customFilters.length === 0 && (
+                    <Text size="sm" c="dimmed" fs="italic">
+                      No custom filters added
+                    </Text>
+                  )}
+                </Stack>
+              </Box>
+
+              {/* Clear all button */}
+              {(selectedRoles.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) && (
+                <Group justify="space-between">
+                  <Text size="sm" c="dimmed">
+                    Showing {filteredData?.nodes.length || 0} nodes, {filteredData?.links.length || 0} connections
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => {
+                      setSelectedRoles([]);
+                      setCustomFilters([]);
+                    }}
+                  >
+                    Clear All
+                  </Button>
+                </Group>
+              )}
+            </Stack>
+          </Box>
+        </Collapse>
+      </Box>
 
       {/* Stats Summary - uses filtered data */}
       <Group mb="xl" gap="lg">
