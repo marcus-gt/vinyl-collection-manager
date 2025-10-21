@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper, SegmentedControl } from '@mantine/core';
-import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
+import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Stack, Select, MultiSelect, Box, Collapse, Badge, Paper, SegmentedControl, TextInput } from '@mantine/core';
+import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp, IconSearch } from '@tabler/icons-react';
 import { musicianNetwork, type MusicianNetworkData, type MusicianStats } from '../services/api';
 import NetworkGraph from '../components/NetworkGraph';
 import * as echarts from 'echarts';
@@ -367,12 +367,12 @@ export default function MusicianNetwork() {
         </div>
       </Group>
 
-      <Tabs defaultValue="network">
-        <Tabs.List>
-          <Tabs.Tab value="network">🌐 Network</Tabs.Tab>
-          <Tabs.Tab value="top">🏆 Top Musicians</Tabs.Tab>
-          <Tabs.Tab value="session">🎭 Session Musicians</Tabs.Tab>
-        </Tabs.List>
+              <Tabs defaultValue="network">
+                <Tabs.List>
+                  <Tabs.Tab value="network">🌐 Network</Tabs.Tab>
+                  <Tabs.Tab value="top">🏆 Top Musicians</Tabs.Tab>
+                  <Tabs.Tab value="lookup">🔍 Musician Lookup</Tabs.Tab>
+                </Tabs.List>
 
         <Tabs.Panel value="network" pt="xl">
           <Title order={3} mb="md">Network Visualization</Title>
@@ -386,44 +386,222 @@ export default function MusicianNetwork() {
           <TopMusiciansPanel data={filteredData || data} />
         </Tabs.Panel>
 
-        <Tabs.Panel value="session" pt="xl">
-          <Title order={3} mb="md">Session Musicians</Title>
-          <Text size="sm" c="dimmed" mb="md">
-            Musicians who appear on multiple records but rarely as the main artist
-          </Text>
-          
-          {(filteredData?.session_musicians || data.session_musicians).length === 0 ? (
-            <Alert color="gray">
-              No session musicians found with the current criteria (min 2 records, 70% session ratio)
-            </Alert>
-          ) : (
-            <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-              {(filteredData?.session_musicians || data.session_musicians).map((musician, idx) => (
-                <div 
-                  key={musician.musician}
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid #eee',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <Text fw={500}>
-                      {idx + 1}. {musician.musician}
-                    </Text>
-                    <Text size="sm" c="dimmed">
-                      {musician.total_records} records • {musician.as_session_musician} session appearances ({Math.round(musician.session_ratio * 100)}% session ratio)
-                    </Text>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <Tabs.Panel value="lookup" pt="xl">
+          <MusicianLookupPanel data={filteredData || data} />
         </Tabs.Panel>
       </Tabs>
     </Container>
+  );
+}
+
+// Musician Lookup Panel
+interface MusicianLookupPanelProps {
+  data: MusicianNetworkData;
+}
+
+function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMusician, setSelectedMusician] = useState<string | null>(null);
+
+  // Get all unique musicians for the dropdown
+  const allMusicians = useMemo(() => {
+    return data.musician_stats
+      .map(m => m.musician)
+      .sort((a, b) => a.localeCompare(b));
+  }, [data]);
+
+  // Filter musicians based on search
+  const filteredMusicians = useMemo(() => {
+    if (!searchQuery) return allMusicians;
+    const query = searchQuery.toLowerCase();
+    return allMusicians.filter(m => m.toLowerCase().includes(query));
+  }, [allMusicians, searchQuery]);
+
+  // Get detailed info for selected musician
+  const musicianDetails = useMemo(() => {
+    if (!selectedMusician) return null;
+
+    const stats = data.musician_stats.find(m => m.musician === selectedMusician);
+    if (!stats) return null;
+
+    // Find all connections (links) involving this musician
+    const connections = data.links.filter(
+      link => link.source === selectedMusician || link.target === selectedMusician
+    );
+
+    // Build two lists:
+    // 1. Albums with roles (where musician is working)
+    const albumsWithRoles = new Map<string, {
+      artist: string;
+      roles: Set<string>;
+    }>();
+    
+    // 2. Artists they've collaborated with
+    const artistCollaborations = new Map<string, Set<string>>();
+
+    connections.forEach(link => {
+      const artist = link.source === selectedMusician ? link.target : link.source;
+      
+      // Add to artist collaborations
+      if (!artistCollaborations.has(artist)) {
+        artistCollaborations.set(artist, new Set());
+      }
+      if (link.albums) {
+        link.albums.forEach(album => artistCollaborations.get(artist)!.add(album));
+      }
+
+      // Add to albums with roles
+      if (link.albums && link.roles) {
+        link.albums.forEach(album => {
+          if (!albumsWithRoles.has(album)) {
+            albumsWithRoles.set(album, {
+              artist: artist,
+              roles: new Set(),
+            });
+          }
+          link.roles.forEach(role => albumsWithRoles.get(album)!.roles.add(role));
+        });
+      }
+    });
+
+    // Convert to sorted arrays
+    const albumsList = Array.from(albumsWithRoles.entries())
+      .map(([album, data]) => ({
+        album,
+        artist: data.artist,
+        roles: Array.from(data.roles).sort().join(', '),
+      }))
+      .sort((a, b) => {
+        // Sort by artist first, then album
+        const artistCompare = a.artist.localeCompare(b.artist);
+        return artistCompare !== 0 ? artistCompare : a.album.localeCompare(b.album);
+      });
+
+    const artistsList = Array.from(artistCollaborations.entries())
+      .map(([artist, albums]) => ({
+        artist,
+        albums: Array.from(albums).sort(),
+        albumCount: albums.size,
+      }))
+      .sort((a, b) => b.albumCount - a.albumCount);
+
+    return {
+      stats,
+      albums: albumsList,
+      artists: artistsList,
+    };
+  }, [selectedMusician, data]);
+
+  return (
+    <>
+      <Title order={3} mb="md">🔍 Musician Lookup</Title>
+      <Text size="sm" c="dimmed" mb="lg">
+        Search for any musician to see their complete work history in your collection
+      </Text>
+
+      <Select
+        placeholder="Search for a musician..."
+        data={filteredMusicians}
+        value={selectedMusician}
+        onChange={setSelectedMusician}
+        searchable
+        clearable
+        size="md"
+        mb="xl"
+        leftSection={<IconSearch size={16} />}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        maxDropdownHeight={300}
+        nothingFoundMessage="No musicians found"
+        comboboxProps={{ withinPortal: false }}
+      />
+
+      {!selectedMusician && (
+        <Center py="xl">
+          <Text c="dimmed" fs="italic">
+            Select a musician to view their details
+          </Text>
+        </Center>
+      )}
+
+      {selectedMusician && musicianDetails && (
+        <Stack gap="lg">
+          {/* Summary Stats */}
+          <Paper p="md" style={{ backgroundColor: '#2e2e2e', borderRadius: '8px' }}>
+            <Title order={4} mb="sm">{selectedMusician}</Title>
+            <Group gap="lg">
+              <div>
+                <Text size="lg" fw={700} c="blue">{musicianDetails.stats.total_records}</Text>
+                <Text size="xs" c="dimmed">Total Records</Text>
+              </div>
+              <div>
+                <Text size="lg" fw={700} c="cyan">{musicianDetails.stats.as_main_artist}</Text>
+                <Text size="xs" c="dimmed">Main Artist</Text>
+              </div>
+              <div>
+                <Text size="lg" fw={700} c="violet">{musicianDetails.stats.as_session_musician}</Text>
+                <Text size="xs" c="dimmed">Session Work</Text>
+              </div>
+              <div>
+                <Text size="lg" fw={700} c="grape">{Math.round(musicianDetails.stats.session_ratio * 100)}%</Text>
+                <Text size="xs" c="dimmed">Session Ratio</Text>
+              </div>
+            </Group>
+          </Paper>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {/* Albums and Roles */}
+            <Paper p="md" style={{ backgroundColor: '#2e2e2e', borderRadius: '8px' }}>
+              <Title order={5} mb="sm">Albums & Roles ({musicianDetails.albums.length})</Title>
+              <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <Stack gap="xs">
+                  {musicianDetails.albums.map((item, idx) => (
+                    <Box 
+                      key={`${item.artist}-${item.album}-${idx}`}
+                      p="xs"
+                      style={{
+                        borderBottom: '1px solid #404040',
+                      }}
+                    >
+                      <Text size="sm" fw={500} mb={4}>
+                        {item.artist} - {item.album}
+                      </Text>
+                      <Text size="xs" c="dimmed">{item.roles}</Text>
+                    </Box>
+                  ))}
+                </Stack>
+              </div>
+            </Paper>
+
+            {/* Artists Collaborated With */}
+            <Paper p="md" style={{ backgroundColor: '#2e2e2e', borderRadius: '8px' }}>
+              <Title order={5} mb="sm">Collaborations ({musicianDetails.artists.length})</Title>
+              <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                <Stack gap="xs">
+                  {musicianDetails.artists.map((collab) => (
+                    <Box 
+                      key={collab.artist}
+                      p="xs"
+                      style={{
+                        borderBottom: '1px solid #404040',
+                      }}
+                    >
+                      <Group gap="xs" mb={4}>
+                        <Text size="sm" fw={500}>{collab.artist}</Text>
+                        <Badge size="xs" variant="light" color="blue">
+                          {collab.albumCount}
+                        </Badge>
+                      </Group>
+                      <Text size="xs" c="dimmed">{collab.albums.join(', ')}</Text>
+                    </Box>
+                  ))}
+                </Stack>
+              </div>
+            </Paper>
+          </div>
+        </Stack>
+      )}
+    </>
   );
 }
 
