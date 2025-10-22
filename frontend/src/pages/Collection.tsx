@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { TextInput, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
 import { IconTrash, IconX, IconSearch, IconPlus, IconColumns } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
@@ -62,6 +62,29 @@ const customValuesService = {
     }
   }
 };
+
+// Service for updating standard record fields
+const recordFieldsService = {
+  update: async (recordId: string, updates: Record<string, any>): Promise<{ success: boolean; data?: VinylRecord }> => {
+    try {
+      const response = await fetch(`/api/records/${recordId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      });
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error(`Failed to update record ${recordId}:`, err);
+      return { success: false };
+    }
+  }
+};
+
+// Removed separate EditableTextCell component - inline editing is now done directly in column cells
 
 function Collection() {
   const [loading, setLoading] = useState(false);
@@ -383,20 +406,86 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={row.original.artist}>
-                      {row.original.artist}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {row.original.artist}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.artist || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.artist || '');
+                }, [row.original.artist]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { artist: newValue });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, artist: newValue } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating artist:', error);
+                    setLocalValue(row.original.artist || '');
+                  }
+                }, 1000);
+                
+                const handleChange = (value: string) => {
+                  setLocalValue(value);
+                  debouncedUpdate(value);
+                };
+                
+                const handleKeyDown = (e: React.KeyboardEvent) => {
+                  if (e.key === 'Enter' || e.key === 'Escape') {
+                    setOpened(false);
+                  }
+                };
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Artist</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Textarea
+                            size="sm"
+                            value={localValue}
+                            onChange={(e) => handleChange(e.target.value)}
+                            placeholder="Enter artist name"
+                            autosize
+                            minRows={2}
+                            maxRows={6}
+                            styles={{ root: { maxWidth: '90vw' } }}
+                            onKeyDown={handleKeyDown}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             { 
               id: 'album',
@@ -407,20 +496,74 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={row.original.album}>
-                      {row.original.album}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {row.original.album}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.album || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.album || '');
+                }, [row.original.album]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { album: newValue });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, album: newValue } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating album:', error);
+                    setLocalValue(row.original.album || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Album</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Textarea
+                            size="sm"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter album name"
+                            autosize
+                            minRows={2}
+                            maxRows={6}
+                            styles={{ root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             { 
               id: 'year',
@@ -428,6 +571,72 @@ function Collection() {
               header: 'Original Year',
               enableSorting: true,
               size: 80,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.year?.toString() || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.year?.toString() || '');
+                }, [row.original.year]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { year: newValue ? parseInt(newValue) : null });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, year: newValue ? parseInt(newValue) : undefined } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating year:', error);
+                    setLocalValue(row.original.year?.toString() || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Original Year</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <TextInput
+                            size="sm"
+                            type="number"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter year"
+                            styles={{ input: { minHeight: '36px' }, root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             { 
               id: 'current_release_year', 
@@ -438,7 +647,72 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 120,
-              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_year || '-'
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.current_release_year?.toString() || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.current_release_year?.toString() || '');
+                }, [row.original.current_release_year]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { current_release_year: newValue ? parseInt(newValue) : null });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, current_release_year: newValue ? parseInt(newValue) : undefined } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating release year:', error);
+                    setLocalValue(row.original.current_release_year?.toString() || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Release Year</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <TextInput
+                            size="sm"
+                            type="number"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter year"
+                            styles={{ input: { minHeight: '36px' }, root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             { 
               id: 'label', 
@@ -449,20 +723,74 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Popover width={400} position="bottom-start" withArrow shadow="md">
-                  <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer' }} title={row.original.label || '-'}>
-                      {row.original.label || '-'}
-                    </Text>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
-                      {row.original.label || '-'}
-                    </Text>
-                  </Popover.Dropdown>
-                </Popover>
-              )
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.label || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.label || '');
+                }, [row.original.label]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { label: newValue });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, label: newValue } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating label:', error);
+                    setLocalValue(row.original.label || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Label</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Textarea
+                            size="sm"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter label"
+                            autosize
+                            minRows={2}
+                            maxRows={6}
+                            styles={{ root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             { 
               id: 'country', 
@@ -473,9 +801,74 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 200,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Text size="sm">{row.original.country || '-'}</Text>
-              )
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.country || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.country || '');
+                }, [row.original.country]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { country: newValue });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, country: newValue } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating country:', error);
+                    setLocalValue(row.original.country || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Country</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Textarea
+                            size="sm"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter country"
+                            autosize
+                            minRows={2}
+                            maxRows={6}
+                            styles={{ root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             {
               id: 'master_format',
@@ -486,7 +879,74 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 150,
-              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.master_format || '-'
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.master_format || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.master_format || '');
+                }, [row.original.master_format]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { master_format: newValue });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, master_format: newValue } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating format:', error);
+                    setLocalValue(row.original.master_format || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Original Format</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Textarea
+                            size="sm"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter format"
+                            autosize
+                            minRows={2}
+                            maxRows={6}
+                            styles={{ root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             {
               id: 'current_release_format',
@@ -497,7 +957,74 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 150,
-              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_format || '-'
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const [localValue, setLocalValue] = useState(row.original.current_release_format || '');
+                const [opened, setOpened] = useState(false);
+                
+                useEffect(() => {
+                  setLocalValue(row.original.current_release_format || '');
+                }, [row.original.current_release_format]);
+                
+                const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+                  if (!row.original.id) return;
+                  try {
+                    const response = await recordFieldsService.update(row.original.id, { current_release_format: newValue });
+                    if (response.success) {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === row.original.id ? { ...r, current_release_format: newValue } : r)
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating format:', error);
+                    setLocalValue(row.original.current_release_format || '');
+                  }
+                }, 1000);
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                            {localValue || '-'}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Edit Release Format</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Textarea
+                            size="sm"
+                            value={localValue}
+                            onChange={(e) => { setLocalValue(e.target.value); debouncedUpdate(e.target.value); }}
+                            placeholder="Enter format"
+                            autosize
+                            minRows={2}
+                            maxRows={6}
+                            styles={{ root: { maxWidth: '90vw' } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setOpened(false); }}
+                          />
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
             },
             { 
               id: 'genres', 
@@ -871,10 +1398,20 @@ function Collection() {
             const [opened, setOpened] = useState(false);
             
             return (
-              <Box style={{ position: 'relative' }}>
+              <Box 
+                style={{ 
+                  position: 'relative', 
+                  width: '100%', 
+                  height: '100%', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }} 
+                onClick={() => setOpened(true)}
+              >
                 <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                   <Popover.Target>
-                    <Text size="sm" style={{ cursor: 'pointer' }} onClick={() => setOpened(true)}>
+                    <div style={{ width: '100%' }}>
                       {values.length === 0 ? (
                         <Text size="sm" c="dimmed">-</Text>
                       ) : (
@@ -914,7 +1451,7 @@ function Collection() {
                           </Group>
                         </Box>
                       )}
-                    </Text>
+                    </div>
                   </Popover.Target>
                   <Popover.Dropdown>
                     <Stack gap="xs">
@@ -965,10 +1502,20 @@ function Collection() {
             const [opened, setOpened] = useState(false);
 
             return (
-              <Box style={{ position: 'relative' }}>
+              <Box 
+                style={{ 
+                  position: 'relative', 
+                  width: '100%', 
+                  height: '100%', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }} 
+                onClick={() => setOpened(true)}
+              >
                 <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                   <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
+                    <div style={{ width: '100%' }}>
                       {localValue ? (
                         <Badge
                           variant="filled"
@@ -988,7 +1535,7 @@ function Collection() {
                       ) : (
                         <Text size="sm" c="dimmed">-</Text>
                       )}
-                    </Text>
+                    </div>
                   </Popover.Target>
                   <Popover.Dropdown>
                     <Stack gap="xs">
@@ -1049,12 +1596,24 @@ function Collection() {
             };
 
             return (
-              <Box style={{ position: 'relative' }}>
+              <Box 
+                style={{ 
+                  position: 'relative', 
+                  width: '100%', 
+                  height: '100%', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }} 
+                onClick={() => setOpened(true)}
+              >
                 <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                   <Popover.Target>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
-                      {localValue || '-'}
-                    </Text>
+                    <div style={{ width: '100%' }}>
+                      <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                        {localValue || '-'}
+                      </Text>
+                    </div>
                   </Popover.Target>
                   <Popover.Dropdown>
                     <Stack gap="xs">
@@ -1100,30 +1659,42 @@ function Collection() {
           };
 
           return (
-            <Box style={{ position: 'relative' }}>
+            <Box 
+              style={{ 
+                position: 'relative', 
+                width: '100%', 
+                height: '100%', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center'
+              }} 
+              onClick={() => setOpened(true)}
+            >
               <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
                 <Popover.Target>
-                  <Text size="sm" lineClamp={1} style={{ cursor: 'pointer', maxWidth: '90vw' }} onClick={() => setOpened(true)}>
-                    {localValue || '-'}
-                  </Text>
+                  <div style={{ width: '100%' }}>
+                    <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                      {localValue || '-'}
+                    </Text>
+                  </div>
                 </Popover.Target>
                 <Popover.Dropdown>
                   <Stack gap="xs">
                     <Group justify="space-between" align="center">
                       <Text size="sm" fw={500}>Edit {column.name}</Text>
-                      <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
+                      <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
                         <IconX size={16} />
                       </ActionIcon>
                     </Group>
-                    <TextInput
+                    <Textarea
                       size="sm"
                       value={localValue}
                       onChange={(e) => handleChange(e.target.value)}
                       placeholder={`Enter ${column.name.toLowerCase()}`}
+                      autosize
+                      minRows={2}
+                      maxRows={6}
                       styles={{
-                        input: {
-                          minHeight: '36px'
-                        },
                         root: {
                           maxWidth: '90vw'
                         }
