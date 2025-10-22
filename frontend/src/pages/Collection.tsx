@@ -343,11 +343,55 @@ function EditableCustomCell({
   if (column.type === 'multi-select' && column.options) {
     const values = localValue ? localValue.split(',') : [];
     const [searchQuery, setSearchQuery] = useState('');
+    const [isCreatingOption, setIsCreatingOption] = useState(false);
     
     // Filter options based on search query
     const filteredOptions = (column.options || [])
       .filter(opt => !values.includes(opt))
       .filter(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Check if search query matches an existing option exactly
+    const exactMatch = column.options?.some(opt => opt.toLowerCase() === searchQuery.toLowerCase());
+    const showCreateOption = searchQuery.trim() && !exactMatch;
+    
+    // Function to create a new option and add it to the column
+    const handleCreateOption = async (newOption: string) => {
+      if (!newOption.trim() || isCreatingOption) return;
+      
+      setIsCreatingOption(true);
+      try {
+        // Update the column with the new option
+        const updatedOptions = [...(column.options || []), newOption.trim()];
+        await customColumnsApi.update(column.id, {
+          options: updatedOptions
+        });
+        
+        // Add the new option to the selected values
+        const newValues = [...values, newOption.trim()];
+        handleChange(newValues.join(','));
+        
+        // Clear search and refresh columns
+        setSearchQuery('');
+        
+        notifications.show({
+          title: 'Option created',
+          message: `Added "${newOption.trim()}" to ${column.name}`,
+          color: 'green'
+        });
+        
+        // Trigger a refresh of custom columns
+        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
+      } catch (error) {
+        console.error('Error creating option:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to create new option',
+          color: 'red'
+        });
+      } finally {
+        setIsCreatingOption(false);
+      }
+    };
     
     return (
       <Box 
@@ -453,6 +497,12 @@ function EditableCustomCell({
                 placeholder="Search options..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && showCreateOption) {
+                    e.preventDefault();
+                    handleCreateOption(searchQuery);
+                  }
+                }}
                 size="sm"
                 leftSection={<IconSearch size={14} />}
                 onClick={(e) => e.stopPropagation()}
@@ -464,6 +514,34 @@ function EditableCustomCell({
                 paddingTop: '8px'
               }}>
                 <Text size="xs" c="dimmed" mb="xs">Select options</Text>
+                
+                {/* Create new option button (shown when search doesn't match) */}
+                {showCreateOption && (
+                  <Box
+                    style={{
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'background-color 0.1s ease',
+                      marginBottom: '8px',
+                      border: '1px dashed var(--mantine-color-gray-4)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--mantine-color-gray-light-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    onClick={() => handleCreateOption(searchQuery)}
+                  >
+                    <IconPlus size={14} />
+                    <Text size="sm">Create "{searchQuery}"</Text>
+                  </Box>
+                )}
                 
                 {/* Available options as a cloud */}
                 <Group gap={4} wrap="wrap">
@@ -500,9 +578,9 @@ function EditableCustomCell({
                         {opt}
                       </Badge>
                     ))
-                  ) : (
+                  ) : !showCreateOption ? (
                     <Text size="sm" c="dimmed">No options found</Text>
-                  )}
+                  ) : null}
                 </Group>
               </Box>
             </Stack>
