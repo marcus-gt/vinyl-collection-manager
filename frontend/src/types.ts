@@ -18,8 +18,10 @@ export interface VinylRecord {
   year?: number;
   barcode?: string;
   master_url?: string;
+  master_format?: string;
   current_release_url?: string;
   current_release_year?: number;
+  current_release_format?: string;
   label?: string;
   country?: string;
 

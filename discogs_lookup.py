@@ -82,10 +82,20 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         # Get musicians from both release credits and track credits
         musicians = set()
         
+        # Get format from current release
+        current_format = None
+        if hasattr(release, 'formats') and release.formats:
+            # Discogs formats is a list of format objects, e.g., [{'name': 'Vinyl', 'qty': '1', 'descriptions': ['LP', 'Album']}]
+            format_names = [fmt.get('name') for fmt in release.formats if fmt.get('name')]
+            if format_names:
+                current_format = ', '.join(format_names)
+                print(f"Found current release format: {current_format}")
+        
         # Try to get the master release for year and additional info
         master = None
         original_year = None
         main_release = None
+        master_format = None
         try:
             if hasattr(release, 'master') and release.master:
                 print("Found master release, fetching full master data...")
@@ -98,6 +108,13 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                     print(f"Found main release ID: {master.main_release.id}")
                     main_release = d.release(master.main_release.id)
                     print("Fetched main release data")
+                    
+                    # Get format from main release
+                    if hasattr(main_release, 'formats') and main_release.formats:
+                        format_names = [fmt.get('name') for fmt in main_release.formats if fmt.get('name')]
+                        if format_names:
+                            master_format = ', '.join(format_names)
+                            print(f"Found master format: {master_format}")
                     
                     # Get musicians from main release credits
                     if hasattr(main_release, 'credits'):
@@ -154,8 +171,10 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             'styles': getattr(release, 'styles', []),
             'musicians': sorted(list(musicians)),
             'master_url': f'https://www.discogs.com/master/{master.id}' if master else None,
+            'master_format': master_format,
             'current_release_url': f'https://www.discogs.com/release/{release.id}',
             'current_release_year': getattr(release, 'year', None),
+            'current_release_format': current_format,
             'barcode': None,
             'country': country,
             'added_from': added_from
