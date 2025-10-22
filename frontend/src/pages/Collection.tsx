@@ -275,6 +275,562 @@ function EditableStandardCell({
   );
 }
 
+// Reusable component for editing custom columns (with auto-save behavior)
+interface EditableCustomCellProps {
+  value: string;
+  recordId: string;
+  column: CustomColumn;
+  onUpdate: (recordId: string, columnId: string, newValue: string) => void;
+}
+
+function EditableCustomCell({ 
+  value, 
+  recordId, 
+  column,
+  onUpdate 
+}: EditableCustomCellProps) {
+  const [localValue, setLocalValue] = useState(value);
+  const [opened, setOpened] = useState(false);
+  
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+  
+  const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
+    if (!recordId) return;
+    onUpdate(recordId, column.id, newValue);
+  }, 1000);
+  
+  const handleChange = (newValue: string) => {
+    setLocalValue(newValue);
+    debouncedUpdate(newValue);
+  };
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setOpened(false);
+    }
+    if (e.key === 'Escape') {
+      setOpened(false);
+    }
+  };
+  
+  // Boolean type
+  if (column.type === 'boolean') {
+    return (
+      <Box style={{ 
+        width: '100%', 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        height: '32px'
+      }}>
+        <Checkbox
+          checked={localValue === 'true'}
+          onChange={(e) => handleChange(e.currentTarget.checked.toString())}
+          size="sm"
+          styles={{
+            input: {
+              cursor: 'pointer'
+            }
+          }}
+        />
+      </Box>
+    );
+  }
+  
+  // Multi-select type
+  if (column.type === 'multi-select' && column.options) {
+    const values = localValue ? localValue.split(',') : [];
+    
+    return (
+      <Box 
+        style={{ 
+          position: 'relative', 
+          width: '100%', 
+          height: '100%', 
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center'
+        }} 
+        onClick={() => setOpened(true)}
+      >
+        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+          <Popover.Target>
+            <div style={{ width: '100%' }}>
+              {values.length === 0 ? (
+                <Text size="sm" c="dimmed">-</Text>
+              ) : (
+                <Box style={{ 
+                  position: 'relative',
+                  height: '48px',
+                  overflow: 'hidden'
+                }}>
+                  <Group gap={4} wrap="nowrap" style={{ 
+                    height: '100%',
+                    alignItems: 'center',
+                    padding: '4px'
+                  }}>
+                    {values.map((val: string) => (
+                      <Badge
+                        key={val}
+                        variant="filled"
+                        size="sm"
+                        radius="sm"
+                        color={column.option_colors?.[val] || PILL_COLORS.default}
+                        styles={{
+                          root: {
+                            textTransform: 'none',
+                            cursor: 'default',
+                            padding: '3px 8px',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-flex',
+                            flexShrink: 0,
+                            height: '20px',
+                            lineHeight: '14px'
+                          }
+                        }}
+                      >
+                        {val}
+                      </Badge>
+                    ))}
+                  </Group>
+                </Box>
+              )}
+            </div>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <Stack gap="xs">
+              <Group justify="space-between" align="center">
+                <Text size="sm" fw={500}>Edit {column.name}</Text>
+                <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
+              <Group gap="xs" wrap="wrap">
+                {(column.options || []).map((opt) => {
+                  const isSelected = values.includes(opt);
+                  return (
+                    <Badge
+                      key={opt}
+                      variant="filled"
+                      size="sm"
+                      radius="sm"
+                      color={column.option_colors?.[opt] || PILL_COLORS.default}
+                      styles={{
+                        root: {
+                          textTransform: 'none',
+                          cursor: 'pointer',
+                          padding: '3px 8px',
+                          opacity: isSelected ? 1 : 0.3
+                        }
+                      }}
+                      onClick={() => {
+                        const newValues = isSelected
+                          ? values.filter((v: string) => v !== opt)
+                          : [...values, opt];
+                        handleChange(newValues.join(','));
+                      }}
+                    >
+                      {opt}
+                    </Badge>
+                  );
+                })}
+              </Group>
+            </Stack>
+          </Popover.Dropdown>
+        </Popover>
+      </Box>
+    );
+  }
+  
+  // Single-select type
+  if (column.type === 'single-select' && column.options) {
+    return (
+      <Box 
+        style={{ 
+          position: 'relative', 
+          width: '100%', 
+          height: '100%', 
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center'
+        }} 
+        onClick={() => setOpened(true)}
+      >
+        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+          <Popover.Target>
+            <div style={{ width: '100%' }}>
+              {localValue ? (
+                <Badge
+                  variant="filled"
+                  size="sm"
+                  radius="sm"
+                  color={column.option_colors?.[localValue] || PILL_COLORS.default}
+                  styles={{
+                    root: {
+                      textTransform: 'none',
+                      cursor: 'default',
+                      padding: '3px 8px'
+                    }
+                  }}
+                >
+                  {localValue}
+                </Badge>
+              ) : (
+                <Text size="sm" c="dimmed">-</Text>
+              )}
+            </div>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <Stack gap="xs">
+              <Group justify="space-between" align="center">
+                <Text size="sm" fw={500}>Edit {column.name}</Text>
+                <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
+              <Group gap="xs" wrap="wrap">
+                {column.options.map((opt) => (
+                  <Badge
+                    key={opt}
+                    variant="filled"
+                    size="sm"
+                    radius="sm"
+                    color={column.option_colors?.[opt] || PILL_COLORS.default}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                        cursor: 'pointer',
+                        padding: '3px 8px',
+                        opacity: localValue === opt ? 1 : 0.5
+                      }
+                    }}
+                    onClick={() => {
+                      if (localValue === opt) {
+                        handleChange('');
+                      } else {
+                        handleChange(opt);
+                      }
+                      setOpened(false);
+                    }}
+                  >
+                    {opt}
+                  </Badge>
+                ))}
+              </Group>
+            </Stack>
+          </Popover.Dropdown>
+        </Popover>
+      </Box>
+    );
+  }
+  
+  // Number type
+  if (column.type === 'number') {
+    return (
+      <Box 
+        style={{ 
+          position: 'relative', 
+          width: '100%', 
+          height: '100%', 
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center'
+        }} 
+        onClick={() => setOpened(true)}
+      >
+        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+          <Popover.Target>
+            <div style={{ width: '100%' }}>
+              <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+                {localValue || '-'}
+              </Text>
+            </div>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <Stack gap="xs">
+              <Group justify="space-between" align="center">
+                <Text size="sm" fw={500}>Edit {column.name}</Text>
+                <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
+              <TextInput
+                size="sm"
+                type="number"
+                value={localValue}
+                onChange={(e) => handleChange(e.target.value)}
+                placeholder={`Enter ${column.name.toLowerCase()}`}
+                styles={{
+                  input: {
+                    minHeight: '36px'
+                  },
+                  root: {
+                    maxWidth: '90vw'
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+              />
+            </Stack>
+          </Popover.Dropdown>
+        </Popover>
+      </Box>
+    );
+  }
+  
+  // Default: Text type
+  return (
+    <Box 
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '100%', 
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center'
+      }} 
+      onClick={() => setOpened(true)}
+    >
+      <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+        <Popover.Target>
+          <div style={{ width: '100%' }}>
+            <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+              {localValue || '-'}
+            </Text>
+          </div>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={500}>Edit {column.name}</Text>
+              <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                <IconX size={16} />
+              </ActionIcon>
+            </Group>
+            <Textarea
+              size="sm"
+              value={localValue}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder={`Enter ${column.name.toLowerCase()}`}
+              autosize
+              minRows={2}
+              maxRows={6}
+              styles={{
+                root: {
+                  maxWidth: '90vw'
+                }
+              }}
+              onKeyDown={handleKeyDown}
+            />
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    </Box>
+  );
+}
+
+// Reusable component for editing Discogs links
+interface EditableDiscogsLinksProps {
+  masterUrl: string | null;
+  currentReleaseUrl: string | null;
+  recordId: string;
+  onUpdate: (recordId: string, updates: { master_url?: string | null; current_release_url?: string | null }) => void;
+}
+
+function EditableDiscogsLinks({ 
+  masterUrl, 
+  currentReleaseUrl, 
+  recordId, 
+  onUpdate 
+}: EditableDiscogsLinksProps) {
+  const [opened, setOpened] = useState(false);
+  const [localMasterUrl, setLocalMasterUrl] = useState(masterUrl || '');
+  const [localCurrentUrl, setLocalCurrentUrl] = useState(currentReleaseUrl || '');
+  const [masterError, setMasterError] = useState('');
+  const [currentError, setCurrentError] = useState('');
+  
+  useEffect(() => {
+    setLocalMasterUrl(masterUrl || '');
+    setLocalCurrentUrl(currentReleaseUrl || '');
+  }, [masterUrl, currentReleaseUrl]);
+  
+  const validateDiscogsUrl = (url: string, type: 'master' | 'release'): boolean => {
+    if (!url) return true; // Empty is valid
+    
+    const masterPattern = /^https?:\/\/(www\.)?discogs\.com\/master\/\d+/;
+    const releasePattern = /^https?:\/\/(www\.)?discogs\.com\/release\/\d+/;
+    
+    if (type === 'master') {
+      return masterPattern.test(url);
+    } else {
+      return releasePattern.test(url);
+    }
+  };
+  
+  const hasChanges = localMasterUrl !== (masterUrl || '') || localCurrentUrl !== (currentReleaseUrl || '');
+  
+  const handleSave = async () => {
+    // Validate URLs
+    let hasErrors = false;
+    
+    if (localMasterUrl && !validateDiscogsUrl(localMasterUrl, 'master')) {
+      setMasterError('Must be a valid Discogs master URL (e.g., https://www.discogs.com/master/123456)');
+      hasErrors = true;
+    } else {
+      setMasterError('');
+    }
+    
+    if (localCurrentUrl && !validateDiscogsUrl(localCurrentUrl, 'release')) {
+      setCurrentError('Must be a valid Discogs release URL (e.g., https://www.discogs.com/release/123456)');
+      hasErrors = true;
+    } else {
+      setCurrentError('');
+    }
+    
+    if (hasErrors || !hasChanges) return;
+    
+    const updates: { master_url?: string | null; current_release_url?: string | null } = {};
+    
+    if (localMasterUrl !== (masterUrl || '')) {
+      updates.master_url = localMasterUrl || null;
+    }
+    
+    if (localCurrentUrl !== (currentReleaseUrl || '')) {
+      updates.current_release_url = localCurrentUrl || null;
+    }
+    
+    onUpdate(recordId, updates);
+    setOpened(false);
+  };
+  
+  const handleCancel = () => {
+    setLocalMasterUrl(masterUrl || '');
+    setLocalCurrentUrl(currentReleaseUrl || '');
+    setMasterError('');
+    setCurrentError('');
+    setOpened(false);
+  };
+  
+  return (
+    <Box 
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '100%', 
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center'
+      }} 
+      onClick={() => setOpened(true)}
+    >
+      <Popover width={500} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) handleCancel(); }}>
+        <Popover.Target>
+          <div style={{ width: '100%' }}>
+            <Group gap={4} wrap="nowrap">
+              {masterUrl && (
+                <Button
+                  component="a"
+                  href={masterUrl}
+                  target="_blank"
+                  variant="light"
+                  size="compact-xs"
+                  style={{ fontSize: '11px', padding: '2px 8px' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Original
+                </Button>
+              )}
+              {currentReleaseUrl && (
+                <Button
+                  component="a"
+                  href={currentReleaseUrl}
+                  target="_blank"
+                  variant="light"
+                  size="compact-xs"
+                  color="blue"
+                  style={{ fontSize: '11px', padding: '2px 8px' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Current
+                </Button>
+              )}
+              {!masterUrl && !currentReleaseUrl && (
+                <Text size="sm" c="dimmed">-</Text>
+              )}
+            </Group>
+          </div>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={500}>Edit Discogs Links</Text>
+              <Group gap="xs">
+                {hasChanges && !masterError && !currentError && (
+                  <ActionIcon size="sm" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); handleSave(); }}>
+                    <IconCheck size={16} />
+                  </ActionIcon>
+                )}
+                <ActionIcon size="sm" variant="subtle" color="red" onClick={(e) => { e.stopPropagation(); handleCancel(); }}>
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
+            </Group>
+            
+            {/* Original/Master URL */}
+            <Box>
+              <Group gap="xs" align="flex-start">
+                <Text size="sm" fw={500} style={{ minWidth: '60px', marginTop: '6px' }}>Original</Text>
+                <Box style={{ flex: 1 }}>
+                  <TextInput
+                    size="sm"
+                    value={localMasterUrl}
+                    onChange={(e) => {
+                      setLocalMasterUrl(e.target.value);
+                      if (masterError) setMasterError('');
+                    }}
+                    placeholder="https://www.discogs.com/master/123456"
+                    error={masterError}
+                    styles={{
+                      input: {
+                        fontSize: '12px'
+                      }
+                    }}
+                  />
+                </Box>
+              </Group>
+            </Box>
+            
+            {/* Current Release URL */}
+            <Box>
+              <Group gap="xs" align="flex-start">
+                <Text size="sm" fw={500} style={{ minWidth: '60px', marginTop: '6px' }}>Current</Text>
+                <Box style={{ flex: 1 }}>
+                  <TextInput
+                    size="sm"
+                    value={localCurrentUrl}
+                    onChange={(e) => {
+                      setLocalCurrentUrl(e.target.value);
+                      if (currentError) setCurrentError('');
+                    }}
+                    placeholder="https://www.discogs.com/release/123456"
+                    error={currentError}
+                    styles={{
+                      input: {
+                        fontSize: '12px'
+                      }
+                    }}
+                  />
+                </Box>
+              </Group>
+            </Box>
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    </Box>
+  );
+}
+
 function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -987,33 +1543,32 @@ function Collection() {
               maxSize: 142,
               enableResizing: false,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Group gap={4} wrap="nowrap">
-                  {row.original.master_url && (
-                    <Button
-                      component="a"
-                      href={row.original.master_url}
-                      target="_blank"
-                      variant="light"
-                      size="compact-xs"
-                      style={{ fontSize: '11px', padding: '2px 8px' }}
-                    >
-                      Original
-                    </Button>
-                  )}
-                  {row.original.current_release_url && (
-                    <Button
-                      component="a"
-                      href={row.original.current_release_url}
-                      target="_blank"
-                      variant="light"
-                      size="compact-xs"
-                      color="blue"
-                      style={{ fontSize: '11px', padding: '2px 8px' }}
-                    >
-                      Current
-                    </Button>
-                  )}
-                </Group>
+                <EditableDiscogsLinks
+                  masterUrl={row.original.master_url || null}
+                  currentReleaseUrl={row.original.current_release_url || null}
+                  recordId={row.original.id!}
+                  onUpdate={async (recordId, updates) => {
+                    try {
+                      const response = await recordFieldsService.update(recordId, updates);
+                      if (response.success) {
+                        setUserRecords(prevRecords =>
+                          prevRecords.map(r => r.id === recordId ? { 
+                            ...r, 
+                            master_url: updates.master_url !== undefined ? updates.master_url || undefined : r.master_url,
+                            current_release_url: updates.current_release_url !== undefined ? updates.current_release_url || undefined : r.current_release_url
+                          } : r)
+                        );
+                      }
+                    } catch (error) {
+                      console.error('Error updating Discogs links:', error);
+                      notifications.show({
+                        title: 'Error',
+                        message: 'Failed to update Discogs links',
+                        color: 'red'
+                      });
+                    }
+                  }}
+                />
               ),
             },
     ];
@@ -1043,411 +1598,59 @@ function Collection() {
                   column.type === 'single-select' ? 'equals' : 
                   undefined,
         enableColumnFilter: column.type === 'multi-select' || column.type === 'single-select',
-        cell: ({ row }: { row: Row<VinylRecord> }) => {
-          const [localValue, setLocalValue] = useState(row.original.custom_values_cache[column.id] || '');
-          
-          // Effect to sync local value with record value
-          useEffect(() => {
-            setLocalValue(row.original.custom_values_cache[column.id] || '');
-          }, [row.original.custom_values_cache, column.id]);
-          
-          const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
-            if (!row.original.id) return;
-            
-            try {
-              console.log('Updating custom value:', {
-                columnId: column.id,
-                newValue,
-                recordId: row.original.id
-              });
-              
-              // For the API, we need to send an object with column_id as key and value as value
-              const valueToSend = {
-                [column.id]: newValue
-              };
+        cell: ({ row }: { row: Row<VinylRecord> }) => (
+          <EditableCustomCell
+            value={row.original.custom_values_cache[column.id] || ''}
+            recordId={row.original.id!}
+            column={column}
+            onUpdate={async (recordId, columnId, newValue) => {
+              try {
+                console.log('Updating custom value:', {
+                  columnId,
+                  newValue,
+                  recordId
+                });
+                
+                const valueToSend = {
+                  [columnId]: newValue
+                };
 
-              const response = await customValuesService.update(row.original.id, valueToSend);
-              
-              if (response.success) {
-                // Update the record in the local state
-                setUserRecords(prevRecords =>
-                  prevRecords.map(r =>
-                    r.id === row.original.id
-                      ? {
-                          ...r,
-                          custom_values_cache: {
-                            ...r.custom_values_cache,
-                            [column.id]: newValue
+                const response = await customValuesService.update(recordId, valueToSend);
+                
+                if (response.success) {
+                  setUserRecords(prevRecords =>
+                    prevRecords.map(r =>
+                      r.id === recordId
+                        ? {
+                            ...r,
+                            custom_values_cache: {
+                              ...r.custom_values_cache,
+                              [columnId]: newValue
+                            }
                           }
-                        }
-                      : r
-                  )
-                );
-                console.log('Successfully updated custom value');
-              } else {
-                console.error('Failed to update custom value');
+                        : r
+                    )
+                  );
+                  console.log('Successfully updated custom value');
+                } else {
+                  console.error('Failed to update custom value');
+                  notifications.show({
+                    title: 'Error',
+                    message: 'Failed to update value',
+                    color: 'red'
+                  });
+                }
+              } catch (err) {
+                console.error('Error updating custom value:', err);
                 notifications.show({
                   title: 'Error',
                   message: 'Failed to update value',
                   color: 'red'
                 });
-                // Revert local value on error
-                setLocalValue(row.original.custom_values_cache[column.id] || '');
               }
-            } catch (err) {
-              console.error('Error updating custom value:', err);
-              notifications.show({
-                title: 'Error',
-                message: 'Failed to update value',
-                color: 'red'
-              });
-              // Revert local value on error
-              setLocalValue(row.original.custom_values_cache[column.id] || '');
-            }
-          }, 1000);  // 1 second debounce
-
-          const handleChange = (value: string) => {
-            setLocalValue(value);  // Update UI immediately
-            debouncedUpdate(value);  // Debounce the API call
-          };
-
-          if (column.type === 'boolean') {
-            return (
-              <Box style={{ 
-                width: '100%', 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                height: '32px' // Match the row height
-              }}>
-                <Checkbox
-                  checked={localValue === 'true'}
-                  onChange={(e) => handleChange(e.currentTarget.checked.toString())}
-                  size="sm"
-                  styles={{
-                    input: {
-                      cursor: 'pointer'
-                    }
-                  }}
-                />
-              </Box>
-            );
-          }
-
-          if (column.type === 'multi-select' && column.options) {
-            const values = localValue ? localValue.split(',') : [];
-            const [opened, setOpened] = useState(false);
-            
-            return (
-              <Box 
-                style={{ 
-                  position: 'relative', 
-                  width: '100%', 
-                  height: '100%', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center'
-                }} 
-                onClick={() => setOpened(true)}
-              >
-                <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                  <Popover.Target>
-                    <div style={{ width: '100%' }}>
-                      {values.length === 0 ? (
-                        <Text size="sm" c="dimmed">-</Text>
-                      ) : (
-                        <Box style={{ 
-                          position: 'relative',
-                          height: '48px',  // Increased height for two lines
-                          overflow: 'hidden'
-                        }}>
-                          <Group gap={4} wrap="nowrap" style={{ 
-                            height: '100%',
-                            alignItems: 'center',
-                            padding: '4px'  // Add some padding around the tags
-                          }}>
-                            {values.map((value: string) => (
-                              <Badge
-                                key={value}
-                                variant="filled"
-                                size="sm"
-                                radius="sm"
-                                color={column.option_colors?.[value] || PILL_COLORS.default}
-                                styles={{
-                                  root: {
-                                    textTransform: 'none',
-                                    cursor: 'default',
-                                    padding: '3px 8px',
-                                    whiteSpace: 'nowrap',
-                                    display: 'inline-flex',
-                                    flexShrink: 0,
-                                    height: '20px',  // Fixed height for badges
-                                    lineHeight: '14px'  // Proper line height for text
-                                  }
-                                }}
-                              >
-                                {value}
-                              </Badge>
-                            ))}
-                          </Group>
-                        </Box>
-                      )}
-                    </div>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Stack gap="xs">
-                      <Group justify="space-between" align="center">
-                        <Text size="sm" fw={500}>Edit {column.name}</Text>
-                        <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
-                          <IconX size={16} />
-                        </ActionIcon>
-                      </Group>
-                      <Group gap="xs" wrap="wrap">
-                        {(column.options || []).map((opt) => {
-                          const isSelected = values.includes(opt);
-                          return (
-                            <Badge
-                              key={opt}
-                              variant="filled"
-                              size="sm"
-                              radius="sm"
-                              color={column.option_colors?.[opt] || PILL_COLORS.default}
-                              styles={{
-                                root: {
-                                  textTransform: 'none',
-                                  cursor: 'pointer',
-                                  padding: '3px 8px',
-                                  opacity: isSelected ? 1 : 0.3
-                                }
-                              }}
-                              onClick={() => {
-                                const newValues = isSelected
-                                  ? values.filter((v: string) => v !== opt)
-                                  : [...values, opt];
-                                handleChange(newValues.join(','));
-                              }}
-                            >
-                              {opt}
-                            </Badge>
-                          );
-                        })}
-                      </Group>
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              </Box>
-            );
-          }
-          
-          if (column.type === 'single-select' && column.options) {
-            const [opened, setOpened] = useState(false);
-
-            return (
-              <Box 
-                style={{ 
-                  position: 'relative', 
-                  width: '100%', 
-                  height: '100%', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center'
-                }} 
-                onClick={() => setOpened(true)}
-              >
-                <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                  <Popover.Target>
-                    <div style={{ width: '100%' }}>
-                      {localValue ? (
-                        <Badge
-                          variant="filled"
-                          size="sm"
-                          radius="sm"
-                          color={column.option_colors?.[localValue] || PILL_COLORS.default}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
-                          }}
-                        >
-                          {localValue}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">-</Text>
-                      )}
-                    </div>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Stack gap="xs">
-                      <Group justify="space-between" align="center">
-                        <Text size="sm" fw={500}>Edit {column.name}</Text>
-                        <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
-                          <IconX size={16} />
-                        </ActionIcon>
-                      </Group>
-                      <Group gap="xs" wrap="wrap">
-                        {column.options.map((opt) => (
-                          <Badge
-                            key={opt}
-                            variant="filled"
-                            size="sm"
-                            radius="sm"
-                            color={column.option_colors?.[opt] || PILL_COLORS.default}
-                            styles={{
-                              root: {
-                                textTransform: 'none',
-                                cursor: 'pointer',
-                                padding: '3px 8px',
-                                opacity: localValue === opt ? 1 : 0.5
-                              }
-                            }}
-                            onClick={() => {
-                              if (localValue === opt) {
-                                // Deselect if clicking the currently selected option
-                                handleChange('');
-                              } else {
-                                // Select the new option
-                                handleChange(opt);
-                              }
-                              setOpened(false);
-                            }}
-                          >
-                            {opt}
-                          </Badge>
-                        ))}
-                      </Group>
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              </Box>
-            );
-          }
-          
-          if (column.type === 'number') {
-            const [opened, setOpened] = useState(false);
-            
-            const handleKeyDown = (e: React.KeyboardEvent) => {
-              if (e.key === 'Enter') {
-                setOpened(false);
-              }
-              if (e.key === 'Escape') {
-                setOpened(false);
-              }
-            };
-
-            return (
-              <Box 
-                style={{ 
-                  position: 'relative', 
-                  width: '100%', 
-                  height: '100%', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center'
-                }} 
-                onClick={() => setOpened(true)}
-              >
-                <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                  <Popover.Target>
-                    <div style={{ width: '100%' }}>
-                      <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
-                        {localValue || '-'}
-                      </Text>
-                    </div>
-                  </Popover.Target>
-                  <Popover.Dropdown>
-                    <Stack gap="xs">
-                      <Group justify="space-between" align="center">
-                        <Text size="sm" fw={500}>Edit {column.name}</Text>
-                        <ActionIcon size="sm" variant="subtle" onClick={() => setOpened(false)}>
-                          <IconX size={16} />
-                        </ActionIcon>
-                      </Group>
-                      <TextInput
-                        size="sm"
-                        type="number"
-                        value={localValue}
-                        onChange={(e) => handleChange(e.target.value)}
-                        placeholder={`Enter ${column.name.toLowerCase()}`}
-                        styles={{
-                          input: {
-                            minHeight: '36px'
-                          },
-                          root: {
-                            maxWidth: '90vw'
-                          }
-                        }}
-                        onKeyDown={handleKeyDown}
-                      />
-                    </Stack>
-                  </Popover.Dropdown>
-                </Popover>
-              </Box>
-            );
-          }
-          
-          // Default text input
-          const [opened, setOpened] = useState(false);
-          
-          const handleKeyDown = (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter') {
-              setOpened(false);
-            }
-            if (e.key === 'Escape') {
-              setOpened(false);
-            }
-          };
-
-          return (
-            <Box 
-              style={{ 
-                position: 'relative', 
-                width: '100%', 
-                height: '100%', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center'
-              }} 
-              onClick={() => setOpened(true)}
-            >
-              <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
-                <Popover.Target>
-                  <div style={{ width: '100%' }}>
-                    <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
-                      {localValue || '-'}
-                    </Text>
-                  </div>
-                </Popover.Target>
-                <Popover.Dropdown>
-                  <Stack gap="xs">
-                    <Group justify="space-between" align="center">
-                      <Text size="sm" fw={500}>Edit {column.name}</Text>
-                      <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
-                        <IconX size={16} />
-                      </ActionIcon>
-                    </Group>
-                    <Textarea
-                      size="sm"
-                      value={localValue}
-                      onChange={(e) => handleChange(e.target.value)}
-                      placeholder={`Enter ${column.name.toLowerCase()}`}
-                      autosize
-                      minRows={2}
-                      maxRows={6}
-                      styles={{
-                        root: {
-                          maxWidth: '90vw'
-                        }
-                      }}
-                      onKeyDown={handleKeyDown}
-                    />
-                  </Stack>
-                </Popover.Dropdown>
-              </Popover>
-            </Box>
-          );
-        }
+            }}
+          />
+        )
       });
     });
 

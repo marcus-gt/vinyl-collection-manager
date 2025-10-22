@@ -972,7 +972,8 @@ def update_record(record_id):
         # Define allowed fields to update (standard columns only)
         allowed_fields = {
             'artist', 'album', 'year', 'current_release_year', 'label', 'country',
-            'master_format', 'current_release_format', 'genres', 'styles', 'musicians'
+            'master_format', 'current_release_format', 'genres', 'styles', 'musicians',
+            'master_url', 'current_release_url'
         }
         
         # Filter to only allowed fields
