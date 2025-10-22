@@ -1523,7 +1523,7 @@ function Collection() {
     }
   };
 
-  const handleDelete = async (record: VinylRecord) => {
+  const handleDelete = (record: VinylRecord) => {
     console.log('Delete initiated for record:', record);
     
     if (!record.id) {
@@ -1531,69 +1531,84 @@ function Collection() {
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this record?')) {
-      console.log('Delete cancelled by user');
-      return;
-    }
+    modals.openConfirmModal({
+      title: 'Delete record',
+      children: (
+        <Stack gap="xs">
+          <Text size="sm">
+            Are you sure you want to delete this record?
+          </Text>
+          <Text size="sm" fw={500}>
+            {record.artist} - {record.album}
+          </Text>
+          <Text size="xs" c="dimmed">
+            This action cannot be undone.
+          </Text>
+        </Stack>
+      ),
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        console.log('Starting delete process for record ID:', record.id);
+        setLoading(true);
+        try {
+          // First load fresh data to ensure we have the latest state
+          const currentData = await records.getAll();
+          console.log('Current data from server:', currentData);
+          
+          if (currentData.success && currentData.data) {
+            setUserRecords(currentData.data);
+          }
 
-    console.log('Starting delete process for record ID:', record.id);
-    setLoading(true);
-    try {
-      // First load fresh data to ensure we have the latest state
-      const currentData = await records.getAll();
-      console.log('Current data from server:', currentData);
-      
-      if (currentData.success && currentData.data) {
-        setUserRecords(currentData.data);
-      }
-
-      console.log('Calling delete API...');
-      const response = await records.delete(record.id);
-      console.log('Delete API response:', response);
-      
-      if (response.success) {
-        console.log('Delete successful, reloading data...');
-        // Reload the full data after successful deletion
-        const refreshedData = await records.getAll();
-        console.log('Refreshed data:', refreshedData);
-        
-        if (refreshedData.success && refreshedData.data) {
-          setUserRecords(refreshedData.data);
+          console.log('Calling delete API...');
+          const response = await records.delete(record.id!);
+          console.log('Delete API response:', response);
+          
+          if (response.success) {
+            console.log('Delete successful, reloading data...');
+            // Reload the full data after successful deletion
+            const refreshedData = await records.getAll();
+            console.log('Refreshed data:', refreshedData);
+            
+            if (refreshedData.success && refreshedData.data) {
+              setUserRecords(refreshedData.data);
+              notifications.show({
+                title: 'Success',
+                message: 'Record deleted successfully',
+                color: 'green'
+              });
+            } else {
+              console.error('Failed to reload data after deletion');
+              notifications.show({
+                title: 'Warning',
+                message: 'Record may have been deleted but failed to refresh data',
+                color: 'yellow'
+              });
+            }
+          } else {
+            console.error('Delete failed:', response.error);
+            setError(response.error || 'Failed to delete record');
+            notifications.show({
+              title: 'Error',
+              message: response.error || 'Failed to delete record',
+              color: 'red'
+            });
+          }
+        } catch (err) {
+          console.error('Error during delete:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
+          setError(errorMessage);
           notifications.show({
-            title: 'Success',
-            message: 'Record deleted successfully',
-            color: 'green'
+            title: 'Error',
+            message: errorMessage,
+            color: 'red'
           });
-        } else {
-          console.error('Failed to reload data after deletion');
-          notifications.show({
-            title: 'Warning',
-            message: 'Record may have been deleted but failed to refresh data',
-            color: 'yellow'
-          });
+        } finally {
+          setLoading(false);
+          console.log('Delete process completed');
         }
-      } else {
-        console.error('Delete failed:', response.error);
-        setError(response.error || 'Failed to delete record');
-        notifications.show({
-          title: 'Error',
-          message: response.error || 'Failed to delete record',
-          color: 'red'
-        });
       }
-    } catch (err) {
-      console.error('Error during delete:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
-      setError(errorMessage);
-      notifications.show({
-        title: 'Error',
-        message: errorMessage,
-        color: 'red'
-      });
-    } finally {
-      setLoading(false);
-      console.log('Delete process completed');
-    }
+    });
   };
 
   const tableColumns = useMemo(() => {

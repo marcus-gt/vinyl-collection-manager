@@ -5,6 +5,7 @@ import { customColumns as customColumnsService, customValues, records } from '..
 import type { CustomColumn, CustomColumnType } from '../types';
 import { PILL_COLORS } from '../types';
 import { notifications } from '@mantine/notifications';
+import { modals } from '@mantine/modals';
 
 export interface CustomColumnManagerProps {
   opened: boolean;
@@ -25,6 +26,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
   const [applyToAll, setApplyToAll] = useState(false);
   const [currentOption, setCurrentOption] = useState('');
   const [columnsChanged, setColumnsChanged] = useState(false);
+  const [validationError, setValidationError] = useState<string>('');
 
   useEffect(() => {
     if (opened) {
@@ -61,13 +63,16 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
   };
 
   const handleSubmit = async () => {
+    // Clear previous validation error
+    setValidationError('');
+    
     if (!name.trim()) {
-      alert('Column name is required');
+      setValidationError('Column name is required');
       return;
     }
 
     if ((type === 'single-select' || type === 'multi-select') && options.length === 0) {
-      alert('Select type requires at least one option');
+      setValidationError('Select type requires at least one option');
       return;
     }
 
@@ -121,33 +126,46 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     }
   };
 
-  const handleDelete = async (column: CustomColumn) => {
-    if (!window.confirm(`Are you sure you want to delete the "${column.name}" column?`)) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await customColumnsService.delete(column.id);
-      if (response.success) {
-        setColumnsChanged(true);
-        notifications.show({
-          title: 'Success',
-          message: 'Column deleted successfully',
-          color: 'green'
-        });
-        await loadColumns();
+  const handleDelete = (column: CustomColumn) => {
+    modals.openConfirmModal({
+      title: 'Delete column',
+      children: (
+        <Stack gap="xs">
+          <Text size="sm">
+            Are you sure you want to delete the "{column.name}" column?
+          </Text>
+          <Text size="xs" c="dimmed">
+            This will permanently remove this column and all its data from all records. This action cannot be undone.
+          </Text>
+        </Stack>
+      ),
+      labels: { confirm: 'Delete', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const response = await customColumnsService.delete(column.id);
+          if (response.success) {
+            setColumnsChanged(true);
+            notifications.show({
+              title: 'Success',
+              message: 'Column deleted successfully',
+              color: 'green'
+            });
+            await loadColumns();
+          }
+        } catch (err) {
+          notifications.show({
+            title: 'Error',
+            message: 'Failed to delete column',
+            color: 'red'
+          });
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to delete column',
-        color: 'red'
-      });
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleEdit = (column: CustomColumn) => {
@@ -169,6 +187,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     setDefaultValue('');
     setApplyToAll(false);
     setCurrentOption('');
+    setValidationError('');
   };
 
   const handleAddOption = () => {
@@ -179,6 +198,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
         [currentOption]: PILL_COLORS.default
       }));
       setCurrentOption('');
+      if (validationError) setValidationError('');
     }
   };
 
@@ -348,7 +368,10 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
               label="Column Name"
               placeholder="e.g., Rating, Comments, Location"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (validationError) setValidationError('');
+              }}
               size="sm"
               styles={{
                 input: {
@@ -574,15 +597,22 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                 size="sm"
               />
             )}
-            <Group justify="flex-end">
-              {editingColumn && (
-                <Button variant="light" onClick={resetForm} size="sm">
-                  Cancel
-                </Button>
+            <Group justify="space-between" align="center">
+              {validationError && (
+                <Text size="sm" c="red" style={{ flex: 1 }}>
+                  {validationError}
+                </Text>
               )}
-              <Button onClick={handleSubmit} loading={loading} size="sm">
-                {editingColumn ? 'Update Column' : 'Add Column'}
-              </Button>
+              <Group justify="flex-end" style={{ marginLeft: 'auto' }}>
+                {editingColumn && (
+                  <Button variant="light" onClick={resetForm} size="sm">
+                    Cancel
+                  </Button>
+                )}
+                <Button onClick={handleSubmit} loading={loading} size="sm">
+                  {editingColumn ? 'Update Column' : 'Add Column'}
+                </Button>
+              </Group>
             </Group>
           </Stack>
         </Box>
