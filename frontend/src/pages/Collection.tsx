@@ -131,8 +131,8 @@ function Collection() {
         'Styles',
         'Musicians',
         'Added',
-        'Scanned Release Year',
-        'Scanned Release Format',
+        'Release Year',
+        'Release Format',
         'Master URL',
         'Release URL'
       ];
@@ -430,6 +430,17 @@ function Collection() {
               size: 80,
             },
             { 
+              id: 'current_release_year', 
+              accessorKey: 'current_release_year', 
+              header: 'Release Year', 
+              enableSorting: true, 
+              size: 80,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 120,
+              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_year || '-'
+            },
+            { 
               id: 'label', 
               accessorKey: 'label', 
               header: 'Label', 
@@ -465,6 +476,28 @@ function Collection() {
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <Text size="sm">{row.original.country || '-'}</Text>
               )
+            },
+            {
+              id: 'master_format',
+              accessorKey: 'master_format',
+              header: 'Original Format',
+              enableSorting: true,
+              size: 100,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 150,
+              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.master_format || '-'
+            },
+            {
+              id: 'current_release_format',
+              accessorKey: 'current_release_format',
+              header: 'Release Format',
+              enableSorting: true,
+              size: 100,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 150,
+              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_format || '-'
             },
             { 
               id: 'genres', 
@@ -560,28 +593,6 @@ function Collection() {
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => row.original.created_at ? 
                 new Date(row.original.created_at).toLocaleDateString() : '-'
-            },
-            { 
-              id: 'current_release_year', 
-              accessorKey: 'current_release_year', 
-              header: 'Scanned Release Year', 
-              enableSorting: true, 
-              size: 100,
-              enableResizing: true,
-              minSize: 100,
-              maxSize: 500,
-              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_year || '-'
-            },
-            {
-              id: 'current_release_format',
-              accessorKey: 'current_release_format',
-              header: 'Format',
-              enableSorting: true,
-              size: 120,
-              enableResizing: true,
-              minSize: 100,
-              maxSize: 200,
-              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_format || row.original.master_format || '-'
             },
             {
               id: 'added_from',
@@ -702,39 +713,37 @@ function Collection() {
             {
               id: 'links',
               accessorKey: 'links',
-              header: 'Links',
-              size: 130,
-              enableResizing: true,
-              minSize: 100,
-              maxSize: 500,
+              header: 'Discogs Links',
+              size: 142,
+              minSize: 142,
+              maxSize: 142,
+              enableResizing: false,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <Group gap="xs">
+                <Group gap={4} wrap="nowrap">
                   {row.original.master_url && (
-                    <Tooltip label="View Master Release">
-                      <ActionIcon 
-                        component="a" 
-                        href={row.original.master_url} 
-                        target="_blank" 
-                        variant="light" 
-                        size="sm"
-                      >
-                        <IconExternalLink size={16} />
-                      </ActionIcon>
-                    </Tooltip>
+                    <Button
+                      component="a"
+                      href={row.original.master_url}
+                      target="_blank"
+                      variant="light"
+                      size="compact-xs"
+                      style={{ fontSize: '11px', padding: '2px 8px' }}
+                    >
+                      Original
+                    </Button>
                   )}
                   {row.original.current_release_url && (
-                    <Tooltip label="View Scanned Release">
-                      <ActionIcon 
-                        component="a" 
-                        href={row.original.current_release_url} 
-                        target="_blank" 
-                        variant="light" 
-                        size="sm"
-                        color="blue"
-                      >
-                        <IconExternalLink size={16} />
-                      </ActionIcon>
-                    </Tooltip>
+                    <Button
+                      component="a"
+                      href={row.original.current_release_url}
+                      target="_blank"
+                      variant="light"
+                      size="compact-xs"
+                      color="blue"
+                      style={{ fontSize: '11px', padding: '2px 8px' }}
+                    >
+                      Current
+                    </Button>
                   )}
                 </Group>
               ),
