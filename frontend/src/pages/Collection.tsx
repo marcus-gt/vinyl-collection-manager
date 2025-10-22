@@ -291,6 +291,7 @@ function EditableCustomCell({
 }: EditableCustomCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const [opened, setOpened] = useState(false);
+  const [, forceUpdate] = useState({});
   
   useEffect(() => {
     setLocalValue(value);
@@ -405,13 +406,11 @@ function EditableCustomCell({
           option_colors: updatedColors
         });
         
-        notifications.show({
-          title: 'Color updated',
-          message: `Changed color for "${optionName}"`,
-          color: 'green'
-        });
+        // Manually update the column object to reflect new colors immediately
+        column.option_colors = updatedColors;
         
-        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
+        // Force a re-render to show the color change without closing popovers
+        forceUpdate({});
       } catch (error) {
         console.error('Error changing color:', error);
         notifications.show({
@@ -460,13 +459,18 @@ function EditableCustomCell({
           handleChange(newValues.join(','));
         }
         
+        // Update the column object locally
+        column.options = updatedOptions;
+        column.option_colors = updatedColors;
+        
+        // Force a re-render without closing popovers
+        forceUpdate({});
+        
         notifications.show({
           title: 'Option renamed',
           message: `Renamed "${oldName}" to "${newName.trim()}"`,
           color: 'green'
         });
-        
-        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
       } catch (error) {
         console.error('Error renaming option:', error);
         notifications.show({
@@ -498,13 +502,18 @@ function EditableCustomCell({
           handleChange(newValues.join(','));
         }
         
+        // Update the column object locally
+        column.options = updatedOptions;
+        column.option_colors = updatedColors;
+        
+        // Force a re-render without closing popovers
+        forceUpdate({});
+        
         notifications.show({
           title: 'Option deleted',
           message: `Deleted "${optionName}"`,
           color: 'green'
         });
-        
-        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
       } catch (error) {
         console.error('Error deleting option:', error);
         notifications.show({
@@ -651,7 +660,7 @@ function EditableCustomCell({
                 onClick={async (e) => {
                   e.stopPropagation();
                   await handleChangeColor(optionName, value);
-                  setMenuOpened(false);
+                  // Don't close menu - user can see color change in real-time
                 }}
                 style={{ paddingTop: '4px', paddingBottom: '4px' }}
               >
