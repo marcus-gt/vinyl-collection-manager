@@ -342,6 +342,12 @@ function EditableCustomCell({
   // Multi-select type
   if (column.type === 'multi-select' && column.options) {
     const values = localValue ? localValue.split(',') : [];
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    // Filter options based on search query
+    const filteredOptions = (column.options || [])
+      .filter(opt => !values.includes(opt))
+      .filter(opt => opt.toLowerCase().includes(searchQuery.toLowerCase()));
     
     return (
       <Box 
@@ -355,7 +361,10 @@ function EditableCustomCell({
         }} 
         onClick={() => setOpened(true)}
       >
-        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { 
+          setOpened(o); 
+          if (!o) setSearchQuery(''); // Clear search when closing
+        }}>
           <Popover.Target>
             <div style={{ width: '100%' }}>
               {values.length === 0 ? (
@@ -400,43 +409,102 @@ function EditableCustomCell({
             </div>
           </Popover.Target>
           <Popover.Dropdown>
-            <Stack gap="xs">
+            <Stack gap="md">
               <Group justify="space-between" align="center">
                 <Text size="sm" fw={500}>Edit {column.name}</Text>
                 <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
                   <IconX size={16} />
                 </ActionIcon>
               </Group>
-              <Group gap="xs" wrap="wrap">
-                {(column.options || []).map((opt) => {
-                  const isSelected = values.includes(opt);
-                  return (
-                    <Badge
-                      key={opt}
-                      variant="filled"
-                      size="sm"
-                      radius="sm"
-                      color={column.option_colors?.[opt] || PILL_COLORS.default}
-                      styles={{
-                        root: {
-                          textTransform: 'none',
-                          cursor: 'pointer',
-                          padding: '3px 8px',
-                          opacity: isSelected ? 1 : 0.3
-                        }
-                      }}
-                      onClick={() => {
-                        const newValues = isSelected
-                          ? values.filter((v: string) => v !== opt)
-                          : [...values, opt];
-                        handleChange(newValues.join(','));
-                      }}
-                    >
-                      {opt}
-                    </Badge>
-                  );
-                })}
-              </Group>
+              
+              {/* Selected values at the top */}
+              {values.length > 0 && (
+                <Box>
+                  <Group gap={4} wrap="wrap">
+                    {values.map((val: string) => (
+                      <Badge
+                        key={val}
+                        variant="filled"
+                        size="sm"
+                        radius="sm"
+                        color={column.option_colors?.[val] || PILL_COLORS.default}
+                        style={{ cursor: 'pointer' }}
+                        styles={{
+                          root: {
+                            textTransform: 'none',
+                            padding: '3px 8px'
+                          }
+                        }}
+                        onClick={() => {
+                          // Remove from selected
+                          const newValues = values.filter((v: string) => v !== val);
+                          handleChange(newValues.join(','));
+                        }}
+                      >
+                        {val}
+                      </Badge>
+                    ))}
+                  </Group>
+                </Box>
+              )}
+              
+              {/* Search input */}
+              <TextInput
+                placeholder="Search options..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="sm"
+                leftSection={<IconSearch size={14} />}
+                onClick={(e) => e.stopPropagation()}
+              />
+              
+              {/* Separator */}
+              <Box style={{ 
+                borderTop: '1px solid var(--mantine-color-gray-3)',
+                paddingTop: '8px'
+              }}>
+                <Text size="xs" c="dimmed" mb="xs">Select options</Text>
+                
+                {/* Available options as a cloud */}
+                <Group gap={4} wrap="wrap">
+                  {filteredOptions.length > 0 ? (
+                    filteredOptions.map((opt) => (
+                      <Badge
+                        key={opt}
+                        variant="filled"
+                        size="sm"
+                        radius="sm"
+                        color={column.option_colors?.[opt] || PILL_COLORS.default}
+                        style={{ cursor: 'pointer' }}
+                        styles={{
+                          root: {
+                            textTransform: 'none',
+                            padding: '3px 8px',
+                            opacity: 0.7,
+                            transition: 'opacity 0.1s ease'
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '0.7';
+                        }}
+                        onClick={() => {
+                          // Add to selected
+                          const newValues = [...values, opt];
+                          handleChange(newValues.join(','));
+                          setSearchQuery(''); // Clear search after selection
+                        }}
+                      >
+                        {opt}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text size="sm" c="dimmed">No options found</Text>
+                  )}
+                </Group>
+              </Box>
             </Stack>
           </Popover.Dropdown>
         </Popover>
