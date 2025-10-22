@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, memo } from 'react';
 import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
 import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { modals } from '@mantine/modals';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
@@ -367,21 +368,24 @@ function EditableCustomCell({
           options: updatedOptions
         });
         
+        // Update the column object locally to show the new option immediately
+        column.options = updatedOptions;
+        
         // Add the new option to the selected values
         const newValues = [...values, newOption.trim()];
         handleChange(newValues.join(','));
         
-        // Clear search and refresh columns
+        // Clear search query
         setSearchQuery('');
+        
+        // Force a re-render to show the new option without closing popovers
+        forceUpdate({});
         
         notifications.show({
           title: 'Option created',
           message: `Added "${newOption.trim()}" to ${column.name}`,
           color: 'green'
         });
-        
-        // Trigger a refresh of custom columns
-        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
       } catch (error) {
         console.error('Error creating option:', error);
         notifications.show({
@@ -687,10 +691,25 @@ function EditableCustomCell({
             <Menu.Item
               leftSection={<IconTrash size={14} />}
               color="red"
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.stopPropagation();
-                await handleDeleteOption(optionName);
-                setMenuOpened(false);
+                modals.openConfirmModal({
+                  title: 'Delete option',
+                  children: (
+                    <Text size="sm">
+                      Are you sure you want to delete "{optionName}"? This will remove it from all records in this column.
+                    </Text>
+                  ),
+                  labels: { confirm: 'Delete', cancel: 'Cancel' },
+                  confirmProps: { color: 'red' },
+                  onConfirm: async () => {
+                    await handleDeleteOption(optionName);
+                    setMenuOpened(false);
+                  },
+                  onCancel: () => {
+                    // Keep menu open if user cancels
+                  }
+                });
               }}
             >
               Delete option
