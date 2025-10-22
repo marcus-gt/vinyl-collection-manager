@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, memo } from 'react';
+import { useEffect, useState, useMemo, memo, useRef } from 'react';
 import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
 import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -281,6 +281,8 @@ interface EditableCustomCellProps {
   value: string;
   recordId: string;
   column: CustomColumn;
+  allRecords: VinylRecord[];
+  getAllRecords: () => VinylRecord[];
   onUpdate: (recordId: string, columnId: string, newValue: string) => void;
 }
 
@@ -288,6 +290,8 @@ function EditableCustomCell({
   value, 
   recordId, 
   column,
+  allRecords,
+  getAllRecords,
   onUpdate 
 }: EditableCustomCellProps) {
   const [localValue, setLocalValue] = useState(value);
@@ -297,6 +301,43 @@ function EditableCustomCell({
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
+  
+  // Listen for column metadata updates from other cells
+  useEffect(() => {
+    const handleMetadataUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.columnId === column.id) {
+        // Update local column reference with new metadata
+        if (customEvent.detail.option_colors) {
+          column.option_colors = customEvent.detail.option_colors;
+        }
+        if (customEvent.detail.options) {
+          column.options = customEvent.detail.options;
+        }
+        // Force re-render to show updated colors/options
+        forceUpdate({});
+      }
+    };
+    
+    const handleRecordValuesUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.columnId === column.id) {
+        // Check if this record's value needs updating
+        const update = customEvent.detail.updates?.find((u: any) => u.recordId === recordId);
+        if (update) {
+          // Update the local value to reflect the change
+          setLocalValue(update.value);
+        }
+      }
+    };
+    
+    window.addEventListener('updateColumnMetadata', handleMetadataUpdate);
+    window.addEventListener('updateRecordValues', handleRecordValuesUpdate);
+    return () => {
+      window.removeEventListener('updateColumnMetadata', handleMetadataUpdate);
+      window.removeEventListener('updateRecordValues', handleRecordValuesUpdate);
+    };
+  }, [column, forceUpdate, recordId]);
   
   const debouncedUpdate = useDebouncedCallback(async (newValue: string) => {
     if (!recordId) return;
@@ -415,6 +456,11 @@ function EditableCustomCell({
         
         // Force a re-render to show the color change without closing popovers
         forceUpdate({});
+        
+        // Dispatch a custom event that only updates the column metadata without refreshing everything
+        window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
+          detail: { columnId: column.id, option_colors: updatedColors } 
+        }));
       } catch (error) {
         console.error('Error changing color:', error);
         notifications.show({
@@ -427,13 +473,17 @@ function EditableCustomCell({
     
     // Function to rename an option
     const handleRenameOption = async (oldName: string, newName: string) => {
+      console.log(`[handleRenameOption] Called with oldName="${oldName}", newName="${newName}"`);
+      
       if (!newName.trim() || oldName === newName.trim()) {
+        console.log('[handleRenameOption] Early return: empty or same name');
         return;
       }
       
       try {
         // Check if new name already exists
         if (column.options?.some(opt => opt.toLowerCase() === newName.trim().toLowerCase() && opt !== oldName)) {
+          console.log('[handleRenameOption] Error: option name already exists');
           notifications.show({
             title: 'Error',
             message: 'An option with this name already exists',
@@ -444,6 +494,7 @@ function EditableCustomCell({
         
         // Update options list
         const updatedOptions = (column.options || []).map(opt => opt === oldName ? newName.trim() : opt);
+        console.log('[handleRenameOption] Updated options:', updatedOptions);
         
         // Update option colors if the old name had a color
         const updatedColors = { ...(column.option_colors || {}) };
@@ -452,28 +503,90 @@ function EditableCustomCell({
           delete updatedColors[oldName];
         }
         
+        console.log('[handleRenameOption] Calling API to update column...');
         await customColumnsApi.update(column.id, {
           options: updatedOptions,
           option_colors: updatedColors
         });
+        console.log('[handleRenameOption] Column updated successfully');
         
-        // Update the current record's value if it includes the old name
-        if (values.includes(oldName)) {
-          const newValues = values.map(v => v === oldName ? newName.trim() : v);
-          handleChange(newValues.join(','));
-        }
+        // Update ALL records that have this option selected
+        // Get fresh records to ensure we have the latest data
+        const currentRecords = getAllRecords();
+        console.log(`[handleRenameOption] Got ${currentRecords.length} records from getAllRecords()`);
         
-        // Update the column object locally
+        const recordsToUpdate = currentRecords.filter(record => {
+          const value = record.custom_values_cache?.[column.id];
+          if (!value) return false;
+          
+          if (column.type === 'single-select') {
+            return value === oldName;
+          } else if (column.type === 'multi-select') {
+            const values = value.split(',').filter(Boolean);
+            return values.includes(oldName);
+          }
+          return false;
+        });
+        
+        console.log(`[handleRenameOption] Found ${recordsToUpdate.length} records to update:`, recordsToUpdate.map(r => ({ id: r.id, value: r.custom_values_cache[column.id] })));
+        
+        // Update the column object locally first
         column.options = updatedOptions;
         column.option_colors = updatedColors;
         
-        // Force a re-render without closing popovers
-        forceUpdate({});
-        
+        // Show immediate feedback
         notifications.show({
-          title: 'Option renamed',
-          message: `Renamed "${oldName}" to "${newName.trim()}"`,
-          color: 'green'
+          title: 'Renaming option',
+          message: `Updating "${oldName}" to "${newName.trim()}" across ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}...`,
+          color: 'blue',
+          autoClose: 2000
+        });
+        
+        // Update each record in the background (without awaiting)
+        Promise.all(recordsToUpdate.map(async (record) => {
+          const currentValue = record.custom_values_cache[column.id];
+          let newValue: string;
+          
+          if (column.type === 'single-select') {
+            newValue = newName.trim();
+          } else {
+            // multi-select: replace oldName with newName in the comma-separated list
+            const values = currentValue.split(',').filter(Boolean);
+            newValue = values.map(v => v === oldName ? newName.trim() : v).join(',');
+          }
+          
+          // Update the record via API
+          await onUpdate(record.id!, column.id, newValue);
+          
+          // Return the record ID and new value for local state update
+          return { recordId: record.id!, newValue };
+        })).then((updates) => {
+          // After all updates complete, dispatch events to refresh other cells
+          // 1. Update column metadata (options and colors)
+          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
+            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
+          }));
+          
+          // 2. Update record values with the new option name
+          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
+            detail: { 
+              columnId: column.id, 
+              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+            } 
+          }));
+          
+          notifications.show({
+            title: 'Option renamed',
+            message: `Successfully updated ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}`,
+            color: 'green'
+          });
+        }).catch((error) => {
+          console.error('Error updating records:', error);
+          notifications.show({
+            title: 'Error',
+            message: 'Some records may not have been updated',
+            color: 'red'
+          });
         });
       } catch (error) {
         console.error('Error renaming option:', error);
@@ -500,23 +613,79 @@ function EditableCustomCell({
           option_colors: updatedColors
         });
         
-        // Remove from current record's values if present
-        if (values.includes(optionName)) {
-          const newValues = values.filter(v => v !== optionName);
-          handleChange(newValues.join(','));
-        }
+        // Update ALL records that have this option selected
+        // Get fresh records to ensure we have the latest data
+        const currentRecords = getAllRecords();
+        const recordsToUpdate = currentRecords.filter(record => {
+          const value = record.custom_values_cache?.[column.id];
+          if (!value) return false;
+          
+          if (column.type === 'single-select') {
+            return value === optionName;
+          } else if (column.type === 'multi-select') {
+            const values = value.split(',').filter(Boolean);
+            return values.includes(optionName);
+          }
+          return false;
+        });
         
-        // Update the column object locally
+        // Update the column object locally first
         column.options = updatedOptions;
         column.option_colors = updatedColors;
         
-        // Force a re-render without closing popovers
-        forceUpdate({});
-        
+        // Show immediate feedback
         notifications.show({
-          title: 'Option deleted',
-          message: `Deleted "${optionName}"`,
-          color: 'green'
+          title: 'Deleting option',
+          message: `Removing "${optionName}" from ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}...`,
+          color: 'blue',
+          autoClose: 2000
+        });
+        
+        // Update each record in the background (without awaiting)
+        Promise.all(recordsToUpdate.map(async (record) => {
+          const currentValue = record.custom_values_cache[column.id];
+          let newValue: string;
+          
+          if (column.type === 'single-select') {
+            newValue = ''; // Clear single-select value
+          } else {
+            // multi-select: remove optionName from the comma-separated list
+            const values = currentValue.split(',').filter(Boolean);
+            newValue = values.filter(v => v !== optionName).join(',');
+          }
+          
+          // Update the record via API
+          await onUpdate(record.id!, column.id, newValue);
+          
+          // Return the record ID and new value for local state update
+          return { recordId: record.id!, newValue };
+        })).then((updates) => {
+          // After all updates complete, dispatch events to refresh other cells
+          // 1. Update column metadata (options and colors)
+          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
+            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
+          }));
+          
+          // 2. Update record values with the deleted option removed
+          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
+            detail: { 
+              columnId: column.id, 
+              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+            } 
+          }));
+          
+          notifications.show({
+            title: 'Option deleted',
+            message: `Successfully removed from ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}`,
+            color: 'green'
+          });
+        }).catch((error) => {
+          console.error('Error updating records:', error);
+          notifications.show({
+            title: 'Error',
+            message: 'Some records may not have been updated',
+            color: 'red'
+          });
         });
       } catch (error) {
         console.error('Error deleting option:', error);
@@ -895,6 +1064,386 @@ function EditableCustomCell({
   
   // Single-select type
   if (column.type === 'single-select' && column.options) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isCreatingOption, setIsCreatingOption] = useState(false);
+    
+    // Filter options based on search query
+    const filteredOptions = (column.options || []).filter(opt => 
+      opt.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    // Check if search query matches an existing option exactly
+    const exactMatch = column.options?.some(opt => opt.toLowerCase() === searchQuery.toLowerCase());
+    const showCreateOption = searchQuery.trim() && !exactMatch;
+    
+    // Function to create a new option (for single-select, auto-select it)
+    const handleCreateOption = async (newOption: string) => {
+      if (!newOption.trim() || isCreatingOption) return;
+      
+      setIsCreatingOption(true);
+      try {
+        const updatedOptions = [...(column.options || []), newOption.trim()];
+        await customColumnsApi.update(column.id, {
+          options: updatedOptions
+        });
+        
+        column.options = updatedOptions;
+        handleChange(newOption.trim()); // Auto-select the new option
+        setSearchQuery('');
+        forceUpdate({});
+        
+        notifications.show({
+          title: 'Option created',
+          message: `Added "${newOption.trim()}" to ${column.name}`,
+          color: 'green'
+        });
+      } catch (error) {
+        console.error('Error creating option:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to create new option',
+          color: 'red'
+        });
+      } finally {
+        setIsCreatingOption(false);
+      }
+    };
+    
+    const handleChangeColor = async (optionName: string, newColor: string) => {
+      try {
+        const updatedColors = {
+          ...(column.option_colors || {}),
+          [optionName]: newColor
+        };
+        
+        await customColumnsApi.update(column.id, {
+          option_colors: updatedColors
+        });
+        
+        column.option_colors = updatedColors;
+        forceUpdate({});
+        
+        window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
+          detail: { columnId: column.id, option_colors: updatedColors } 
+        }));
+      } catch (error) {
+        console.error('Error changing color:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to change color',
+          color: 'red'
+        });
+      }
+    };
+    
+    const handleRenameOption = async (oldName: string, newName: string) => {
+      if (!newName.trim() || oldName === newName.trim()) return;
+      
+      try {
+        if (column.options?.some(opt => opt.toLowerCase() === newName.trim().toLowerCase() && opt !== oldName)) {
+          notifications.show({
+            title: 'Error',
+            message: 'An option with this name already exists',
+            color: 'red'
+          });
+          return;
+        }
+        
+        const updatedOptions = (column.options || []).map(opt => opt === oldName ? newName.trim() : opt);
+        const updatedColors = { ...(column.option_colors || {}) };
+        if (updatedColors[oldName]) {
+          updatedColors[newName.trim()] = updatedColors[oldName];
+          delete updatedColors[oldName];
+        }
+        
+        await customColumnsApi.update(column.id, {
+          options: updatedOptions,
+          option_colors: updatedColors
+        });
+        
+        const currentRecords = getAllRecords();
+        const recordsToUpdate = currentRecords.filter(record => {
+          const value = record.custom_values_cache?.[column.id];
+          return value === oldName;
+        });
+        
+        column.options = updatedOptions;
+        column.option_colors = updatedColors;
+        
+        notifications.show({
+          title: 'Renaming option',
+          message: `Updating "${oldName}" to "${newName.trim()}" across ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}...`,
+          color: 'blue',
+          autoClose: 2000
+        });
+        
+        Promise.all(recordsToUpdate.map(async (record) => {
+          await onUpdate(record.id!, column.id, newName.trim());
+          return { recordId: record.id!, newValue: newName.trim() };
+        })).then((updates) => {
+          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
+            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
+          }));
+          
+          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
+            detail: { 
+              columnId: column.id, 
+              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+            } 
+          }));
+          
+          notifications.show({
+            title: 'Option renamed',
+            message: `Successfully updated ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}`,
+            color: 'green'
+          });
+        }).catch((error) => {
+          console.error('Error updating records:', error);
+          notifications.show({
+            title: 'Error',
+            message: 'Some records may not have been updated',
+            color: 'red'
+          });
+        });
+      } catch (error) {
+        console.error('Error renaming option:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to rename option',
+          color: 'red'
+        });
+      }
+    };
+    
+    const handleDeleteOption = async (optionName: string) => {
+      try {
+        const updatedOptions = (column.options || []).filter(opt => opt !== optionName);
+        const updatedColors = { ...(column.option_colors || {}) };
+        delete updatedColors[optionName];
+        
+        await customColumnsApi.update(column.id, {
+          options: updatedOptions,
+          option_colors: updatedColors
+        });
+        
+        const currentRecords = getAllRecords();
+        const recordsToUpdate = currentRecords.filter(record => {
+          const value = record.custom_values_cache?.[column.id];
+          return value === optionName;
+        });
+        
+        column.options = updatedOptions;
+        column.option_colors = updatedColors;
+        
+        notifications.show({
+          title: 'Deleting option',
+          message: `Removing "${optionName}" from ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}...`,
+          color: 'blue',
+          autoClose: 2000
+        });
+        
+        Promise.all(recordsToUpdate.map(async (record) => {
+          await onUpdate(record.id!, column.id, ''); // Clear value
+          return { recordId: record.id!, newValue: '' };
+        })).then((updates) => {
+          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
+            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
+          }));
+          
+          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
+            detail: { 
+              columnId: column.id, 
+              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+            } 
+          }));
+          
+          notifications.show({
+            title: 'Option deleted',
+            message: `Successfully removed from ${recordsToUpdate.length} record${recordsToUpdate.length !== 1 ? 's' : ''}`,
+            color: 'green'
+          });
+        }).catch((error) => {
+          console.error('Error updating records:', error);
+          notifications.show({
+            title: 'Error',
+            message: 'Some records may not have been updated',
+            color: 'red'
+          });
+        });
+      } catch (error) {
+        console.error('Error deleting option:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to delete option',
+          color: 'red'
+        });
+      }
+    };
+    
+    const OptionBadge = memo(({ optionName, isSelected, onClick }: { 
+      optionName: string; 
+      isSelected: boolean; 
+      onClick?: () => void;
+    }) => {
+      const [menuOpened, setMenuOpened] = useState(false);
+      const [editedName, setEditedName] = useState('');
+      
+      return (
+        <Menu 
+          opened={menuOpened} 
+          onChange={setMenuOpened}
+          withinPortal={false}
+          position="bottom-start"
+        >
+          <Menu.Target>
+            <Badge
+              variant="filled"
+              size="sm"
+              radius="sm"
+              color={column.option_colors?.[optionName] || PILL_COLORS.default}
+              style={{ cursor: 'pointer', opacity: isSelected ? 1 : 0.7 }}
+              styles={{
+                root: {
+                  textTransform: 'none',
+                  padding: '3px 8px'
+                }
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) e.currentTarget.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) e.currentTarget.style.opacity = '0.7';
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!menuOpened && onClick) {
+                  onClick();
+                }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpened(true);
+                setEditedName(optionName);
+              }}
+            >
+              {optionName}
+            </Badge>
+          </Menu.Target>
+          <Menu.Dropdown>
+            <Box p="xs" pb={0} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+              <Group justify="space-between" align="center" mb="xs">
+                <Text size="xs" fw={500} c="dimmed">Edit Option</Text>
+                <Group gap={4} wrap="nowrap">
+                  {editedName.trim() && editedName !== optionName && (
+                    <ActionIcon
+                      size="xs"
+                      color="green"
+                      variant="subtle"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await handleRenameOption(optionName, editedName);
+                        setMenuOpened(false);
+                      }}
+                      style={{ width: '24px', height: '24px' }}
+                    >
+                      <IconCheck size={14} />
+                    </ActionIcon>
+                  )}
+                  <ActionIcon
+                    size="xs"
+                    color="red"
+                    variant="subtle"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpened(false);
+                    }}
+                    style={{ width: '24px', height: '24px' }}
+                  >
+                    <IconX size={14} />
+                  </ActionIcon>
+                </Group>
+              </Group>
+              
+              <TextInput
+                size="xs"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter' && editedName.trim() && editedName !== optionName) {
+                    handleRenameOption(optionName, editedName);
+                    setMenuOpened(false);
+                  }
+                }}
+                placeholder="Option name"
+                styles={{ input: { fontSize: '12px' } }}
+              />
+            </Box>
+            
+            <Menu.Divider />
+            
+            <Box p="xs" onClick={(e) => e.stopPropagation()}>
+              <Text size="xs" c="dimmed" mb="xs">Color</Text>
+              {PILL_COLORS.options.map(({ value, label }) => (
+                <Menu.Item
+                  key={value}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleChangeColor(optionName, value);
+                  }}
+                  style={{ paddingTop: '4px', paddingBottom: '4px' }}
+                >
+                  <Badge
+                    variant="filled"
+                    size="sm"
+                    radius="sm"
+                    color={value}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                        padding: '3px 8px'
+                      }
+                    }}
+                  >
+                    {label}
+                  </Badge>
+                </Menu.Item>
+              ))}
+            </Box>
+            
+            <Menu.Divider />
+            
+            <Menu.Item
+              leftSection={<IconTrash size={14} />}
+              color="red"
+              onClick={(e) => {
+                e.stopPropagation();
+                modals.openConfirmModal({
+                  title: 'Delete option',
+                  children: (
+                    <Text size="sm">
+                      Are you sure you want to delete "{optionName}"? This will remove it from all records in this column.
+                    </Text>
+                  ),
+                  labels: { confirm: 'Delete', cancel: 'Cancel' },
+                  confirmProps: { color: 'red' },
+                  onConfirm: async () => {
+                    await handleDeleteOption(optionName);
+                    setMenuOpened(false);
+                  },
+                  onCancel: () => {}
+                });
+              }}
+            >
+              Delete option
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      );
+    });
+    
     return (
       <Box 
         style={{ 
@@ -907,7 +1456,17 @@ function EditableCustomCell({
         }} 
         onClick={() => setOpened(true)}
       >
-        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+        <Popover 
+          width={400} 
+          position="bottom" 
+          withArrow 
+          shadow="md" 
+          opened={opened}
+          onChange={(o) => { 
+            setOpened(o); 
+            if (!o) setSearchQuery('');
+          }}
+        >
           <Popover.Target>
             <div style={{ width: '100%' }}>
               {localValue ? (
@@ -932,42 +1491,95 @@ function EditableCustomCell({
             </div>
           </Popover.Target>
           <Popover.Dropdown>
-            <Stack gap="xs">
+            <Stack gap="md">
               <Group justify="space-between" align="center">
                 <Text size="sm" fw={500}>Edit {column.name}</Text>
                 <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
                   <IconX size={16} />
                 </ActionIcon>
               </Group>
-              <Group gap="xs" wrap="wrap">
-                {column.options.map((opt) => (
-                  <Badge
-                    key={opt}
-                    variant="filled"
-                    size="sm"
-                    radius="sm"
-                    color={column.option_colors?.[opt] || PILL_COLORS.default}
-                    styles={{
-                      root: {
-                        textTransform: 'none',
-                        cursor: 'pointer',
-                        padding: '3px 8px',
-                        opacity: localValue === opt ? 1 : 0.5
-                      }
+              
+              {/* Current selection at the top */}
+              {localValue && (
+                <Box>
+                  <OptionBadge
+                    optionName={localValue}
+                    isSelected={true}
+                    onClick={() => handleChange('')}
+                  />
+                </Box>
+              )}
+              
+              {/* Search input */}
+              <TextInput
+                placeholder="Search options..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && showCreateOption) {
+                    e.preventDefault();
+                    handleCreateOption(searchQuery);
+                  }
+                }}
+                size="sm"
+                leftSection={<IconSearch size={14} />}
+                onClick={(e) => e.stopPropagation()}
+              />
+              
+              {/* Separator */}
+              <Box style={{ 
+                borderTop: '1px solid var(--mantine-color-gray-3)',
+                paddingTop: '8px'
+              }}>
+                <Text size="xs" c="dimmed" mb="xs">Select option</Text>
+                
+                {/* Create new option */}
+                {showCreateOption && (
+                  <Box
+                    style={{
+                      padding: '6px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '4px',
+                      transition: 'background-color 0.1s ease'
                     }}
-                    onClick={() => {
-                      if (localValue === opt) {
-                        handleChange('');
-                      } else {
-                        handleChange(opt);
-                      }
-                      setOpened(false);
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--mantine-color-gray-light-hover)';
                     }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    onClick={() => handleCreateOption(searchQuery)}
                   >
-                    {opt}
-                  </Badge>
-                ))}
-              </Group>
+                    <IconPlus size={14} />
+                    <Text size="sm">Create "{searchQuery.trim()}"</Text>
+                  </Box>
+                )}
+                
+                {/* Available options */}
+                <Group gap={4} wrap="wrap">
+                  {filteredOptions
+                    .filter(opt => opt !== localValue)
+                    .map((opt) => (
+                      <OptionBadge
+                        key={opt}
+                        optionName={opt}
+                        isSelected={false}
+                        onClick={() => handleChange(opt)}
+                      />
+                    ))}
+                </Group>
+                
+                {filteredOptions.filter(opt => opt !== localValue).length === 0 && !showCreateOption && (
+                  <Text size="sm" c="dimmed" ta="center" py="md">
+                    No options found
+                  </Text>
+                )}
+              </Box>
             </Stack>
           </Popover.Dropdown>
         </Popover>
@@ -1284,6 +1896,7 @@ function Collection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userRecords, setUserRecords] = useState<VinylRecord[]>([]);
+  const userRecordsRef = useRef<VinylRecord[]>([]);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingRecord, setEditingRecord] = useState<VinylRecord | null>(null);
@@ -1292,6 +1905,11 @@ function Collection() {
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    userRecordsRef.current = userRecords;
+  }, [userRecords]);
 
   useEffect(() => {
     loadRecords();
@@ -2074,6 +2692,8 @@ function Collection() {
             value={row.original.custom_values_cache[column.id] || ''}
             recordId={row.original.id!}
             column={column}
+            allRecords={userRecords}
+            getAllRecords={() => userRecordsRef.current}
             onUpdate={async (recordId, columnId, newValue) => {
               try {
                 console.log('Updating custom value:', {
