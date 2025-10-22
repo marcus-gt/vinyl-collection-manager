@@ -955,6 +955,48 @@ def update_custom_values(record_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/records/<record_id>', methods=['PATCH'])
+def update_record(record_id):
+    """Update standard fields of a record."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        updates = request.get_json()
+        if not isinstance(updates, dict):
+            return jsonify({'success': False, 'error': 'Invalid data format'}), 400
+        
+        client = get_supabase_client()
+        
+        # Define allowed fields to update (standard columns only)
+        allowed_fields = {
+            'artist', 'album', 'year', 'current_release_year', 'label', 'country',
+            'master_format', 'current_release_format', 'genres', 'styles', 'musicians',
+            'master_url', 'current_release_url'
+        }
+        
+        # Filter to only allowed fields
+        filtered_updates = {k: v for k, v in updates.items() if k in allowed_fields}
+        
+        if not filtered_updates:
+            return jsonify({'success': False, 'error': 'No valid fields to update'}), 400
+        
+        # Add updated_at timestamp
+        filtered_updates['updated_at'] = datetime.utcnow().isoformat()
+        
+        # Update the record
+        response = client.table('vinyl_records').update(filtered_updates).eq('id', record_id).eq('user_id', user_id).execute()
+        
+        if response.data:
+            return jsonify({'success': True, 'data': response.data[0]}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Record not found or update failed'}), 404
+            
+    except Exception as e:
+        print(f"Error updating record: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/lookup/discogs/<release_id>')
 def lookup_discogs(release_id):
     """Look up a release by Discogs release ID."""

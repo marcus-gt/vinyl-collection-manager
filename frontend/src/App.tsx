@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { MantineProvider, createTheme } from '@mantine/core';
 import '@mantine/core/styles.css';
+import { ModalsProvider } from '@mantine/modals';
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -88,34 +89,36 @@ const theme = createTheme({
 function App() {
   return (
     <MantineProvider defaultColorScheme="dark" theme={theme}>
-      <Notifications />
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="/collection" replace />} />
-              <Route
-                path="collection"
-                element={
-                  <PrivateRoute>
-                    <Collection />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="musician-network"
-                element={
-                  <PrivateRoute>
-                    <MusicianNetwork />
-                  </PrivateRoute>
-                }
-              />
-            </Route>
-          </Routes>
-        </Router>
-      </AuthProvider>
+      <ModalsProvider>
+        <Notifications />
+        <AuthProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Navigate to="/collection" replace />} />
+                <Route
+                  path="collection"
+                  element={
+                    <PrivateRoute>
+                      <Collection />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="musician-network"
+                  element={
+                    <PrivateRoute>
+                      <MusicianNetwork />
+                    </PrivateRoute>
+                  }
+                />
+              </Route>
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </ModalsProvider>
     </MantineProvider>
   );
 }
