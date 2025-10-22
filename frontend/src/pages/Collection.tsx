@@ -290,7 +290,6 @@ function EditableCustomCell({
   value, 
   recordId, 
   column,
-  allRecords,
   getAllRecords,
   onUpdate 
 }: EditableCustomCellProps) {
