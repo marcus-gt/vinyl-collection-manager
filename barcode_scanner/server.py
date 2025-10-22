@@ -991,13 +991,8 @@ def lookup_discogs_url():
             
         result = search_by_discogs_url(url)
         if result and result.get('success'):
-            # Ensure current_release fields are null for discogs_url method
-            if result.get('data'):
-                result['data']['current_release_url'] = None
-                result['data']['current_release_year'] = None
-                # Make sure country is included in the response
-                if 'country' in result['data']:
-                    result['data']['country'] = result['data']['country']
+            # Keep the current_release_url and current_release_year from format_release_data
+            # (they are already set correctly in discogs_lookup.py)
             return jsonify(result)
         else:
             return jsonify({
