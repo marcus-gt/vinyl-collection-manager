@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox } from '@mantine/core';
+import { useEffect, useState, useMemo, memo } from 'react';
+import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
 import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { records, customColumns as customColumnsApi } from '../services/api';
@@ -393,6 +393,304 @@ function EditableCustomCell({
       }
     };
     
+    // Function to change option color
+    const handleChangeColor = async (optionName: string, newColor: string) => {
+      try {
+        const updatedColors = {
+          ...(column.option_colors || {}),
+          [optionName]: newColor
+        };
+        
+        await customColumnsApi.update(column.id, {
+          option_colors: updatedColors
+        });
+        
+        notifications.show({
+          title: 'Color updated',
+          message: `Changed color for "${optionName}"`,
+          color: 'green'
+        });
+        
+        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
+      } catch (error) {
+        console.error('Error changing color:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to change color',
+          color: 'red'
+        });
+      }
+    };
+    
+    // Function to rename an option
+    const handleRenameOption = async (oldName: string, newName: string) => {
+      if (!newName.trim() || oldName === newName.trim()) {
+        return;
+      }
+      
+      try {
+        // Check if new name already exists
+        if (column.options?.some(opt => opt.toLowerCase() === newName.trim().toLowerCase() && opt !== oldName)) {
+          notifications.show({
+            title: 'Error',
+            message: 'An option with this name already exists',
+            color: 'red'
+          });
+          return;
+        }
+        
+        // Update options list
+        const updatedOptions = (column.options || []).map(opt => opt === oldName ? newName.trim() : opt);
+        
+        // Update option colors if the old name had a color
+        const updatedColors = { ...(column.option_colors || {}) };
+        if (updatedColors[oldName]) {
+          updatedColors[newName.trim()] = updatedColors[oldName];
+          delete updatedColors[oldName];
+        }
+        
+        await customColumnsApi.update(column.id, {
+          options: updatedOptions,
+          option_colors: updatedColors
+        });
+        
+        // Update the current record's value if it includes the old name
+        if (values.includes(oldName)) {
+          const newValues = values.map(v => v === oldName ? newName.trim() : v);
+          handleChange(newValues.join(','));
+        }
+        
+        notifications.show({
+          title: 'Option renamed',
+          message: `Renamed "${oldName}" to "${newName.trim()}"`,
+          color: 'green'
+        });
+        
+        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
+      } catch (error) {
+        console.error('Error renaming option:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to rename option',
+          color: 'red'
+        });
+      }
+    };
+    
+    // Function to delete an option
+    const handleDeleteOption = async (optionName: string) => {
+      try {
+        // Remove from options list
+        const updatedOptions = (column.options || []).filter(opt => opt !== optionName);
+        
+        // Remove from option colors
+        const updatedColors = { ...(column.option_colors || {}) };
+        delete updatedColors[optionName];
+        
+        await customColumnsApi.update(column.id, {
+          options: updatedOptions,
+          option_colors: updatedColors
+        });
+        
+        // Remove from current record's values if present
+        if (values.includes(optionName)) {
+          const newValues = values.filter(v => v !== optionName);
+          handleChange(newValues.join(','));
+        }
+        
+        notifications.show({
+          title: 'Option deleted',
+          message: `Deleted "${optionName}"`,
+          color: 'green'
+        });
+        
+        window.dispatchEvent(new CustomEvent('refreshCustomColumns'));
+      } catch (error) {
+        console.error('Error deleting option:', error);
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to delete option',
+          color: 'red'
+        });
+      }
+    };
+    
+    // Component for rendering a badge with context menu
+    const OptionBadge = memo(({ 
+      optionName, 
+      isSelected, 
+      onClick 
+    }: { 
+      optionName: string; 
+      isSelected: boolean; 
+      onClick?: () => void;
+    }) => {
+      const [menuOpened, setMenuOpened] = useState(false);
+      const [editedName, setEditedName] = useState(optionName);
+      
+      return (
+        <Menu 
+          opened={menuOpened} 
+          onChange={(opened) => {
+            setMenuOpened(opened);
+            if (opened) {
+              setEditedName(optionName); // Reset to current name when opening
+            }
+          }}
+          position="bottom-start"
+          withinPortal={false}
+        >
+          <Menu.Target>
+            <Badge
+              variant="filled"
+              size="sm"
+              radius="sm"
+              color={column.option_colors?.[optionName] || PILL_COLORS.default}
+              style={{ cursor: 'pointer' }}
+              styles={{
+                root: {
+                  textTransform: 'none',
+                  padding: '3px 8px',
+                  opacity: isSelected ? 1 : 0.7,
+                  transition: 'opacity 0.1s ease'
+                }
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) e.currentTarget.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) e.currentTarget.style.opacity = '0.7';
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Left click - select/deselect if menu not open
+                if (!menuOpened && onClick) {
+                  onClick();
+                }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpened(true);
+                setEditedName(optionName); // Set the edited name when opening menu
+              }}
+            >
+              {optionName}
+            </Badge>
+          </Menu.Target>
+          <Menu.Dropdown>
+            {/* Header with action buttons */}
+            <Box p="xs" pb={0} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+              <Group justify="space-between" align="center" mb="xs">
+                <Text size="xs" fw={500} c="dimmed">Edit Option</Text>
+                <Group gap={4} wrap="nowrap">
+                  {editedName.trim() && editedName !== optionName && (
+                    <ActionIcon
+                      size="xs"
+                      color="green"
+                      variant="subtle"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await handleRenameOption(optionName, editedName);
+                        setMenuOpened(false);
+                      }}
+                      style={{ width: '24px', height: '24px' }}
+                    >
+                      <IconCheck size={14} />
+                    </ActionIcon>
+                  )}
+                  <ActionIcon
+                    size="xs"
+                    color="red"
+                    variant="subtle"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpened(false);
+                    }}
+                    style={{ width: '24px', height: '24px' }}
+                  >
+                    <IconX size={14} />
+                  </ActionIcon>
+                </Group>
+              </Group>
+              
+               {/* Edit name text input */}
+               <TextInput
+                 size="xs"
+                 value={editedName}
+                 onChange={(e) => {
+                   e.stopPropagation();
+                   setEditedName(e.target.value);
+                 }}
+                 onKeyDown={(e) => {
+                   e.stopPropagation();
+                   if (e.key === 'Enter' && editedName.trim() && editedName !== optionName) {
+                     e.preventDefault();
+                     handleRenameOption(optionName, editedName);
+                     setMenuOpened(false);
+                   } else if (e.key === 'Escape') {
+                     setEditedName(optionName);
+                     setMenuOpened(false);
+                   }
+                 }}
+                 placeholder="Option name"
+                 onClick={(e) => e.stopPropagation()}
+                 onFocus={(e) => e.stopPropagation()}
+                 onMouseDown={(e) => e.stopPropagation()}
+                 autoComplete="off"
+               />
+            </Box>
+            
+            <Menu.Divider />
+            
+            {/* Color picker section */}
+            <Menu.Label>Change color</Menu.Label>
+            {PILL_COLORS.options.map(({ value, label }) => (
+              <Menu.Item
+                key={value}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await handleChangeColor(optionName, value);
+                  setMenuOpened(false);
+                }}
+                style={{ paddingTop: '4px', paddingBottom: '4px' }}
+              >
+                <Badge
+                  variant="filled"
+                  size="sm"
+                  radius="sm"
+                  color={value}
+                  styles={{
+                    root: {
+                      textTransform: 'none',
+                      padding: '4px 8px'
+                    }
+                  }}
+                >
+                  {label}
+                </Badge>
+              </Menu.Item>
+            ))}
+            
+            <Menu.Divider />
+            
+            {/* Delete */}
+            <Menu.Item
+              leftSection={<IconTrash size={14} />}
+              color="red"
+              onClick={async (e) => {
+                e.stopPropagation();
+                await handleDeleteOption(optionName);
+                setMenuOpened(false);
+              }}
+            >
+              Delete option
+            </Menu.Item>
+          </Menu.Dropdown>
+        </Menu>
+      );
+    });
+    
     return (
       <Box 
         style={{ 
@@ -405,10 +703,17 @@ function EditableCustomCell({
         }} 
         onClick={() => setOpened(true)}
       >
-        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { 
-          setOpened(o); 
-          if (!o) setSearchQuery(''); // Clear search when closing
-        }}>
+        <Popover 
+          width={400} 
+          position="bottom" 
+          withArrow 
+          shadow="md" 
+          opened={opened}
+          onChange={(o) => { 
+            setOpened(o); 
+            if (!o) setSearchQuery(''); // Clear search when closing
+          }}
+        >
           <Popover.Target>
             <div style={{ width: '100%' }}>
               {values.length === 0 ? (
@@ -466,27 +771,16 @@ function EditableCustomCell({
                 <Box>
                   <Group gap={4} wrap="wrap">
                     {values.map((val: string) => (
-                      <Badge
+                      <OptionBadge
                         key={val}
-                        variant="filled"
-                        size="sm"
-                        radius="sm"
-                        color={column.option_colors?.[val] || PILL_COLORS.default}
-                        style={{ cursor: 'pointer' }}
-                        styles={{
-                          root: {
-                            textTransform: 'none',
-                            padding: '3px 8px'
-                          }
-                        }}
+                        optionName={val}
+                        isSelected={true}
                         onClick={() => {
                           // Remove from selected
                           const newValues = values.filter((v: string) => v !== val);
                           handleChange(newValues.join(','));
                         }}
-                      >
-                        {val}
-                      </Badge>
+                      />
                     ))}
                   </Group>
                 </Box>
@@ -547,36 +841,17 @@ function EditableCustomCell({
                 <Group gap={4} wrap="wrap">
                   {filteredOptions.length > 0 ? (
                     filteredOptions.map((opt) => (
-                      <Badge
+                      <OptionBadge
                         key={opt}
-                        variant="filled"
-                        size="sm"
-                        radius="sm"
-                        color={column.option_colors?.[opt] || PILL_COLORS.default}
-                        style={{ cursor: 'pointer' }}
-                        styles={{
-                          root: {
-                            textTransform: 'none',
-                            padding: '3px 8px',
-                            opacity: 0.7,
-                            transition: 'opacity 0.1s ease'
-                          }
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.opacity = '0.7';
-                        }}
+                        optionName={opt}
+                        isSelected={false}
                         onClick={() => {
                           // Add to selected
                           const newValues = [...values, opt];
                           handleChange(newValues.join(','));
                           setSearchQuery(''); // Clear search after selection
                         }}
-                      >
-                        {opt}
-                      </Badge>
+                      />
                     ))
                   ) : !showCreateOption ? (
                     <Text size="sm" c="dimmed">No options found</Text>
@@ -1007,14 +1282,21 @@ function Collection() {
       console.log('Records reload initiated');
     };
 
+    const handleCustomColumnsRefresh = () => {
+      console.log('Custom columns refresh event received');
+      loadCustomColumns();
+    };
+
     // Add event listeners
     window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
     window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
+    window.addEventListener('refreshCustomColumns', handleCustomColumnsRefresh);
 
     return () => {
       console.log('Removing event listeners');
       window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
       window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
+      window.removeEventListener('refreshCustomColumns', handleCustomColumnsRefresh);
     };
   }, []);
 
