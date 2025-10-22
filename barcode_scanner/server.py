@@ -665,7 +665,9 @@ def lookup_barcode(barcode):
                     'styles': result.get('styles', []),
                     'musicians': result.get('musicians', []),
                     'master_url': result.get('master_url'),
+                    'master_format': result.get('master_format'),
                     'current_release_url': result.get('current_release_url') if result.get('added_from') == 'barcode' else None,
+                    'current_release_format': result.get('current_release_format') if result.get('added_from') == 'barcode' else None,
                     'label': result.get('label'),
                     'country': result.get('country'),
                     'added_from': result.get('added_from', 'barcode')

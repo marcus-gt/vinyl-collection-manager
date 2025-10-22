@@ -15,8 +15,10 @@ export interface VinylRecord {
   notes?: string;
   musicians?: string;
   master_url?: string;
+  master_format?: string;
   release_url?: string;
   release_year?: string;
+  current_release_format?: string;
   added_at: string;
   updated_at?: string;
   user_id: string;

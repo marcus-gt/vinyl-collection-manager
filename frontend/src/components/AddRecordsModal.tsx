@@ -431,7 +431,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         styles: record.styles || [],
         musicians: record.musicians || [],
         master_url: record.master_url || undefined,
+        master_format: record.master_format,
         current_release_url: record.current_release_url || undefined,
+        current_release_format: record.current_release_format,
         label: record.label,
         country: record.country,
         added_from: record.added_from || 'manual',
@@ -1355,7 +1357,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       {record.styles && <Text size="sm">Styles: {record.styles.join(', ')}</Text>}
                       {record.musicians && <Text size="sm">Musicians: {record.musicians.join(', ')}</Text>}
                       {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
+                      {record.master_format && <Text size="sm">Original Format: {record.master_format}</Text>}
                       {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
+                      {record.current_release_format && <Text size="sm">Current Release Format: {record.current_release_format}</Text>}
                       {record.label && <Text size="sm">Label: {record.label}</Text>}
                       {record.country && <Text size="sm">Country: {record.country}</Text>}
                       

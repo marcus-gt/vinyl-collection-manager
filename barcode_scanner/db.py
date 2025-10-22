@@ -195,8 +195,10 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             'styles': record_data.get('styles', []),
             'musicians': record_data.get('musicians', []),
             'master_url': record_data.get('master_url'),
+            'master_format': record_data.get('master_format'),
             'current_release_url': record_data.get('current_release_url'),
             'current_release_year': record_data.get('current_release_year'),
+            'current_release_format': record_data.get('current_release_format'),
             'barcode': record_data.get('barcode'),
             'country': record_data.get('country'),
             'added_from': record_data.get('added_from', '')

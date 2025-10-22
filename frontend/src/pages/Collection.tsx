@@ -124,6 +124,7 @@ function Collection() {
         'Artist',
         'Album',
         'Original Year',
+        'Original Format',
         'Label',
         'Country',
         'Genres',
@@ -131,6 +132,7 @@ function Collection() {
         'Musicians',
         'Added',
         'Scanned Release Year',
+        'Scanned Release Format',
         'Master URL',
         'Release URL'
       ];
@@ -151,6 +153,7 @@ function Collection() {
           record.artist || '',
           record.album || '',
           record.year?.toString() || '',
+          record.master_format || '',
           record.label || '',
           record.country || '',
           (record.genres || []).join('; '),
@@ -158,6 +161,7 @@ function Collection() {
           (record.musicians || []).join('; '),
           record.created_at ? new Date(record.created_at).toLocaleString() : '',
           record.current_release_year?.toString() || '',
+          record.current_release_format || '',
           record.master_url || '',
           record.current_release_url || ''
         ];
@@ -567,6 +571,17 @@ function Collection() {
               minSize: 100,
               maxSize: 500,
               cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_year || '-'
+            },
+            {
+              id: 'current_release_format',
+              accessorKey: 'current_release_format',
+              header: 'Format',
+              enableSorting: true,
+              size: 120,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => row.original.current_release_format || row.original.master_format || '-'
             },
             {
               id: 'added_from',

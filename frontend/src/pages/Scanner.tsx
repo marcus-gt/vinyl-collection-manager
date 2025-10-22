@@ -321,7 +321,9 @@ export function Scanner() {
         styles: record.styles || [],
         musicians: record.musicians || [],
         master_url: record.master_url,
+        master_format: record.master_format,
         current_release_url: record.current_release_url,
+        current_release_format: record.current_release_format,
         label: record.label,
         country: record.country,
         added_from: record.added_from || 'manual',
@@ -667,7 +669,9 @@ export function Scanner() {
                     {record.styles && <Text size="sm">Styles: {record.styles.join(', ')}</Text>}
                     {record.musicians && <Text size="sm">Musicians: {record.musicians.join(', ')}</Text>}
                     {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
+                    {record.master_format && <Text size="sm">Original Format: {record.master_format}</Text>}
                     {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
+                    {record.current_release_format && <Text size="sm">Current Release Format: {record.current_release_format}</Text>}
                     {record.label && <Text size="sm">Label: {record.label}</Text>}
                     <Group gap="xs" mt="xs">
                       {record.master_url && (
@@ -728,6 +732,7 @@ export function Scanner() {
                   <Table.Th style={{ whiteSpace: 'nowrap' }}>Album</Table.Th>
                   <Table.Th style={{ whiteSpace: 'nowrap' }}>Label</Table.Th>
                   <Table.Th w={80} style={{ whiteSpace: 'nowrap' }}>Year</Table.Th>
+                  <Table.Th w={100} style={{ whiteSpace: 'nowrap' }}>Format</Table.Th>
                   <Table.Th w={80} style={{ whiteSpace: 'nowrap' }}>Release</Table.Th>
                   <Table.Th w={120} style={{ whiteSpace: 'nowrap' }}>Links</Table.Th>
                 </Table.Tr>
@@ -751,6 +756,7 @@ export function Scanner() {
                       </Text>
                     </Table.Td>
                     <Table.Td>{record.year || '-'}</Table.Td>
+                    <Table.Td>{record.current_release_format || record.master_format || '-'}</Table.Td>
                     <Table.Td>{record.current_release_year || '-'}</Table.Td>
                     <Table.Td>
                       <Group gap={4} wrap="nowrap">
