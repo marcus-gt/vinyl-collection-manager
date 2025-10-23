@@ -21,7 +21,7 @@ import {
 import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
-import { IconSearch, IconCalendar, IconFilter } from '@tabler/icons-react';
+import { IconSearch, IconCalendar, IconFilter, IconCheck } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -195,15 +195,37 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     return () => clearTimeout(timeoutId);
   }, [columnFilters]);
 
-  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: string): boolean => {
+  const textFilter: FilterFn<T> = (row: Row<T>, columnId: string, value: any): boolean => {
     const cellValue = row.getValue(columnId);
     if (!cellValue) return false;
+    
+    // Handle array of filter terms (pills)
+    if (Array.isArray(value)) {
+      if (value.length === 0) return true;
+      
+      // If cellValue is an array (like genres: ['Jazz', 'Electronic'])
+      if (Array.isArray(cellValue)) {
+        // Convert all cell values to lowercase for comparison
+        const cellValuesLower = cellValue.map((v: any) => String(v).toLowerCase());
+        // Return true if ANY filter term matches ANY cell value
+        return value.some(term => 
+          cellValuesLower.some(cellVal => cellVal.includes(term.toLowerCase()))
+        );
+      }
+      
+      // If cellValue is a string
+      const cellValueLower = String(cellValue).toLowerCase();
+      return value.some(term => cellValueLower.includes(term.toLowerCase()));
+    }
+    
+    // Handle single string filter value (legacy)
     if (Array.isArray(cellValue)) {
       return cellValue.some(item => 
-        String(item).toLowerCase().includes(value.toLowerCase())
+        String(item).toLowerCase().includes(String(value).toLowerCase())
       );
     }
-    return String(cellValue).toLowerCase().includes(value.toLowerCase());
+    
+    return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
   };
 
   const multiSelectFilter: FilterFn<T> = (
@@ -466,11 +488,14 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         ...column,
         id: columnId,
         enableColumnFilter: column.enableColumnFilter !== false, // Respect original setting
-        filterFn: filterType === 'multi-select' ? multiSelectFilter :
+        // Respect existing filterFn if provided, otherwise use filterType-based logic
+        filterFn: column.filterFn || (
+                  filterType === 'multi-select' ? multiSelectFilter :
                   filterType === 'single-select' ? singleSelectFilter :
                   filterType === 'number' ? numberFilter :
                   filterType === 'boolean' ? booleanFilter :
-                  textFilter,
+                  textFilter
+                ),
         filter: {
           type: filterType,
           options: options
@@ -548,7 +573,47 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       'multi-select': multiSelectFilter,
       number: numberFilter,
       singleSelect: singleSelectFilter,
-      boolean: booleanFilter
+      boolean: booleanFilter,
+      textMultiTermContains: (row, columnId, filterValue) => {
+        const cellValue = row.getValue(columnId);
+        
+        console.log(`🔍 [textMultiTermContains] columnId: ${columnId}, filterValue:`, filterValue, 'cellValue:', cellValue);
+        
+        // filterValue is an array of search terms
+        if (!filterValue || !Array.isArray(filterValue) || filterValue.length === 0) {
+          return true; // No filter, show all rows
+        }
+        
+        // If cell value is null/undefined, don't match
+        if (cellValue === null || cellValue === undefined) {
+          console.log(`   ❌ Cell value is null/undefined`);
+          return false;
+        }
+        
+        // Convert filter terms to lowercase for case-insensitive matching
+        const filterTerms = filterValue.map((term: string) => term.toLowerCase());
+        console.log(`   📋 Filter terms (lowercase):`, filterTerms);
+        
+        // Handle array values (like genres)
+        if (Array.isArray(cellValue)) {
+          const cellValuesLower = cellValue.map(v => String(v).toLowerCase());
+          console.log(`   📚 Cell values (lowercase array):`, cellValuesLower);
+          // Check if ALL filter terms match at least one value in the cell's array (AND logic)
+          const matches = filterTerms.every(filterTerm => 
+            cellValuesLower.some(cellVal => cellVal.includes(filterTerm))
+          );
+          console.log(`   ${matches ? '✅' : '❌'} Array match result (AND): ${matches}`);
+          return matches;
+        }
+        
+        // Handle string/number values
+        const cellStr = String(cellValue).toLowerCase();
+        console.log(`   📝 Cell value (lowercase string): "${cellStr}"`);
+        // Check if ALL filter terms are contained in the cell value (AND logic)
+        const matches = filterTerms.every(filterTerm => cellStr.includes(filterTerm));
+        console.log(`   ${matches ? '✅' : '❌'} String match result (AND): ${matches}`);
+        return matches;
+      }
     } as Record<string, FilterFn<T>>,
     defaultColumn: {
       minSize: 50,
@@ -577,27 +642,27 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     filters: columnFilters
   });
 
-  const handleFilterChange = (columnId: string, value: any) => {
+  const handleFilterChange = React.useCallback((columnId: string, value: any) => {
     console.log('handleFilterChange called:', {
       columnId,
-      value,
-      currentFilters: columnFilters
+      value
     });
 
     // Reset to page 1 before updating filters
     onPageChange(1);
 
     setColumnFilters((prev: ColumnFiltersState) => {
+      console.log('  Previous filters:', prev);
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (value == null || (typeof value === 'string' && !value)) {
-        console.log('Removing filter for column:', columnId);
+        console.log('  Removing filter for column:', columnId);
         return existing;
       }
       const newFilters = [...existing, { id: columnId, value }];
-      console.log('New filters state:', newFilters);
+      console.log('  New filters state:', newFilters);
       return newFilters;
     });
-  };
+  }, [onPageChange]);
 
   const applyLocalFilter = (columnId: string, value: any) => {
     console.log('applyLocalFilter called:', {
@@ -815,6 +880,118 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             );
           })}
         </Box>
+      </Box>
+    );
+  };
+
+  // Component for text filter with multi-term support
+  const TextFilter = ({ header, currentFilterValue }: any) => {
+    const columnId = header.column.id;
+    
+    // Initialize pills from saved filter (array format only)
+    const [filterTerms, setFilterTerms] = React.useState<string[]>(() => {
+      if (Array.isArray(currentFilterValue) && currentFilterValue.length > 0) {
+        console.log('🔄 Initializing filterTerms from saved filters:', currentFilterValue);
+        return currentFilterValue;
+      }
+      return [];
+    });
+    
+    // Local input for typing - does NOT trigger table filter
+    const [inputValue, setInputValue] = React.useState('');
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInputValue(e.target.value);
+      // NO filter update here - only when Enter/checkmark is pressed
+    };
+
+    const handleAddTerm = () => {
+      if (inputValue.trim() && !filterTerms.includes(inputValue.trim())) {
+        console.log('✅ Adding term to pills:', inputValue.trim());
+        const newTerms = [...filterTerms, inputValue.trim()];
+        console.log('📋 All filter terms:', newTerms);
+        setFilterTerms(newTerms);
+        setInputValue('');
+        // Update table filter with all pills
+        handleFilterChange(columnId, newTerms);
+      }
+    };
+
+    const handleRemoveTerm = (term: string) => {
+      console.log('❌ Removing term from pills:', term);
+      const newTerms = filterTerms.filter(t => t !== term);
+      setFilterTerms(newTerms);
+      // Update table filter
+      handleFilterChange(columnId, newTerms.length > 0 ? newTerms : undefined);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddTerm();
+      }
+    };
+
+    return (
+      <Box>
+        {/* Stored filter terms (pills) at the top */}
+        {filterTerms.length > 0 && (
+          <Box mb="xs" pb="xs" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+            <Group gap={4}>
+              {filterTerms.map((term) => (
+                <Badge
+                  key={term}
+                  size="sm"
+                  radius="md"
+                  style={{
+                    cursor: 'pointer',
+                    backgroundColor: 'rgba(55, 123, 206, 0.15)',
+                    color: 'rgb(91, 169, 255)',
+                    border: 'none'
+                  }}
+                  styles={{
+                    root: {
+                      textTransform: 'none',
+                      padding: '2.5px 5px',
+                      fontSize: '10.5px'
+                    }
+                  }}
+                  onClick={() => handleRemoveTerm(term)}
+                >
+                  {term}
+                </Badge>
+              ))}
+            </Group>
+          </Box>
+        )}
+
+        <Group gap={4} align="center" wrap="nowrap">
+          <TextInput
+            placeholder="Filter..."
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            size="xs"
+            leftSection={<IconSearch size={14} />}
+            styles={{
+              root: { flex: 1 },
+              input: {
+                minHeight: '28px'
+              }
+            }}
+          />
+          {inputValue.trim() && (
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="green"
+              onClick={handleAddTerm}
+              style={{ flexShrink: 0 }}
+            >
+              <IconCheck size={16} />
+            </ActionIcon>
+          )}
+        </Group>
       </Box>
     );
   };
@@ -1085,21 +1262,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       case 'text':
       default:
         return (
-          <TextInput
-            placeholder="Filter..."
-            value={(currentFilter?.value as string) || ''}
-            onChange={(e) => handleFilterChange(header.column.id, e.target.value)}
-            size="xs"
-            leftSection={<IconSearch size={14} />}
-            styles={{
-              root: { width: '100%' },
-              input: {
-                minHeight: '28px',
-                '&::placeholder': {
-                  color: theme.colors.dark[2]
-                }
-              }
-            }}
+          <TextFilter
+            key={`text-filter-${header.column.id}`}
+            header={header}
+            currentFilterValue={currentFilter?.value}
           />
         );
     }
