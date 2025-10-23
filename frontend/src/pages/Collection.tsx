@@ -1588,6 +1588,21 @@ function EditableCustomCell({
   
   // Number type
   if (column.type === 'number') {
+    const [tempValue, setTempValue] = useState(localValue);
+    const hasChanges = tempValue !== localValue;
+    
+    const handleSave = () => {
+      if (hasChanges) {
+        handleChange(tempValue);
+      }
+      setOpened(false);
+    };
+    
+    const handleCancel = () => {
+      setTempValue(localValue);
+      setOpened(false);
+    };
+    
     return (
       <Box 
         style={{ 
@@ -1600,7 +1615,7 @@ function EditableCustomCell({
         }} 
         onClick={() => setOpened(true)}
       >
-        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }}>
           <Popover.Target>
             <div style={{ width: '100%' }}>
               <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
@@ -1612,15 +1627,38 @@ function EditableCustomCell({
             <Stack gap="xs">
               <Group justify="space-between" align="center">
                 <Text size="sm" fw={500}>Edit {column.name}</Text>
-                <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
-                  <IconX size={16} />
-                </ActionIcon>
+                <Group gap={4}>
+                  {hasChanges && (
+                    <ActionIcon
+                      size="sm"
+                      color="green"
+                      variant="subtle"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSave();
+                      }}
+                    >
+                      <IconCheck size={16} />
+                    </ActionIcon>
+                  )}
+                  <ActionIcon 
+                    size="sm" 
+                    variant="subtle"
+                    color="red"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      handleCancel();
+                    }}
+                  >
+                    <IconX size={16} />
+                  </ActionIcon>
+                </Group>
               </Group>
               <TextInput
                 size="sm"
                 type="number"
-                value={localValue}
-                onChange={(e) => handleChange(e.target.value)}
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
                 placeholder={`Enter ${column.name.toLowerCase()}`}
                 styles={{
                   input: {
@@ -1630,7 +1668,15 @@ function EditableCustomCell({
                     maxWidth: '90vw'
                   }
                 }}
-                onKeyDown={handleKeyDown}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && hasChanges) {
+                    e.preventDefault();
+                    handleSave();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancel();
+                  }
+                }}
               />
             </Stack>
           </Popover.Dropdown>
@@ -1640,6 +1686,21 @@ function EditableCustomCell({
   }
   
   // Default: Text type
+  const [tempValue, setTempValue] = useState(localValue);
+  const hasChanges = tempValue !== localValue;
+  
+  const handleSave = () => {
+    if (hasChanges) {
+      handleChange(tempValue);
+    }
+    setOpened(false);
+  };
+  
+  const handleCancel = () => {
+    setTempValue(localValue);
+    setOpened(false);
+  };
+  
   return (
     <Box 
       style={{ 
@@ -1652,7 +1713,7 @@ function EditableCustomCell({
       }} 
       onClick={() => setOpened(true)}
     >
-      <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened}>
+      <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }}>
         <Popover.Target>
           <div style={{ width: '100%' }}>
             <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
@@ -1664,14 +1725,37 @@ function EditableCustomCell({
           <Stack gap="xs">
             <Group justify="space-between" align="center">
               <Text size="sm" fw={500}>Edit {column.name}</Text>
-              <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
-                <IconX size={16} />
-              </ActionIcon>
+              <Group gap={4}>
+                {hasChanges && (
+                  <ActionIcon
+                    size="sm"
+                    color="green"
+                    variant="subtle"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSave();
+                    }}
+                  >
+                    <IconCheck size={16} />
+                  </ActionIcon>
+                )}
+                <ActionIcon 
+                  size="sm" 
+                  variant="subtle"
+                  color="red"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    handleCancel();
+                  }}
+                >
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
             </Group>
             <Textarea
               size="sm"
-              value={localValue}
-              onChange={(e) => handleChange(e.target.value)}
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
               placeholder={`Enter ${column.name.toLowerCase()}`}
               autosize
               minRows={2}
@@ -1681,7 +1765,20 @@ function EditableCustomCell({
                   maxWidth: '90vw'
                 }
               }}
-              onKeyDown={handleKeyDown}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (hasChanges) {
+                    handleSave();
+                  } else {
+                    setOpened(false);
+                  }
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  handleCancel();
+                }
+                // Shift+Enter will naturally create a new line (default Textarea behavior)
+              }}
             />
           </Stack>
         </Popover.Dropdown>
