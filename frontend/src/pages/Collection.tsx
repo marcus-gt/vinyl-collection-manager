@@ -2843,7 +2843,13 @@ function Collection() {
           option_colors: column.option_colors
         },
         filterFn: column.type === 'multi-select' ? 'arrIncludes' : 
-                  column.type === 'single-select' ? 'equals' : 
+                  column.type === 'single-select' ? (row, columnId, filterValue) => {
+                    // Handle multi-select filtering for single-select columns
+                    if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
+                    const cellValue = row.getValue(columnId);
+                    const filterArray = Array.isArray(filterValue) ? filterValue : [filterValue];
+                    return filterArray.includes(cellValue as string);
+                  } : 
                   undefined,
         enableColumnFilter: column.type === 'multi-select' || column.type === 'single-select',
         cell: ({ row }: { row: Row<VinylRecord> }) => (

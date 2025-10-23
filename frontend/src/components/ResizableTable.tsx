@@ -281,22 +281,28 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const singleSelectFilter: FilterFn<T> = (
     row: Row<T>,
     columnId: string,
-    filterValue: string
+    filterValue: string | string[]
   ): boolean => {
-    if (!filterValue) return true;
+    // If no filter value, show all rows
+    if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
+    
     const cellValue = row.getValue(columnId);
+    
+    // Convert filterValue to array if it's not already
+    const filterArray = Array.isArray(filterValue) ? filterValue : [filterValue];
     
     // For the Source column, we need to compare raw values
     if (columnId === 'added_from') {
       console.log('Single-select filter comparison:', {
         columnId,
         cellValue,
-        filterValue,
-        matches: cellValue === filterValue
+        filterValue: filterArray,
+        matches: filterArray.includes(cellValue as string)
       });
     }
     
-    return cellValue === filterValue;
+    // Check if the cell value is in the filter array
+    return filterArray.includes(cellValue as string);
   };
 
   const booleanFilter: FilterFn<T> = (
@@ -784,33 +790,96 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           label: displayLabel  // Use display label
         })) || [];
 
+        // Get option colors from column meta if available
+        const singleSelectOptionColors = (header.column.columnDef.meta as any)?.option_colors || {};
+
         console.log('Single-select setup:', {
           columnId: header.column.id,
           labelToValueMap,
           valueToLabelMap,
           selectOptions,
-          currentFilter
+          currentFilter,
+          singleSelectOptionColors
         });
 
+        // Create a style tag with custom colors for each pill (now supporting multi-select for single-select columns)
+        const singleSelectValues = Array.isArray(currentFilter?.value) 
+          ? currentFilter.value 
+          : (currentFilter?.value ? [currentFilter.value as string] : []);
+        const singleSelectPillColorStyles = singleSelectValues.map((val, index) => {
+          // Find the display label for this value
+          const displayLabel = valueToLabelMap[val] || val;
+          const colorStyles = getColorStyles(singleSelectOptionColors[displayLabel] || PILL_COLORS.default);
+          return `
+            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) {
+              background-color: ${colorStyles.backgroundColor} !important;
+              color: ${colorStyles.color} !important;
+              border: none !important;
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              line-height: 1 !important;
+            }
+            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) span {
+              display: flex !important;
+              align-items: center !important;
+              line-height: 1 !important;
+            }
+          `;
+        }).join('\n');
+
         return (
-          <Select
-            placeholder="Select..."
-            value={(currentFilter?.value as string) || null}
-            onChange={(value) => handleFilterChange(header.column.id, value)}
-            data={selectOptions}
-            clearable
-            searchable
-            size="xs"
-            styles={{
-              root: { width: '100%' },
-              input: {
-                minHeight: '28px',
-                '&::placeholder': {
-                  color: theme.colors.dark[2]
-                }
-              }
-            }}
-          />
+          <>
+            {singleSelectValues.length > 0 && (
+              <style dangerouslySetInnerHTML={{ __html: singleSelectPillColorStyles }} />
+            )}
+            <div data-column-filter={header.column.id}>
+              <MultiSelect
+                placeholder="Select options..."
+                value={singleSelectValues}
+                onChange={(value) => handleFilterChange(header.column.id, value)}
+                data={selectOptions}
+                clearable
+                searchable
+                hidePickedOptions
+                maxDropdownHeight={200}
+                size="xs"
+                styles={{
+                  root: { width: '100%' },
+                  input: {
+                    minHeight: '28px',
+                    '&::placeholder': {
+                      color: theme.colors.dark[2]
+                    }
+                  },
+                  pill: {
+                    fontSize: '10.5px',
+                    padding: '2.5px 5px',
+                    textTransform: 'none'
+                  }
+                }}
+                renderOption={({ option }) => {
+                  // Use the label to get the color (option.label is the display label)
+                  return (
+                    <Badge
+                      size="sm"
+                      radius="md"
+                      style={getColorStyles(singleSelectOptionColors[option.label] || PILL_COLORS.default)}
+                      styles={{
+                        root: {
+                          textTransform: 'none',
+                          padding: '2.5px 5px',
+                          fontSize: '10.5px'
+                        }
+                      }}
+                    >
+                      {option.label}
+                    </Badge>
+                  );
+                }}
+              />
+            </div>
+          </>
         );
 
       case 'multi-select':
