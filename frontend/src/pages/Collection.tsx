@@ -2589,6 +2589,7 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
+              filterFn: 'textMultiTermContains' as any,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableStandardCell
                   value={row.original.genres || []}
@@ -2614,6 +2615,7 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
+              filterFn: 'textMultiTermContains' as any,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableStandardCell
                   value={row.original.styles || []}
@@ -2639,6 +2641,7 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
+              filterFn: 'textMultiTermContains' as any,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableStandardCell
                   value={row.original.musicians || []}
