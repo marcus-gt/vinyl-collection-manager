@@ -18,7 +18,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Tooltip } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar, IconFilter, IconCheck } from '@tabler/icons-react';
@@ -1062,29 +1062,108 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             </ActionIcon>
           )}
           {supportsAndOr && filterTerms.length > 0 && (
-            <Badge
-              size="sm"
-              radius="sm"
+            <Box
               style={{
-                cursor: 'pointer',
-                backgroundColor: filterMode === 'AND' ? 'rgba(68, 131, 97, 0.2)' : 'rgba(217, 115, 13, 0.2)',
-                color: filterMode === 'AND' ? 'rgb(115, 184, 148)' : 'rgb(255, 169, 91)',
-                border: 'none',
-                flexShrink: 0
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                flexShrink: 0,
+                width: '32px'
               }}
-              styles={{
-                root: {
-                  textTransform: 'none',
-                  padding: '3px 6px',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  letterSpacing: '0.5px'
-                }
-              }}
-              onClick={handleModeToggle}
             >
-              {filterMode}
-            </Badge>
+              <Badge
+                size="sm"
+                radius="sm"
+                style={{
+                  cursor: 'pointer',
+                  backgroundColor: filterMode === 'AND' ? 'rgba(68, 131, 97, 0.25)' : 'rgba(128, 128, 128, 0.15)',
+                  color: filterMode === 'AND' ? 'rgb(115, 184, 148)' : 'rgb(160, 160, 160)',
+                  border: `1px solid ${filterMode === 'AND' ? 'rgba(68, 131, 97, 0.5)' : 'rgba(128, 128, 128, 0.2)'}`,
+                  transition: 'all 0.15s ease',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                styles={{
+                  root: {
+                    textTransform: 'none',
+                    padding: '3px 0',
+                    fontSize: '8.5px',
+                    fontWeight: filterMode === 'AND' ? 700 : 500,
+                    letterSpacing: '0.5px'
+                  }
+                }}
+                onClick={() => {
+                  if (filterMode !== 'AND') {
+                    setFilterMode('AND');
+                    if (filterTerms.length > 0) {
+                      handleFilterChange(columnId, { terms: filterTerms, mode: 'AND' });
+                    }
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  if (filterMode !== 'AND') {
+                    e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.25)';
+                    e.currentTarget.style.borderColor = 'rgba(128, 128, 128, 0.35)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (filterMode !== 'AND') {
+                    e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(128, 128, 128, 0.2)';
+                  }
+                }}
+              >
+                AND
+              </Badge>
+              <Badge
+                size="sm"
+                radius="sm"
+                style={{
+                  cursor: 'pointer',
+                  backgroundColor: filterMode === 'OR' ? 'rgba(217, 115, 13, 0.25)' : 'rgba(128, 128, 128, 0.15)',
+                  color: filterMode === 'OR' ? 'rgb(255, 169, 91)' : 'rgb(160, 160, 160)',
+                  border: `1px solid ${filterMode === 'OR' ? 'rgba(217, 115, 13, 0.5)' : 'rgba(128, 128, 128, 0.2)'}`,
+                  transition: 'all 0.15s ease',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                styles={{
+                  root: {
+                    textTransform: 'none',
+                    padding: '3px 0',
+                    fontSize: '8.5px',
+                    fontWeight: filterMode === 'OR' ? 700 : 500,
+                    letterSpacing: '0.5px'
+                  }
+                }}
+                onClick={() => {
+                  if (filterMode !== 'OR') {
+                    setFilterMode('OR');
+                    if (filterTerms.length > 0) {
+                      handleFilterChange(columnId, { terms: filterTerms, mode: 'OR' });
+                    }
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  if (filterMode !== 'OR') {
+                    e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.25)';
+                    e.currentTarget.style.borderColor = 'rgba(128, 128, 128, 0.35)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (filterMode !== 'OR') {
+                    e.currentTarget.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
+                    e.currentTarget.style.borderColor = 'rgba(128, 128, 128, 0.2)';
+                  }
+                }}
+              >
+                OR
+              </Badge>
+            </Box>
           )}
         </Group>
       </Box>
