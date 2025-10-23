@@ -79,35 +79,6 @@ export interface CustomColumnValue {
   updated_at?: string;
 }
 
-// Available theme colors for pills
-export type PillColor = 
-  | 'dark'
-  | 'gray'
-  | 'red'
-  | 'grape'
-  | 'violet'
-  | 'indigo'
-  | 'blue'
-  | 'cyan'
-  | 'green'
-  | 'orange';
-
-export const PILL_COLORS = {
-  default: 'blue',
-  options: [
-    { value: 'dark', label: 'Dark' },
-    { value: 'gray', label: 'Gray' },
-    { value: 'red', label: 'Red' },
-    { value: 'grape', label: 'Purple' },
-    { value: 'violet', label: 'Violet' },
-    { value: 'indigo', label: 'Indigo' },
-    { value: 'blue', label: 'Blue' },
-    { value: 'cyan', label: 'Cyan' },
-    { value: 'green', label: 'Green' },
-    { value: 'orange', label: 'Orange' }
-  ]
-} as const;
-
 export interface AddedAlbum {
   artist: string;
   album: string;

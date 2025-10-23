@@ -3,9 +3,28 @@ import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text
 import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
 import { customColumns as customColumnsService, customValues, records } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
-import { PILL_COLORS } from '../types';
+import { PILL_COLORS } from '../constants/colors';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
+
+// Helper function to get color styles for badges
+const getColorStyles = (colorName: string) => {
+  const colorOption = PILL_COLORS.options.find(opt => opt.value === colorName);
+  if (colorOption) {
+    return {
+      backgroundColor: colorOption.background,
+      color: colorOption.color,
+      border: 'none'
+    };
+  }
+  // Default gray if not found
+  const defaultColor = PILL_COLORS.options.find(opt => opt.value === 'gray');
+  return {
+    backgroundColor: defaultColor?.background || 'rgba(120, 119, 116, 0.2)',
+    color: defaultColor?.color || 'rgba(120, 119, 116, 1)',
+    border: 'none'
+  };
+};
 
 export interface CustomColumnManagerProps {
   opened: boolean;
@@ -460,16 +479,17 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                             <Menu shadow="md" width={150} position="bottom-start" closeOnItemClick>
                               <Menu.Target>
                                 <Badge
-                                  variant="filled"
                                   size="sm"
                                   radius="sm"
-                                  color={optionColors[opt] || PILL_COLORS.default}
+                                  style={{
+                                    cursor: 'pointer',
+                                    paddingRight: 25,
+                                    ...getColorStyles(optionColors[opt] || PILL_COLORS.default)
+                                  }}
                                   styles={{
                                     root: {
                                       textTransform: 'none',
-                                      cursor: 'pointer',
-                                      padding: '3px 8px',
-                                      paddingRight: 25
+                                      padding: '3px 8px'
                                     }
                                   }}
                                 >
@@ -481,16 +501,17 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                                   {PILL_COLORS.options.map(({ value, label }) => (
                                     <Badge
                                       key={value}
-                                      variant="filled"
                                       size="sm"
                                       radius="sm"
-                                      color={value}
+                                      style={{
+                                        cursor: 'pointer',
+                                        opacity: optionColors[opt] === value ? 1 : 0.5,
+                                        ...getColorStyles(value)
+                                      }}
                                       styles={{
                                         root: {
                                           textTransform: 'none',
-                                          cursor: 'pointer',
-                                          padding: '3px 8px',
-                                          opacity: optionColors[opt] === value ? 1 : 0.5
+                                          padding: '3px 8px'
                                         }
                                       }}
                                       onClick={() => {

@@ -1,19 +1,66 @@
 interface PillColorOption {
   value: string;
   label: string;
+  background: string;
+  color: string;
 }
 
 export const PILL_COLORS = {
-  default: 'grey',
+  default: 'gray',
   options: [
-    { value: 'grey', label: 'Grey' },
-    { value: 'blue', label: 'Blue' },
-    { value: 'green', label: 'Green' },
-    { value: 'red', label: 'Red' },
-    { value: 'yellow', label: 'Yellow' },
-    { value: 'orange', label: 'Orange' },
-    { value: 'cyan', label: 'Cyan' },
-    { value: 'grape', label: 'Purple' },
-    { value: 'pink', label: 'Pink' }
+    { 
+      value: 'gray', 
+      label: 'Gray',
+      background: 'rgba(112, 120, 117, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'brown', 
+      label: 'Brown',
+      background: 'rgba(140, 109, 82, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'orange', 
+      label: 'Orange',
+      background: 'rgba(217, 115, 13, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'yellow', 
+      label: 'Yellow',
+      background: 'rgba(203, 145, 47, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'green', 
+      label: 'Green',
+      background: 'rgba(68, 131, 97, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'blue', 
+      label: 'Blue',
+      background: 'rgba(55, 123, 206, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'purple', 
+      label: 'Purple',
+      background: 'rgba(144, 101, 176, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'pink', 
+      label: 'Pink',
+      background: 'rgba(193, 76, 138, 0.6)',
+      color: 'rgb(221, 219, 219)'
+    },
+    { 
+      value: 'red', 
+      label: 'Red',
+      background: 'rgba(234, 42, 36, 0.4)',
+      color: 'rgb(221, 219, 219)'
+    }
   ] as PillColorOption[]
 }; 

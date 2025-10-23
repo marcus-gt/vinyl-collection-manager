@@ -8,11 +8,30 @@ import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { AddRecordsModal } from '../components/AddRecordsModal';
 import { useDebouncedCallback } from 'use-debounce';
-import { PILL_COLORS } from '../types';
+import { PILL_COLORS } from '../constants/colors';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
 
 const PAGE_SIZE = 40;
+
+// Helper function to get color styles for badges
+const getColorStyles = (colorName: string) => {
+  const colorOption = PILL_COLORS.options.find(opt => opt.value === colorName);
+  if (colorOption) {
+    return {
+      backgroundColor: colorOption.background,
+      color: colorOption.color,
+      border: 'none'
+    };
+  }
+  // Default gray if not found
+  const defaultColor = PILL_COLORS.options.find(opt => opt.value === 'gray');
+  return {
+    backgroundColor: defaultColor?.background || 'rgba(120, 119, 116, 0.2)',
+    color: defaultColor?.color || 'rgba(120, 119, 116, 1)',
+    border: 'none'
+  };
+};
 
 // Create a service for custom values
 const customValuesService = {
@@ -746,17 +765,18 @@ function EditableCustomCell({
         >
           <Menu.Target>
             <Badge
-              variant="filled"
               size="sm"
               radius="sm"
-              color={column.option_colors?.[optionName] || PILL_COLORS.default}
-              style={{ cursor: 'pointer' }}
+              style={{ 
+                cursor: 'pointer',
+                opacity: isSelected ? 1 : 0.7,
+                transition: 'opacity 0.1s ease',
+                ...getColorStyles(column.option_colors?.[optionName] || PILL_COLORS.default)
+              }}
               styles={{
                 root: {
                   textTransform: 'none',
-                  padding: '3px 8px',
-                  opacity: isSelected ? 1 : 0.7,
-                  transition: 'opacity 0.1s ease'
+                  padding: '3px 8px'
                 }
               }}
               onMouseEnter={(e) => {
@@ -860,10 +880,9 @@ function EditableCustomCell({
                 style={{ paddingTop: '4px', paddingBottom: '4px' }}
               >
                 <Badge
-                  variant="filled"
                   size="sm"
                   radius="sm"
-                  color={value}
+                  style={getColorStyles(value)}
                   styles={{
                     root: {
                       textTransform: 'none',
@@ -951,10 +970,9 @@ function EditableCustomCell({
                     {values.map((val: string) => (
                       <Badge
                         key={val}
-                        variant="filled"
                         size="sm"
                         radius="sm"
-                        color={column.option_colors?.[val] || PILL_COLORS.default}
+                        style={getColorStyles(column.option_colors?.[val] || PILL_COLORS.default)}
                         styles={{
                           root: {
                             textTransform: 'none',
@@ -1319,11 +1337,13 @@ function EditableCustomCell({
         >
           <Menu.Target>
             <Badge
-              variant="filled"
               size="sm"
               radius="sm"
-              color={column.option_colors?.[optionName] || PILL_COLORS.default}
-              style={{ cursor: 'pointer', opacity: isSelected ? 1 : 0.7 }}
+              style={{ 
+                cursor: 'pointer', 
+                opacity: isSelected ? 1 : 0.7,
+                ...getColorStyles(column.option_colors?.[optionName] || PILL_COLORS.default)
+              }}
               styles={{
                 root: {
                   textTransform: 'none',
@@ -1418,10 +1438,9 @@ function EditableCustomCell({
                   style={{ paddingTop: '4px', paddingBottom: '4px' }}
                 >
                   <Badge
-                    variant="filled"
                     size="sm"
                     radius="sm"
-                    color={value}
+                    style={getColorStyles(value)}
                     styles={{
                       root: {
                         textTransform: 'none',
@@ -1493,10 +1512,9 @@ function EditableCustomCell({
             <div style={{ width: '100%' }}>
               {localValue ? (
                 <Badge
-                  variant="filled"
                   size="sm"
                   radius="sm"
-                  color={column.option_colors?.[localValue] || PILL_COLORS.default}
+                  style={getColorStyles(column.option_colors?.[localValue] || PILL_COLORS.default)}
                   styles={{
                     root: {
                       textTransform: 'none',
