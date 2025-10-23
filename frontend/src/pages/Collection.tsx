@@ -766,7 +766,7 @@ function EditableCustomCell({
           <Menu.Target>
             <Badge
               size="sm"
-              radius="sm"
+              radius="md"
               style={{ 
                 cursor: 'pointer',
                 opacity: isSelected ? 1 : 0.7,
@@ -776,7 +776,8 @@ function EditableCustomCell({
               styles={{
                 root: {
                   textTransform: 'none',
-                  padding: '3px 8px'
+                  padding: '2px 5px',
+                  fontSize: '10.5px'
                 }
               }}
               onMouseEnter={(e) => {
@@ -881,12 +882,13 @@ function EditableCustomCell({
               >
                 <Badge
                   size="sm"
-                  radius="sm"
+                  radius="md"
                   style={getColorStyles(value)}
                   styles={{
                     root: {
                       textTransform: 'none',
-                      padding: '4px 8px'
+                      padding: '2px 5px',
+                      fontSize: '10.5px'
                     }
                   }}
                 >
@@ -971,18 +973,17 @@ function EditableCustomCell({
                       <Badge
                         key={val}
                         size="sm"
-                        radius="sm"
+                        radius="md"
                         style={getColorStyles(column.option_colors?.[val] || PILL_COLORS.default)}
                         styles={{
                           root: {
                             textTransform: 'none',
                             cursor: 'default',
-                            padding: '3px 8px',
+                            padding: '2px 5px',
                             whiteSpace: 'nowrap',
                             display: 'inline-flex',
                             flexShrink: 0,
-                            height: '20px',
-                            lineHeight: '14px'
+                            fontSize: '10.5px'
                           }
                         }}
                       >
@@ -1338,7 +1339,7 @@ function EditableCustomCell({
           <Menu.Target>
             <Badge
               size="sm"
-              radius="sm"
+              radius="md"
               style={{ 
                 cursor: 'pointer', 
                 opacity: isSelected ? 1 : 0.7,
@@ -1347,7 +1348,8 @@ function EditableCustomCell({
               styles={{
                 root: {
                   textTransform: 'none',
-                  padding: '3px 8px'
+                  padding: '2px 5px',
+                  fontSize: '10.5px'
                 }
               }}
               onMouseEnter={(e) => {
@@ -1439,7 +1441,7 @@ function EditableCustomCell({
                 >
                   <Badge
                     size="sm"
-                    radius="sm"
+                    radius="md"
                     style={getColorStyles(value)}
                     styles={{
                       root: {
@@ -1513,13 +1515,14 @@ function EditableCustomCell({
               {localValue ? (
                 <Badge
                   size="sm"
-                  radius="sm"
+                  radius="md"
                   style={getColorStyles(column.option_colors?.[localValue] || PILL_COLORS.default)}
                   styles={{
                     root: {
                       textTransform: 'none',
                       cursor: 'default',
-                      padding: '3px 8px'
+                      padding: '2px 5px',
+                      fontSize: '10.5px'
                     }
                   }}
                 >
@@ -2759,7 +2762,7 @@ function Collection() {
                       {source ? (
                         <Badge
                           size="sm"
-                          radius="sm"
+                          radius="md"
                           style={getColorStyles(color)}
                           styles={{
                             root: {

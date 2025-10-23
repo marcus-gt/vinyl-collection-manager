@@ -480,7 +480,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                               <Menu.Target>
                                 <Badge
                                   size="sm"
-                                  radius="sm"
+                                  radius="md"
                                   style={{
                                     cursor: 'pointer',
                                     paddingRight: 25,
@@ -489,7 +489,8 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                                   styles={{
                                     root: {
                                       textTransform: 'none',
-                                      padding: '3px 8px'
+                                      padding: '2px 5px',
+                                      fontSize: '10.5px'
                                     }
                                   }}
                                 >
@@ -502,7 +503,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
                                     <Badge
                                       key={value}
                                       size="sm"
-                                      radius="sm"
+                                      radius="md"
                                       style={{
                                         cursor: 'pointer',
                                         opacity: optionColors[opt] === value ? 1 : 0.5,
