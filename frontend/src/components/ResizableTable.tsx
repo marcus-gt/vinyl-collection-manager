@@ -18,10 +18,10 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, MultiSelect, Select, Badge } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
-import { IconSearch, IconCalendar } from '@tabler/icons-react';
+import { IconSearch, IconCalendar, IconFilter } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -133,9 +133,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   });
 
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const columnHeaderHeight = 32;
-  const filterRowHeight = 40;
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const columnHeaderHeight = 32;
 
   // Load saved filters on mount
   useEffect(() => {
@@ -716,6 +715,214 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     );
   };
 
+  // Component for single-select filter with hooks
+  const SingleSelectFilter = ({ header, selectOptions, singleSelectOptionColors, singleSelectValues }: any) => {
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const filteredSelectOptions = selectOptions.filter((opt: any) => 
+      opt.label.toLowerCase().includes(searchQuery.toLowerCase()) && !singleSelectValues.includes(opt.value)
+    );
+
+    return (
+      <Box>
+        {/* Selected options at the top */}
+        {singleSelectValues.length > 0 && (
+          <Box mb="xs" pb="xs" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+            <Text size="xs" fw={500} mb={6} c="dimmed">Selected</Text>
+            <Group gap={4}>
+              {singleSelectValues.map((value: string) => {
+                const option = selectOptions.find((opt: any) => opt.value === value);
+                if (!option) return null;
+                return (
+                  <Badge
+                    key={value}
+                    size="sm"
+                    radius="md"
+                    style={{
+                      cursor: 'pointer',
+                      ...getColorStyles(singleSelectOptionColors[option.label] || PILL_COLORS.default)
+                    }}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                        padding: '2.5px 5px',
+                        fontSize: '10.5px'
+                      }
+                    }}
+                    onClick={() => {
+                      const newValues = singleSelectValues.filter((v: string) => v !== value);
+                      handleFilterChange(header.column.id, newValues.length > 0 ? newValues : null);
+                    }}
+                  >
+                    {option.label}
+                  </Badge>
+                );
+              })}
+            </Group>
+          </Box>
+        )}
+
+        <TextInput
+          placeholder="Search options..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          size="xs"
+          mb="xs"
+          leftSection={<IconSearch size={14} />}
+          styles={{
+            input: {
+              minHeight: '28px'
+            }
+          }}
+        />
+        
+        <Box style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          {filteredSelectOptions.map((option: any) => {
+            const isSelected = singleSelectValues.includes(option.value);
+            return (
+              <Box key={option.value} mb={2}>
+                <Badge
+                  size="sm"
+                  radius="md"
+                  style={{
+                    cursor: 'pointer',
+                    opacity: isSelected ? 1 : 0.7,
+                    ...getColorStyles(singleSelectOptionColors[option.label] || PILL_COLORS.default)
+                  }}
+                  styles={{
+                    root: {
+                      textTransform: 'none',
+                      padding: '2.5px 5px',
+                      fontSize: '10.5px',
+                      transition: 'opacity 0.1s ease'
+                    }
+                  }}
+                  onClick={() => {
+                    const newValues = isSelected
+                      ? singleSelectValues.filter((v: string) => v !== option.value)
+                      : [...singleSelectValues, option.value];
+                    handleFilterChange(header.column.id, newValues.length > 0 ? newValues : null);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = isSelected ? '1' : '0.7';
+                  }}
+                >
+                  {option.label}
+                </Badge>
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  };
+
+  // Component for multi-select filter with hooks
+  const MultiSelectFilter = ({ header, multiSelectOptions, optionColors, selectedMultiValues }: any) => {
+    const [multiSearchQuery, setMultiSearchQuery] = React.useState('');
+    const filteredMultiOptions = multiSelectOptions.filter((opt: any) => 
+      opt.label.toLowerCase().includes(multiSearchQuery.toLowerCase()) && !selectedMultiValues.includes(opt.value)
+    );
+
+    return (
+      <Box>
+        {/* Selected options at the top */}
+        {selectedMultiValues.length > 0 && (
+          <Box mb="xs" pb="xs" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+            <Text size="xs" fw={500} mb={6} c="dimmed">Selected</Text>
+            <Group gap={4}>
+              {selectedMultiValues.map((value: string) => {
+                const option = multiSelectOptions.find((opt: any) => opt.value === value);
+                if (!option) return null;
+                return (
+                  <Badge
+                    key={value}
+                    size="sm"
+                    radius="md"
+                    style={{
+                      cursor: 'pointer',
+                      ...getColorStyles(optionColors[value] || PILL_COLORS.default)
+                    }}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                        padding: '2.5px 5px',
+                        fontSize: '10.5px'
+                      }
+                    }}
+                    onClick={() => {
+                      const newValues = selectedMultiValues.filter((v: string) => v !== value);
+                      handleFilterChange(header.column.id, newValues.length > 0 ? newValues : null);
+                    }}
+                  >
+                    {option.label}
+                  </Badge>
+                );
+              })}
+            </Group>
+          </Box>
+        )}
+
+        <TextInput
+          placeholder="Search options..."
+          value={multiSearchQuery}
+          onChange={(e) => setMultiSearchQuery(e.target.value)}
+          size="xs"
+          mb="xs"
+          leftSection={<IconSearch size={14} />}
+          styles={{
+            input: {
+              minHeight: '28px'
+            }
+          }}
+        />
+        
+        <Box style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          {filteredMultiOptions.map((option: any) => {
+            const isSelected = selectedMultiValues.includes(option.value);
+            return (
+              <Box key={option.value} mb={2}>
+                <Badge
+                  size="sm"
+                  radius="md"
+                  style={{
+                    cursor: 'pointer',
+                    opacity: isSelected ? 1 : 0.7,
+                    ...getColorStyles(optionColors[option.value] || PILL_COLORS.default)
+                  }}
+                  styles={{
+                    root: {
+                      textTransform: 'none',
+                      padding: '2.5px 5px',
+                      fontSize: '10.5px',
+                      transition: 'opacity 0.1s ease'
+                    }
+                  }}
+                  onClick={() => {
+                    const newValues = isSelected
+                      ? selectedMultiValues.filter((v: string) => v !== option.value)
+                      : [...selectedMultiValues, option.value];
+                    handleFilterChange(header.column.id, newValues.length > 0 ? newValues : null);
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = isSelected ? '1' : '0.7';
+                  }}
+                >
+                  {option.label}
+                </Badge>
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  };
+
   const renderFilterInput = (header: Header<T, unknown>) => {
     if (!header.column.getCanFilter()) return null;
 
@@ -802,84 +1009,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           singleSelectOptionColors
         });
 
-        // Create a style tag with custom colors for each pill (now supporting multi-select for single-select columns)
         const singleSelectValues = Array.isArray(currentFilter?.value) 
           ? currentFilter.value 
           : (currentFilter?.value ? [currentFilter.value as string] : []);
-        const singleSelectPillColorStyles = singleSelectValues.map((val, index) => {
-          // Find the display label for this value
-          const displayLabel = valueToLabelMap[val] || val;
-          const colorStyles = getColorStyles(singleSelectOptionColors[displayLabel] || PILL_COLORS.default);
-          return `
-            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) {
-              background-color: ${colorStyles.backgroundColor} !important;
-              color: ${colorStyles.color} !important;
-              border: none !important;
-              display: inline-flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              line-height: 1 !important;
-            }
-            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) span {
-              display: flex !important;
-              align-items: center !important;
-              line-height: 1 !important;
-            }
-          `;
-        }).join('\n');
 
         return (
-          <>
-            {singleSelectValues.length > 0 && (
-              <style dangerouslySetInnerHTML={{ __html: singleSelectPillColorStyles }} />
-            )}
-            <div data-column-filter={header.column.id}>
-              <MultiSelect
-                placeholder="Select options..."
-                value={singleSelectValues}
-                onChange={(value) => handleFilterChange(header.column.id, value)}
-                data={selectOptions}
-                clearable
-                searchable
-                hidePickedOptions
-                maxDropdownHeight={200}
-                size="xs"
-                styles={{
-                  root: { width: '100%' },
-                  input: {
-                    minHeight: '28px',
-                    '&::placeholder': {
-                      color: theme.colors.dark[2]
-                    }
-                  },
-                  pill: {
-                    fontSize: '10.5px',
-                    padding: '2.5px 5px',
-                    textTransform: 'none'
-                  }
-                }}
-                renderOption={({ option }) => {
-                  // Use the label to get the color (option.label is the display label)
-                  return (
-                    <Badge
-                      size="sm"
-                      radius="md"
-                      style={getColorStyles(singleSelectOptionColors[option.label] || PILL_COLORS.default)}
-                      styles={{
-                        root: {
-                          textTransform: 'none',
-                          padding: '2.5px 5px',
-                          fontSize: '10.5px'
-                        }
-                      }}
-                    >
-                      {option.label}
-                    </Badge>
-                  );
-                }}
-              />
-            </div>
-          </>
+          <SingleSelectFilter
+            header={header}
+            selectOptions={selectOptions}
+            singleSelectOptionColors={singleSelectOptionColors}
+            singleSelectValues={singleSelectValues}
+          />
         );
 
       case 'multi-select':
@@ -890,6 +1030,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         
         // Get option colors from column meta if available
         const optionColors = (header.column.columnDef.meta as any)?.option_colors || {};
+        const selectedMultiValues = (currentFilter?.value as string[]) || [];
         
         console.log(`Rendering multi-select for ${header.column.id}:`, {
           options: multiSelectOptions,
@@ -899,80 +1040,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           optionColors
         });
         
-        // Create a style tag with custom colors for each pill
-        const selectedValues = (currentFilter?.value as string[]) || [];
-        const pillColorStyles = selectedValues.map((val, index) => {
-          const colorStyles = getColorStyles(optionColors[val] || PILL_COLORS.default);
-          return `
-            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) {
-              background-color: ${colorStyles.backgroundColor} !important;
-              color: ${colorStyles.color} !important;
-              border: none !important;
-              display: inline-flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              line-height: 1 !important;
-            }
-            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) span {
-              display: flex !important;
-              align-items: center !important;
-              line-height: 1 !important;
-            }
-          `;
-        }).join('\n');
-        
         return (
-          <>
-            {selectedValues.length > 0 && (
-              <style dangerouslySetInnerHTML={{ __html: pillColorStyles }} />
-            )}
-            <div data-column-filter={header.column.id}>
-              <MultiSelect
-                placeholder="Select options..."
-                value={selectedValues}
-                onChange={(value) => {
-                  console.log(`Multi-select value changed for ${header.column.id}:`, value);
-                  handleFilterChange(header.column.id, value);
-                }}
-                data={multiSelectOptions}
-                clearable
-                searchable
-                hidePickedOptions
-                maxDropdownHeight={200}
-                size="xs"
-                styles={{
-                  root: { width: '100%' },
-                  input: {
-                    minHeight: '28px',
-                    '&::placeholder': {
-                      color: theme.colors.dark[2]
-                    }
-                  },
-                  pill: {
-                    fontSize: '10.5px',
-                    padding: '2.5px 5px',
-                    textTransform: 'none'
-                  }
-                }}
-                renderOption={({ option }) => (
-                  <Badge
-                    size="sm"
-                    radius="md"
-                    style={getColorStyles(optionColors[option.value] || PILL_COLORS.default)}
-                    styles={{
-                      root: {
-                        textTransform: 'none',
-                        padding: '2.5px 5px',
-                        fontSize: '10.5px'
-                      }
-                    }}
-                  >
-                    {option.label}
-                  </Badge>
-                )}
-              />
-            </div>
-          </>
+          <MultiSelectFilter
+            header={header}
+            multiSelectOptions={multiSelectOptions}
+            optionColors={optionColors}
+            selectedMultiValues={selectedMultiValues}
+          />
         );
 
       case 'boolean':
@@ -1143,27 +1217,64 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           style={{
                             display: 'flex',
                             alignItems: 'center',
+                            justifyContent: 'space-between',
                             cursor: header.column.getCanSort() ? 'pointer' : 'default',
                             position: 'relative',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
+                            width: '100%',
                             height: '32px',
                             maxHeight: '32px'
                           }}
                           onClick={header.column.getToggleSortingHandler()}
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          {header.column.getCanSort() && (
-                            <Text ml="xs" c="dimmed">
-                              {{
-                                asc: '↑',
-                                desc: '↓'
-                              }[header.column.getIsSorted() as string] ?? ''}
-                            </Text>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            flex: 1,
+                            minWidth: 0
+                          }}>
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {header.column.getCanSort() && (
+                              <Text ml="xs" c="dimmed">
+                                {{
+                                  asc: '↑',
+                                  desc: '↓'
+                                }[header.column.getIsSorted() as string] ?? ''}
+                              </Text>
+                            )}
+                          </div>
+                          {header.column.getCanFilter() && (
+                            <Box
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                              style={{ 
+                                display: 'flex',
+                                alignItems: 'center',
+                                marginLeft: '8px',
+                                flexShrink: 0
+                              }}
+                            >
+                              <Popover width={280} position="bottom-start" shadow="md">
+                                <Popover.Target>
+                                  <ActionIcon
+                                    size="xs"
+                                    variant="subtle"
+                                    color={table.getState().columnFilters.find(f => f.id === header.column.id) ? 'blue' : 'gray'}
+                                  >
+                                    <IconFilter size={14} />
+                                  </ActionIcon>
+                                </Popover.Target>
+                                <Popover.Dropdown p={10}>
+                                  {renderFilterInput(header)}
+                                </Popover.Dropdown>
+                              </Popover>
+                            </Box>
                           )}
                         </div>
                       )}
@@ -1198,33 +1309,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           }}
                         />
                       )}
-                    </Table.Th>
-                  ))}
-                </Table.Tr>
-                <Table.Tr
-                  style={{
-                    position: 'sticky',
-                    top: `${columnHeaderHeight}px`,
-                    zIndex: 10,
-                    backgroundColor: 'var(--mantine-color-dark-7)'
-                  }}
-                >
-                  {headerGroup.headers.map((header: Header<T, unknown>) => (
-                    <Table.Th
-                      key={`${header.id}-filter`}
-                      colSpan={header.colSpan}
-                      style={{
-                        width: header.getSize(),
-                        position: 'sticky',
-                        top: `${columnHeaderHeight}px`,
-                        zIndex: 10,
-                        backgroundColor: 'var(--mantine-color-dark-7)',
-                        padding: '4px 8px',
-                        height: `${filterRowHeight}px`,
-                        maxHeight: `${filterRowHeight}px`
-                      }}
-                    >
-                      {!header.isPlaceholder && header.column.getCanFilter() && renderFilterInput(header)}
                     </Table.Th>
                   ))}
                 </Table.Tr>
