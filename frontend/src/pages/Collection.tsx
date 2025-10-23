@@ -85,7 +85,7 @@ const recordFieldsService = {
   }
 };
 
-// Reusable component for editing standard columns (with pencil icon for two-step edit)
+// Reusable component for editing standard columns (with optional pencil icon for two-step edit)
 interface EditableStandardCellProps {
   value: any;
   displayValue?: string;
@@ -93,6 +93,7 @@ interface EditableStandardCellProps {
   fieldLabel: string;
   recordId: string;
   inputType: 'text' | 'number' | 'textarea' | 'array';
+  requirePencilClick?: boolean; // If true, shows pencil icon for two-step edit (default: true for standard columns)
   onUpdate: (recordId: string, fieldName: string, newValue: any) => void;
 }
 
@@ -103,15 +104,23 @@ function EditableStandardCell({
   fieldLabel, 
   recordId, 
   inputType, 
+  requirePencilClick = true,
   onUpdate 
 }: EditableStandardCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const [opened, setOpened] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(!requirePencilClick); // Auto-edit if no pencil required
   
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
+  
+  // Reset editing state when opening if pencil is not required
+  useEffect(() => {
+    if (opened && !requirePencilClick) {
+      setIsEditing(true);
+    }
+  }, [opened, requirePencilClick]);
   
   // For array types, check if arrays are equal
   const hasChanges = inputType === 'array'
@@ -125,7 +134,7 @@ function EditableStandardCell({
       const response = await recordFieldsService.update(recordId, { [fieldName]: localValue });
       if (response.success) {
         onUpdate(recordId, fieldName, localValue);
-        setIsEditing(false);
+        setIsEditing(!requirePencilClick); // Keep editing mode if no pencil required
         setOpened(false);
       }
     } catch (error) {
@@ -135,15 +144,34 @@ function EditableStandardCell({
   
   const handleCancel = () => {
     setLocalValue(value);
-    setIsEditing(false);
+    setIsEditing(!requirePencilClick); // Keep editing mode if no pencil required
     setOpened(false);
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
+      e.preventDefault();
       handleCancel();
-    } else if (e.key === 'Enter' && e.ctrlKey && hasChanges) {
-      handleSave();
+    } else if (inputType === 'textarea' || inputType === 'array') {
+      // For textarea: Enter saves (or closes if no changes), Shift+Enter creates new line
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (hasChanges) {
+          handleSave();
+        } else {
+          setOpened(false);
+        }
+      }
+    } else {
+      // For text/number inputs: Enter saves (or closes if no changes)
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (hasChanges) {
+          handleSave();
+        } else {
+          setOpened(false);
+        }
+      }
     }
   };
   
@@ -240,8 +268,19 @@ function EditableStandardCell({
           <Stack gap="xs">
             <Group justify="space-between" align="center">
               <Text size="sm" fw={500}>{fieldLabel}</Text>
-              <Group gap="xs">
-                {isEditing ? (
+              <Group gap={4}>
+                {requirePencilClick && !isEditing ? (
+                  // View mode (with pencil): show pencil and X
+                  <>
+                    <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+                      <IconPencil size={16} />
+                    </ActionIcon>
+                    <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); handleCancel(); }}>
+                      <IconX size={16} />
+                    </ActionIcon>
+                  </>
+                ) : (
+                  // Edit mode (or no pencil required): show checkmark (if changes) and X
                   <>
                     {hasChanges && (
                       <ActionIcon size="sm" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); handleSave(); }}>
@@ -252,22 +291,15 @@ function EditableStandardCell({
                       <IconX size={16} />
                     </ActionIcon>
                   </>
-                ) : (
-                  <>
-                    <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-                      <IconPencil size={16} />
-                    </ActionIcon>
-                    <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); handleCancel(); }}>
-                      <IconX size={16} />
-                    </ActionIcon>
-                  </>
                 )}
               </Group>
             </Group>
-            {isEditing ? renderInput() : (
+            {(requirePencilClick && !isEditing) ? (
               <Text size="sm" style={{ whiteSpace: 'pre-wrap', userSelect: 'text' }}>
                 {renderDisplayValue()}
               </Text>
+            ) : (
+              renderInput()
             )}
           </Stack>
         </Popover.Dropdown>
@@ -346,15 +378,6 @@ function EditableCustomCell({
   const handleChange = (newValue: string) => {
     setLocalValue(newValue);
     debouncedUpdate(newValue);
-  };
-  
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      setOpened(false);
-    }
-    if (e.key === 'Escape') {
-      setOpened(false);
-    }
   };
   
   // Boolean type
@@ -1669,9 +1692,13 @@ function EditableCustomCell({
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && hasChanges) {
+                  if (e.key === 'Enter') {
                     e.preventDefault();
-                    handleSave();
+                    if (hasChanges) {
+                      handleSave();
+                    } else {
+                      setOpened(false);
+                    }
                   } else if (e.key === 'Escape') {
                     e.preventDefault();
                     handleCancel();
@@ -1869,6 +1896,20 @@ function EditableDiscogsLinks({
     setOpened(false);
   };
   
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (hasChanges && !masterError && !currentError) {
+        handleSave();
+      } else if (!hasChanges) {
+        setOpened(false);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+  
   return (
     <Box 
       style={{ 
@@ -1953,6 +1994,7 @@ function EditableDiscogsLinks({
                         fontSize: '12px'
                       }
                     }}
+                    onKeyDown={handleKeyDown}
                   />
                 </Box>
               </Group>
@@ -1977,6 +2019,7 @@ function EditableDiscogsLinks({
                         fontSize: '12px'
                       }
                     }}
+                    onKeyDown={handleKeyDown}
                   />
                 </Box>
               </Group>
