@@ -17,6 +17,12 @@ export function ActiveFilters({ filters, columns, onClearFilter }: ActiveFilters
     
     if (!column) return String(filter.value);
 
+    // Handle text filters with AND/OR mode (new format: { terms: string[], mode: 'AND' | 'OR' })
+    if (filter.value && typeof filter.value === 'object' && 'terms' in filter.value && 'mode' in filter.value) {
+      const { terms, mode } = filter.value;
+      return `${terms.join(', ')} (${mode})`;
+    }
+
     switch (column.meta?.type) {
       case 'multi-select':
         return Array.isArray(filter.value) 

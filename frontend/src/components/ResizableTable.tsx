@@ -581,13 +581,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         
         // Handle new format: { terms: string[], mode: 'AND' | 'OR' }
         // or old format: string[]
-        let filterTerms: string[];
-        let filterMode: 'AND' | 'OR' = 'OR'; // Default to OR for backwards compatibility
+              let filterTerms: string[];
+              let filterMode: 'AND' | 'OR' = 'OR'; // Default to OR
         
         if (filterValue && typeof filterValue === 'object' && 'terms' in filterValue) {
           // New format with mode
           filterTerms = filterValue.terms;
-          filterMode = filterValue.mode || 'AND';
+          filterMode = filterValue.mode || 'OR';
         } else if (Array.isArray(filterValue)) {
           // Old format (just array) - use OR logic by default
           filterTerms = filterValue;
@@ -922,11 +922,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const TextFilter = ({ header, currentFilterValue }: any) => {
     const columnId = header.column.id;
     
-    // Columns that support AND/OR toggle
-    const supportsAndOr = ['genres', 'styles', 'musicians'].includes(columnId);
-    
-    // Filter mode state (AND or OR)
-    const [filterMode, setFilterMode] = React.useState<'AND' | 'OR'>('AND');
+      // Columns that support AND/OR toggle
+      const supportsAndOr = ['genres', 'styles', 'musicians'].includes(columnId);
+      
+      // Filter mode state (AND or OR) - default to OR
+      const [filterMode, setFilterMode] = React.useState<'AND' | 'OR'>('OR');
     
     // Initialize pills from saved filter (can be array or object with mode)
     const [filterTerms, setFilterTerms] = React.useState<string[]>(() => {
@@ -934,7 +934,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         // New format: { terms: string[], mode: 'AND' | 'OR' }
         if (typeof currentFilterValue === 'object' && 'terms' in currentFilterValue) {
           console.log('🔄 Initializing filterTerms from saved filters (with mode):', currentFilterValue);
-          setFilterMode(currentFilterValue.mode || 'AND');
+          setFilterMode(currentFilterValue.mode || 'OR');
           return currentFilterValue.terms || [];
         }
         // Old format: string[]
