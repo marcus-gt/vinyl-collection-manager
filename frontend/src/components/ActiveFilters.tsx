@@ -24,6 +24,26 @@ export function ActiveFilters({ filters, columns, onClearFilter }: ActiveFilters
     }
 
     switch (column.meta?.type) {
+      case 'number':
+        if (filter.value && typeof filter.value === 'object') {
+          const range = filter.value as { min?: number; max?: number; includeEmpty?: boolean };
+          let rangeStr = '';
+          if (range.min !== undefined && range.max !== undefined) {
+            rangeStr = `${range.min} - ${range.max}`;
+          } else if (range.min !== undefined) {
+            rangeStr = `≥ ${range.min}`;
+          } else if (range.max !== undefined) {
+            rangeStr = `≤ ${range.max}`;
+          }
+          
+          // Add "(excl. empty)" if includeEmpty is false
+          if (rangeStr && range.includeEmpty === false) {
+            rangeStr += ' (excl. empty)';
+          }
+          
+          return rangeStr || String(filter.value);
+        }
+        return String(filter.value);
       case 'multi-select':
         return Array.isArray(filter.value) 
           ? filter.value.join(', ')

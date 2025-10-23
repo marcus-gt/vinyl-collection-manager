@@ -18,7 +18,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Checkbox } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar, IconFilter, IconCheck } from '@tabler/icons-react';
@@ -289,13 +289,37 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const numberFilter: FilterFn<T> = (
     row: Row<T>,
     columnId: string,
-    value: { min?: number; max?: number }
+    value: { min?: number; max?: number; includeEmpty?: boolean }
   ): boolean => {
-    if (!value || (!value.min && !value.max)) return true;
-    const cellValue = Number(row.getValue(columnId));
-    if (isNaN(cellValue)) return false;
-    if (value.min && cellValue < value.min) return false;
-    if (value.max && cellValue > value.max) return false;
+    if (!value || (value.min === undefined && value.max === undefined)) return true;
+    const rawValue = row.getValue(columnId);
+    const includeEmpty = value.includeEmpty ?? true; // Default to true if not specified
+    
+    // Check if value is empty (null, undefined, empty string, or 0)
+    const isEmpty = rawValue === null || rawValue === undefined || rawValue === '' || rawValue === 0;
+    
+    // If the value is empty and we should include empty values, pass the filter
+    if (isEmpty && includeEmpty) {
+      return true;
+    }
+    
+    // If the value is empty and we should NOT include empty values, exclude it
+    if (isEmpty && !includeEmpty) {
+      return false;
+    }
+    
+    const cellValue = Number(rawValue);
+    if (isNaN(cellValue)) {
+      return false;
+    }
+    
+    if (value.min !== undefined && cellValue < value.min) {
+      return false;
+    }
+    if (value.max !== undefined && cellValue > value.max) {
+      return false;
+    }
+    
     return true;
   };
 
@@ -1282,50 +1306,69 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
     switch (column.filter.type) {
       case 'number':
-        const numberValue = (currentFilter?.value || {}) as { min?: number; max?: number };
+        const numberValue = (currentFilter?.value || {}) as { min?: number; max?: number; includeEmpty?: boolean };
+        const includeEmpty = numberValue.includeEmpty ?? true; // Default to true (checked)
         return (
-          <Group gap="xs">
-            <TextInput
-              placeholder="Min"
-              type="number"
-              value={numberValue.min ?? ''}
-              onChange={(e) => {
-                const min = e.target.value ? Number(e.target.value) : undefined;
-                const max = numberValue.max;
-                applyLocalFilter(header.column.id, { min, max });
-              }}
-              size="xs"
-              styles={{
-                root: { flex: 1 },
-                input: {
-                  minHeight: '28px',
-                  '&::placeholder': {
-                    color: theme.colors.dark[2]
+          <Box>
+            <Group gap="xs" mb="xs">
+              <TextInput
+                placeholder="Min"
+                type="number"
+                value={numberValue.min ?? ''}
+                onChange={(e) => {
+                  const min = e.target.value ? Number(e.target.value) : undefined;
+                  const max = numberValue.max;
+                  applyLocalFilter(header.column.id, { min, max, includeEmpty });
+                }}
+                size="xs"
+                styles={{
+                  root: { flex: 1 },
+                  input: {
+                    minHeight: '28px',
+                    '&::placeholder': {
+                      color: theme.colors.dark[2]
+                    }
                   }
-                }
+                }}
+              />
+              <TextInput
+                placeholder="Max"
+                type="number"
+                value={numberValue.max ?? ''}
+                onChange={(e) => {
+                  const max = e.target.value ? Number(e.target.value) : undefined;
+                  const min = numberValue.min;
+                  applyLocalFilter(header.column.id, { min, max, includeEmpty });
+                }}
+                size="xs"
+                styles={{
+                  root: { flex: 1 },
+                  input: {
+                    minHeight: '28px',
+                    '&::placeholder': {
+                      color: theme.colors.dark[2]
+                    }
+                  }
+                }}
+              />
+            </Group>
+            <Checkbox
+              label="Include empty values"
+              size="xs"
+              checked={includeEmpty}
+              onChange={(e) => {
+                const newIncludeEmpty = e.currentTarget.checked;
+                applyLocalFilter(header.column.id, { 
+                  min: numberValue.min, 
+                  max: numberValue.max, 
+                  includeEmpty: newIncludeEmpty 
+                });
+              }}
+              styles={{
+                label: { fontSize: '11px', cursor: 'pointer' }
               }}
             />
-            <TextInput
-              placeholder="Max"
-              type="number"
-              value={numberValue.max ?? ''}
-              onChange={(e) => {
-                const max = e.target.value ? Number(e.target.value) : undefined;
-                const min = numberValue.min;
-                applyLocalFilter(header.column.id, { min, max });
-              }}
-              size="xs"
-              styles={{
-                root: { flex: 1 },
-                input: {
-                  minHeight: '28px',
-                  '&::placeholder': {
-                    color: theme.colors.dark[2]
-                  }
-                }
-              }}
-            />
-          </Group>
+          </Box>
         );
 
       case 'single-select':

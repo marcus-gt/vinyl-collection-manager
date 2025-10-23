@@ -2445,6 +2445,9 @@ function Collection() {
               header: 'Original Year',
               enableSorting: true,
               size: 80,
+              meta: {
+                type: 'number'
+              },
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableStandardCell
                   value={row.original.year || ''}
@@ -2469,6 +2472,9 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 120,
+              meta: {
+                type: 'number'
+              },
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableStandardCell
                   value={row.original.current_release_year || ''}
@@ -2855,7 +2861,7 @@ function Collection() {
                     return filterArray.includes(cellValue as string);
                   } : 
                   undefined,
-        enableColumnFilter: column.type === 'multi-select' || column.type === 'single-select',
+        enableColumnFilter: true, // Enable filtering for all custom columns
         cell: ({ row }: { row: Row<VinylRecord> }) => (
           <EditableCustomCell
             value={row.original.custom_values_cache[column.id] || ''}
