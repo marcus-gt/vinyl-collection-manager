@@ -18,7 +18,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Tooltip } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar, IconFilter, IconCheck } from '@tabler/icons-react';
@@ -990,15 +990,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       if (e.key === 'Enter') {
         e.preventDefault();
         handleAddTerm();
-      }
-    };
-
-    const handleModeToggle = () => {
-      const newMode = filterMode === 'AND' ? 'OR' : 'AND';
-      setFilterMode(newMode);
-      // Re-apply filter with new mode if we have terms
-      if (filterTerms.length > 0) {
-        handleFilterChange(columnId, { terms: filterTerms, mode: newMode });
       }
     };
 
