@@ -18,7 +18,7 @@ import {
   ColumnFiltersState,
   FilterFn
 } from '@tanstack/react-table';
-import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, MultiSelect, Select } from '@mantine/core';
+import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, MultiSelect, Select, Badge } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSearch, IconCalendar } from '@tabler/icons-react';
@@ -29,6 +29,26 @@ import minMax from 'dayjs/plugin/minMax';
 import { MyCustomPagination } from './MyCustomPagination';
 import { columnFilters as columnFiltersApi } from '../services/api';
 import { ActiveFilters } from './ActiveFilters';
+import { PILL_COLORS } from '../constants/colors';
+
+// Helper function to get color styles for badges
+const getColorStyles = (colorName: string) => {
+  const colorOption = PILL_COLORS.options.find(opt => opt.value === colorName);
+  if (colorOption) {
+    return {
+      backgroundColor: colorOption.background,
+      color: colorOption.color,
+      border: 'none'
+    };
+  }
+  // Default gray if not found
+  const defaultColor = PILL_COLORS.options.find(opt => opt.value === 'gray');
+  return {
+    backgroundColor: defaultColor?.background || 'rgba(120, 119, 116, 0.2)',
+    color: defaultColor?.color || 'rgba(120, 119, 116, 1)',
+    border: 'none'
+  };
+};
 
 // Initialize dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -799,37 +819,91 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           label: opt
         }));
         
+        // Get option colors from column meta if available
+        const optionColors = (header.column.columnDef.meta as any)?.option_colors || {};
+        
         console.log(`Rendering multi-select for ${header.column.id}:`, {
           options: multiSelectOptions,
           currentValue: currentFilter?.value,
           columnFilter: column.filter,
-          columnMeta: column.meta
+          columnMeta: column.meta,
+          optionColors
         });
         
+        // Create a style tag with custom colors for each pill
+        const selectedValues = (currentFilter?.value as string[]) || [];
+        const pillColorStyles = selectedValues.map((val, index) => {
+          const colorStyles = getColorStyles(optionColors[val] || PILL_COLORS.default);
+          return `
+            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) {
+              background-color: ${colorStyles.backgroundColor} !important;
+              color: ${colorStyles.color} !important;
+              border: none !important;
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              line-height: 1 !important;
+            }
+            [data-column-filter="${header.column.id}"] .mantine-MultiSelect-pill:nth-of-type(${index + 1}) span {
+              display: flex !important;
+              align-items: center !important;
+              line-height: 1 !important;
+            }
+          `;
+        }).join('\n');
+        
         return (
-          <MultiSelect
-            placeholder="Select options..."
-            value={(currentFilter?.value as string[]) || []}
-            onChange={(value) => {
-              console.log(`Multi-select value changed for ${header.column.id}:`, value);
-              handleFilterChange(header.column.id, value);
-            }}
-            data={multiSelectOptions}
-            clearable
-            searchable
-            hidePickedOptions
-            maxDropdownHeight={200}
-            size="xs"
-            styles={{
-              root: { width: '100%' },
-              input: {
-                minHeight: '28px',
-                '&::placeholder': {
-                  color: theme.colors.dark[2]
-                }
-              }
-            }}
-          />
+          <>
+            {selectedValues.length > 0 && (
+              <style dangerouslySetInnerHTML={{ __html: pillColorStyles }} />
+            )}
+            <div data-column-filter={header.column.id}>
+              <MultiSelect
+                placeholder="Select options..."
+                value={selectedValues}
+                onChange={(value) => {
+                  console.log(`Multi-select value changed for ${header.column.id}:`, value);
+                  handleFilterChange(header.column.id, value);
+                }}
+                data={multiSelectOptions}
+                clearable
+                searchable
+                hidePickedOptions
+                maxDropdownHeight={200}
+                size="xs"
+                styles={{
+                  root: { width: '100%' },
+                  input: {
+                    minHeight: '28px',
+                    '&::placeholder': {
+                      color: theme.colors.dark[2]
+                    }
+                  },
+                  pill: {
+                    fontSize: '10.5px',
+                    padding: '2.5px 5px',
+                    textTransform: 'none'
+                  }
+                }}
+                renderOption={({ option }) => (
+                  <Badge
+                    size="sm"
+                    radius="md"
+                    style={getColorStyles(optionColors[option.value] || PILL_COLORS.default)}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                        padding: '2.5px 5px',
+                        fontSize: '10.5px'
+                      }
+                    }}
+                  >
+                    {option.label}
+                  </Badge>
+                )}
+              />
+            </div>
+          </>
         );
 
       case 'boolean':
