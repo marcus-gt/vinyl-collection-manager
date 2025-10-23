@@ -1066,9 +1066,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '2px',
+                gap: '1px',
                 flexShrink: 0,
-                width: '32px'
+                width: '32px',
+                height: '28px'
               }}
             >
               <Badge
@@ -1081,6 +1082,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   border: `1px solid ${filterMode === 'AND' ? 'rgba(68, 131, 97, 0.5)' : 'rgba(128, 128, 128, 0.2)'}`,
                   transition: 'all 0.15s ease',
                   width: '100%',
+                  height: '13px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -1088,10 +1090,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 styles={{
                   root: {
                     textTransform: 'none',
-                    padding: '3px 0',
-                    fontSize: '8.5px',
+                    padding: '0',
+                    fontSize: '8px',
                     fontWeight: filterMode === 'AND' ? 700 : 500,
-                    letterSpacing: '0.5px'
+                    letterSpacing: '0.5px',
+                    lineHeight: '1'
                   }
                 }}
                 onClick={() => {
@@ -1127,6 +1130,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                   border: `1px solid ${filterMode === 'OR' ? 'rgba(217, 115, 13, 0.5)' : 'rgba(128, 128, 128, 0.2)'}`,
                   transition: 'all 0.15s ease',
                   width: '100%',
+                  height: '13px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -1134,10 +1138,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                 styles={{
                   root: {
                     textTransform: 'none',
-                    padding: '3px 0',
-                    fontSize: '8.5px',
+                    padding: '0',
+                    fontSize: '8px',
                     fontWeight: filterMode === 'OR' ? 700 : 500,
-                    letterSpacing: '0.5px'
+                    letterSpacing: '0.5px',
+                    lineHeight: '1'
                   }
                 }}
                 onClick={() => {
