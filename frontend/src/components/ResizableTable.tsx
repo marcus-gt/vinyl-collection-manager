@@ -19,9 +19,9 @@ import {
   FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Checkbox } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
+import { DateInput, DatePickerInput, DatePicker } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
-import { IconSearch, IconCalendar, IconFilter, IconCheck } from '@tabler/icons-react';
+import { IconSearch, IconCalendar, IconFilter, IconCheck, IconX } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -762,45 +762,140 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     });
   };
 
-  const renderDateRangeFilter = (header: Header<T, unknown>) => {
+  const DateRangeFilter = ({ header }: any) => {
     const currentFilter = table.getState().columnFilters.find(
       (filter: { id: string; value: unknown }) => filter.id === header.column.id
     );
     const value = (currentFilter?.value as DateRangeValue) || { start: null, end: null };
+    
+    // Local state for the date range before confirming
+    const [localValue, setLocalValue] = React.useState<[Date | null, Date | null]>([value.start, value.end]);
+    
+    // Update local value when filter changes externally
+    React.useEffect(() => {
+      setLocalValue([value.start, value.end]);
+    }, [value.start, value.end]);
+
+    const handleConfirm = () => {
+      if (!localValue[0] && !localValue[1]) {
+        applyLocalFilter(header.column.id, undefined);
+      } else {
+        applyLocalFilter(header.column.id, { start: localValue[0], end: localValue[1] });
+      }
+    };
+
+    const handleCancel = () => {
+      setLocalValue([value.start, value.end]); // Reset to current filter value
+    };
+
+    const handleClear = () => {
+      setLocalValue([null, null]);
+      applyLocalFilter(header.column.id, undefined);
+    };
+
+    const formatDateForDisplay = (date: Date | null) => {
+      if (!date) return '';
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    const parseDateFromInput = (input: string): Date | null => {
+      if (!input) return null;
+      // Try to parse DD/MM/YYYY format
+      const parts = input.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // Months are 0-indexed
+        const year = parseInt(parts[2], 10);
+        const date = new Date(year, month, day);
+        // Validate the date
+        if (!isNaN(date.getTime()) && 
+            date.getDate() === day && 
+            date.getMonth() === month && 
+            date.getFullYear() === year) {
+          return date;
+        }
+      }
+      return null;
+    };
+
+    const [startText, setStartText] = React.useState(formatDateForDisplay(localValue[0]));
+    const [endText, setEndText] = React.useState(formatDateForDisplay(localValue[1]));
+
+    // Update text when localValue changes (from calendar clicks)
+    React.useEffect(() => {
+      setStartText(formatDateForDisplay(localValue[0]));
+      setEndText(formatDateForDisplay(localValue[1]));
+    }, [localValue[0], localValue[1]]);
+
+    const handleStartTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value;
+      setStartText(text);
+      const parsedDate = parseDateFromInput(text);
+      if (parsedDate) {
+        setLocalValue([parsedDate, localValue[1]]);
+      } else if (!text) {
+        setLocalValue([null, localValue[1]]);
+      }
+    };
+
+    const handleEndTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value;
+      setEndText(text);
+      const parsedDate = parseDateFromInput(text);
+      if (parsedDate) {
+        setLocalValue([localValue[0], parsedDate]);
+      } else if (!text) {
+        setLocalValue([localValue[0], null]);
+      }
+    };
 
     return (
-      <Group gap="xs">
-        <DateInput
-          size="xs"
-          placeholder="Start date"
-          value={value.start}
-          onChange={(date: Date | null) => {
-            const newValue = { ...value, start: date };
-            if (!date && !value.end) {
-              applyLocalFilter(header.column.id, undefined);
-            } else {
-              applyLocalFilter(header.column.id, newValue);
-            }
+      <Box>
+        <Group gap="xs" mb="xs">
+          <TextInput
+            size="sm"
+            placeholder="DD/MM/YYYY"
+            value={startText}
+            onChange={handleStartTextChange}
+            styles={{
+              root: { flex: 1 },
+              input: {
+                fontSize: '13px',
+                fontWeight: 500
+              }
+            }}
+          />
+          <TextInput
+            size="sm"
+            placeholder="DD/MM/YYYY"
+            value={endText}
+            onChange={handleEndTextChange}
+            styles={{
+              root: { flex: 1 },
+              input: {
+                fontSize: '13px',
+                fontWeight: 500
+              }
+            }}
+          />
+        </Group>
+        <DatePicker
+          type="range"
+          value={localValue}
+          onChange={(dates: [Date | null, Date | null] | null) => {
+            setLocalValue(dates || [null, null]);
           }}
-          leftSection={<IconCalendar size={14} />}
-          clearable
-          valueFormat="DD/MM/YYYY"
+          defaultDate={localValue[0] || new Date()}
           minDate={dateRangeLimits.minDate}
           maxDate={dateRangeLimits.maxDate}
+          numberOfColumns={1}
+          allowSingleDateInRange
           styles={{
-            root: { flex: 1 },
-            input: {
-              minHeight: '28px',
-              '&::placeholder': {
-                color: 'var(--mantine-color-dark-2)'
-              }
-            },
-            calendarHeader: {
-              maxWidth: '250px'
-            },
             calendarHeaderControl: {
               width: '24px',
               height: '24px',
+              minWidth: '24px',
+              minHeight: '24px',
               '& svg': {
                 width: '14px',
                 height: '14px'
@@ -808,46 +903,43 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             }
           }}
         />
-        <DateInput
-          size="xs"
-          placeholder="End date"
-          value={value.end}
-          onChange={(date: Date | null) => {
-            const newValue = { ...value, end: date };
-            if (!date && !value.start) {
-              applyLocalFilter(header.column.id, undefined);
-            } else {
-              applyLocalFilter(header.column.id, newValue);
-            }
-          }}
-          leftSection={<IconCalendar size={14} />}
-          clearable
-          valueFormat="DD/MM/YYYY"
-          minDate={dateRangeLimits.minDate}
-          maxDate={dateRangeLimits.maxDate}
-          styles={{
-            root: { flex: 1 },
-            input: {
-              minHeight: '28px',
-              '&::placeholder': {
-                color: 'var(--mantine-color-dark-2)'
-              }
-            },
-            calendarHeader: {
-              maxWidth: '250px'
-            },
-            calendarHeaderControl: {
-              width: '24px',
-              height: '24px',
-              '& svg': {
-                width: '14px',
-                height: '14px'
-              }
-            }
-          }}
-        />
-      </Group>
+        <Group gap={4} mt="xs" justify="space-between">
+          <ActionIcon
+            size="sm"
+            variant="subtle"
+            color="gray"
+            onClick={handleClear}
+            title="Clear"
+          >
+            <IconX size={16} />
+          </ActionIcon>
+          <Group gap={4}>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="red"
+              onClick={handleCancel}
+              title="Cancel"
+            >
+              <IconX size={16} />
+            </ActionIcon>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="green"
+              onClick={handleConfirm}
+              title="Apply"
+            >
+              <IconCheck size={16} />
+            </ActionIcon>
+          </Group>
+        </Group>
+      </Box>
     );
+  };
+
+  const renderDateRangeFilter = (header: Header<T, unknown>) => {
+    return <DateRangeFilter header={header} />;
   };
 
   // Component for single-select filter with hooks
