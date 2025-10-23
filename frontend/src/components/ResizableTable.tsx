@@ -19,9 +19,9 @@ import {
   FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Checkbox } from '@mantine/core';
-import { DateInput, DatePickerInput, DatePicker } from '@mantine/dates';
+import { DatePicker } from '@mantine/dates';
 import { useLocalStorage } from '@mantine/hooks';
-import { IconSearch, IconCalendar, IconFilter, IconCheck, IconX } from '@tabler/icons-react';
+import { IconSearch, IconFilter, IconCheck, IconX } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
