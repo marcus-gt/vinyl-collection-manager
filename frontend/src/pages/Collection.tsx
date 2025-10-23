@@ -2673,6 +2673,9 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
+              meta: {
+                type: 'dateRange'
+              },
               cell: ({ row }: { row: Row<VinylRecord> }) => row.original.created_at ? 
                 new Date(row.original.created_at).toLocaleDateString() : '-'
             },

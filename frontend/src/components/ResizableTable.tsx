@@ -363,10 +363,23 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const dateRangeFilter: FilterFn<any> = (
     row: Row<any>,
     columnId: string,
-    filterValue: [Date | null, Date | null]
+    filterValue: { start: Date | null; end: Date | null } | [Date | null, Date | null]
   ): boolean => {
+    // Handle both object and array formats
+    let start: Date | null;
+    let end: Date | null;
+    
+    if (Array.isArray(filterValue)) {
+      [start, end] = filterValue;
+    } else if (filterValue && typeof filterValue === 'object') {
+      start = filterValue.start;
+      end = filterValue.end;
+    } else {
+      return true;
+    }
+    
     // If no filter value is set, show all rows
-    if (!filterValue || (!filterValue[0] && !filterValue[1])) {
+    if (!start && !end) {
       return true;
     }
 
@@ -377,7 +390,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
 
     const cellDate = new Date(cellValue as string | number | Date);
-    const [start, end] = filterValue;
 
     if (start && end) {
       return cellDate >= start && cellDate <= end;
