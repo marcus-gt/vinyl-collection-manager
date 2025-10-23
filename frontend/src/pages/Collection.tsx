@@ -2589,7 +2589,6 @@ function Collection() {
               enableResizing: true,
               minSize: 100,
               maxSize: 500,
-              filterFn: 'textMultiTermContains',
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableStandardCell
                   value={row.original.genres || []}
