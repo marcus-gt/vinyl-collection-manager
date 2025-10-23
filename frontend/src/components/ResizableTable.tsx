@@ -579,8 +579,24 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         
         console.log(`🔍 [textMultiTermContains] columnId: ${columnId}, filterValue:`, filterValue, 'cellValue:', cellValue);
         
-        // filterValue is an array of search terms
-        if (!filterValue || !Array.isArray(filterValue) || filterValue.length === 0) {
+        // Handle new format: { terms: string[], mode: 'AND' | 'OR' }
+        // or old format: string[]
+        let filterTerms: string[];
+        let filterMode: 'AND' | 'OR' = 'OR'; // Default to OR for backwards compatibility
+        
+        if (filterValue && typeof filterValue === 'object' && 'terms' in filterValue) {
+          // New format with mode
+          filterTerms = filterValue.terms;
+          filterMode = filterValue.mode || 'AND';
+        } else if (Array.isArray(filterValue)) {
+          // Old format (just array) - use OR logic by default
+          filterTerms = filterValue;
+        } else {
+          // No valid filter
+          return true;
+        }
+        
+        if (filterTerms.length === 0) {
           return true; // No filter, show all rows
         }
         
@@ -591,27 +607,45 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         }
         
         // Convert filter terms to lowercase for case-insensitive matching
-        const filterTerms = filterValue.map((term: string) => term.toLowerCase());
-        console.log(`   📋 Filter terms (lowercase):`, filterTerms);
+        const filterTermsLower = filterTerms.map((term: string) => term.toLowerCase());
+        console.log(`   📋 Filter terms (lowercase):`, filterTermsLower, `Mode: ${filterMode}`);
         
         // Handle array values (like genres)
         if (Array.isArray(cellValue)) {
           const cellValuesLower = cellValue.map(v => String(v).toLowerCase());
           console.log(`   📚 Cell values (lowercase array):`, cellValuesLower);
-          // Check if ALL filter terms match at least one value in the cell's array (AND logic)
-          const matches = filterTerms.every(filterTerm => 
-            cellValuesLower.some(cellVal => cellVal.includes(filterTerm))
-          );
-          console.log(`   ${matches ? '✅' : '❌'} Array match result (AND): ${matches}`);
+          
+          let matches: boolean;
+          if (filterMode === 'AND') {
+            // Check if ALL filter terms match at least one value in the cell's array
+            matches = filterTermsLower.every(filterTerm => 
+              cellValuesLower.some(cellVal => cellVal.includes(filterTerm))
+            );
+            console.log(`   ${matches ? '✅' : '❌'} Array match result (AND): ${matches}`);
+          } else {
+            // Check if ANY filter term matches at least one value in the cell's array
+            matches = filterTermsLower.some(filterTerm => 
+              cellValuesLower.some(cellVal => cellVal.includes(filterTerm))
+            );
+            console.log(`   ${matches ? '✅' : '❌'} Array match result (OR): ${matches}`);
+          }
           return matches;
         }
         
         // Handle string/number values
         const cellStr = String(cellValue).toLowerCase();
         console.log(`   📝 Cell value (lowercase string): "${cellStr}"`);
-        // Check if ALL filter terms are contained in the cell value (AND logic)
-        const matches = filterTerms.every(filterTerm => cellStr.includes(filterTerm));
-        console.log(`   ${matches ? '✅' : '❌'} String match result (AND): ${matches}`);
+        
+        let matches: boolean;
+        if (filterMode === 'AND') {
+          // Check if ALL filter terms are contained in the cell value
+          matches = filterTermsLower.every(filterTerm => cellStr.includes(filterTerm));
+          console.log(`   ${matches ? '✅' : '❌'} String match result (AND): ${matches}`);
+        } else {
+          // Check if ANY filter term is contained in the cell value
+          matches = filterTermsLower.some(filterTerm => cellStr.includes(filterTerm));
+          console.log(`   ${matches ? '✅' : '❌'} String match result (OR): ${matches}`);
+        }
         return matches;
       }
     } as Record<string, FilterFn<T>>,
@@ -888,11 +922,26 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   const TextFilter = ({ header, currentFilterValue }: any) => {
     const columnId = header.column.id;
     
-    // Initialize pills from saved filter (array format only)
+    // Columns that support AND/OR toggle
+    const supportsAndOr = ['genres', 'styles', 'musicians'].includes(columnId);
+    
+    // Filter mode state (AND or OR)
+    const [filterMode, setFilterMode] = React.useState<'AND' | 'OR'>('AND');
+    
+    // Initialize pills from saved filter (can be array or object with mode)
     const [filterTerms, setFilterTerms] = React.useState<string[]>(() => {
-      if (Array.isArray(currentFilterValue) && currentFilterValue.length > 0) {
-        console.log('🔄 Initializing filterTerms from saved filters:', currentFilterValue);
-        return currentFilterValue;
+      if (currentFilterValue) {
+        // New format: { terms: string[], mode: 'AND' | 'OR' }
+        if (typeof currentFilterValue === 'object' && 'terms' in currentFilterValue) {
+          console.log('🔄 Initializing filterTerms from saved filters (with mode):', currentFilterValue);
+          setFilterMode(currentFilterValue.mode || 'AND');
+          return currentFilterValue.terms || [];
+        }
+        // Old format: string[]
+        if (Array.isArray(currentFilterValue) && currentFilterValue.length > 0) {
+          console.log('🔄 Initializing filterTerms from saved filters (array):', currentFilterValue);
+          return currentFilterValue;
+        }
       }
       return [];
     });
@@ -912,8 +961,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         console.log('📋 All filter terms:', newTerms);
         setFilterTerms(newTerms);
         setInputValue('');
-        // Update table filter with all pills
-        handleFilterChange(columnId, newTerms);
+        // Update table filter with all pills and mode (if applicable)
+        if (supportsAndOr) {
+          handleFilterChange(columnId, { terms: newTerms, mode: filterMode });
+        } else {
+          handleFilterChange(columnId, newTerms);
+        }
       }
     };
 
@@ -922,13 +975,30 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       const newTerms = filterTerms.filter(t => t !== term);
       setFilterTerms(newTerms);
       // Update table filter
-      handleFilterChange(columnId, newTerms.length > 0 ? newTerms : undefined);
+      if (newTerms.length > 0) {
+        if (supportsAndOr) {
+          handleFilterChange(columnId, { terms: newTerms, mode: filterMode });
+        } else {
+          handleFilterChange(columnId, newTerms);
+        }
+      } else {
+        handleFilterChange(columnId, undefined);
+      }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleAddTerm();
+      }
+    };
+
+    const handleModeToggle = () => {
+      const newMode = filterMode === 'AND' ? 'OR' : 'AND';
+      setFilterMode(newMode);
+      // Re-apply filter with new mode if we have terms
+      if (filterTerms.length > 0) {
+        handleFilterChange(columnId, { terms: filterTerms, mode: newMode });
       }
     };
 
@@ -990,6 +1060,31 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             >
               <IconCheck size={16} />
             </ActionIcon>
+          )}
+          {supportsAndOr && filterTerms.length > 0 && (
+            <Badge
+              size="sm"
+              radius="sm"
+              style={{
+                cursor: 'pointer',
+                backgroundColor: filterMode === 'AND' ? 'rgba(68, 131, 97, 0.2)' : 'rgba(217, 115, 13, 0.2)',
+                color: filterMode === 'AND' ? 'rgb(115, 184, 148)' : 'rgb(255, 169, 91)',
+                border: 'none',
+                flexShrink: 0
+              }}
+              styles={{
+                root: {
+                  textTransform: 'none',
+                  padding: '3px 6px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px'
+                }
+              }}
+              onClick={handleModeToggle}
+            >
+              {filterMode}
+            </Badge>
           )}
         </Group>
       </Box>
