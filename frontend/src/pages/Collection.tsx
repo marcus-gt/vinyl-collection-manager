@@ -2747,21 +2747,20 @@ function Collection() {
                   'spotify_list_sub': 'green',
                   'barcode': 'blue',
                   'discogs_url': 'orange',
-                  'csv_import': 'violet'
+                  'csv_import': 'purple'
                 };
                 
                 const displayText = source ? displayMap[source] || source : '-';
-                const color = source ? colorMap[source] : undefined;
+                const color = source ? colorMap[source] : 'gray';
                 
                 return (
                   <Box style={{ position: 'relative' }}>
                     <Text size="sm" lineClamp={1} style={{ cursor: 'default', maxWidth: '90vw' }}>
                       {source ? (
                         <Badge
-                          variant="filled"
                           size="sm"
                           radius="sm"
-                          color={color}
+                          style={getColorStyles(color)}
                           styles={{
                             root: {
                               textTransform: 'none',
