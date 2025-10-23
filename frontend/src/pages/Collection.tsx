@@ -2790,6 +2790,7 @@ function Collection() {
               minSize: 142,
               maxSize: 142,
               enableResizing: false,
+              enableColumnFilter: false,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableDiscogsLinks
                   masterUrl={row.original.master_url || null}
@@ -2919,6 +2920,7 @@ function Collection() {
       enableResizing: true,
       minSize: 50, // Reduced from 100 to 50
       maxSize: 100,
+      enableColumnFilter: false,
       cell: ({ row }: { row: Row<VinylRecord> }) => (
         <Box style={{ 
           width: '100%', 

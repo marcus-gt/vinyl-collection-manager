@@ -465,7 +465,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       const result = {
         ...column,
         id: columnId,
-        enableColumnFilter: true,
+        enableColumnFilter: column.enableColumnFilter !== false, // Respect original setting
         filterFn: filterType === 'multi-select' ? multiSelectFilter :
                   filterType === 'single-select' ? singleSelectFilter :
                   filterType === 'number' ? numberFilter :
