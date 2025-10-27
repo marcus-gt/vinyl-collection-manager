@@ -2969,31 +2969,69 @@ function Collection() {
         padding: 'var(--mantine-spacing-md)',
       }}
     >
-      <Group justify="space-between" mb="md">
-        <TextInput
-          placeholder="Search records..."
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.currentTarget.value)}
-          leftSection={<IconSearch size={14} />}
-          style={{ minWidth: '300px' }}
-        />
-        <Group>
-          <Button
-            variant="default"
-            onClick={() => setAddRecordsModalOpened(true)}
-            leftSection={<IconPlus size={14} />}
-          >
-            Add Records
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => setCustomColumnManagerOpened(true)}
-            leftSection={<IconColumns size={14} />}
-          >
-            Manage Columns
-          </Button>
-        </Group>
-      </Group>
+      <Box mb="md">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .search-controls-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--mantine-spacing-xs);
+          }
+          .search-input-wrapper {
+            min-width: 175px;
+            max-width: 350px;
+            flex: 1 1 auto;
+          }
+          .buttons-wrapper {
+            flex: 0 0 auto;
+            display: flex;
+            gap: var(--mantine-spacing-xs);
+          }
+          @media (max-width: 768px) {
+            .search-controls-wrapper {
+              flex-direction: column;
+              align-items: stretch;
+            }
+            .search-input-wrapper {
+              width: 100%;
+              min-width: 100%;
+              max-width: 100%;
+            }
+            .buttons-wrapper {
+              width: 100%;
+            }
+            .buttons-wrapper button {
+              flex: 1;
+            }
+          }
+        `}} />
+        <Box className="search-controls-wrapper">
+          <Box className="search-input-wrapper">
+            <TextInput
+              placeholder="Search records..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+              leftSection={<IconSearch size={14} />}
+            />
+          </Box>
+          <Box className="buttons-wrapper">
+            <Button
+              variant="default"
+              onClick={() => setAddRecordsModalOpened(true)}
+              leftSection={<IconPlus size={14} />}
+            >
+              Add Records
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => setCustomColumnManagerOpened(true)}
+              leftSection={<IconColumns size={14} />}
+            >
+              Manage Columns
+            </Button>
+          </Box>
+        </Box>
+      </Box>
 
       {error && (
         <Text c="red" mb="md">
