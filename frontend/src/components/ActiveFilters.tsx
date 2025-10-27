@@ -1,4 +1,4 @@
-import { Group, Badge, Text, Box } from '@mantine/core';
+import { Group, Badge, Text, Box, ActionIcon } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { ColumnFiltersState } from '@tanstack/react-table';
 import type { ExtendedColumnDef } from './ResizableTable';
@@ -74,13 +74,30 @@ export function ActiveFilters({ filters, columns, onClearFilter }: ActiveFilters
           return (
             <Badge 
               key={filter.id}
-              variant="filled"
+              variant="light"
+              color="blue"
+              style={{
+                fontSize: '10.5px',
+                padding: '2.5px 5px',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
               rightSection={
-                <IconX 
-                  size={14}
-                  style={{ cursor: 'pointer' }}
+                <ActionIcon
+                  size={12}
+                  variant="transparent"
+                  color="gray"
                   onClick={() => onClearFilter(filter.id)}
-                />
+                  style={{ 
+                    marginLeft: '2px',
+                    minWidth: '12px',
+                    minHeight: '12px'
+                  }}
+                >
+                  <IconX size={10} />
+                </ActionIcon>
               }
             >
               {columnName}: {renderFilterValue(filter)}

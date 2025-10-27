@@ -103,7 +103,8 @@ export function MyCustomPagination({
             return (
               <Button
                 key={index}
-                variant={item.active ? 'filled' : 'subtle'}
+                variant={item.active ? 'light' : 'subtle'}
+                color={item.active ? 'blue' : 'gray'}
                 size="sm"
                 px="xs"
                 onClick={() => onChange(item.value)}
