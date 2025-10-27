@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
-import { IconX, IconBrandSpotify } from '@tabler/icons-react';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, FileInput, Progress, Table } from '@mantine/core';
+import { IconX, IconBrandSpotify, IconUpload, IconCheck, IconAlertCircle } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -81,6 +81,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  
+  // Batch upload state
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [batchResults, setBatchResults] = useState<Array<{
+    artist: string;
+    album: string;
+    status: 'pending' | 'processing' | 'success' | 'error';
+    error?: string;
+    record?: VinylRecord;
+  }>>([]);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -857,6 +869,164 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
+  // CSV parsing function
+  const parseCSV = (text: string): Array<{ artist: string; album: string }> => {
+    const lines = text.trim().split('\n');
+    const results: Array<{ artist: string; album: string }> = [];
+    
+    // Skip header row if it exists (check if first row contains "artist" or "album")
+    const startIndex = lines[0].toLowerCase().includes('artist') || lines[0].toLowerCase().includes('album') ? 1 : 0;
+    
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Split by comma, handling quoted values
+      const parts = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+      
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        const artist = parts[0].replace(/^"|"$/g, '').trim();
+        const album = parts[1].replace(/^"|"$/g, '').trim();
+        
+        if (artist && album) {
+          results.push({ artist, album });
+        }
+      }
+    }
+    
+    return results;
+  };
+
+  const handleCSVUpload = async (file: File | null) => {
+    if (!file) return;
+    
+    setCsvFile(file);
+    
+    try {
+      const text = await file.text();
+      const parsed = parseCSV(text);
+      
+      if (parsed.length === 0) {
+        setError('No valid records found in CSV. Expected format: Artist,Album');
+        return;
+      }
+      
+      // Initialize batch results
+      setBatchResults(parsed.map(item => ({
+        ...item,
+        status: 'pending' as const
+      })));
+      
+      notifications.show({
+        title: 'CSV Loaded',
+        message: `Found ${parsed.length} records to process`,
+        color: 'blue'
+      });
+    } catch (err) {
+      setError('Failed to parse CSV file');
+      console.error('CSV parsing error:', err);
+    }
+  };
+
+  const handleBatchProcess = async () => {
+    if (batchResults.length === 0) return;
+    
+    setIsBatchProcessing(true);
+    setBatchProgress(0);
+    
+    const updatedResults = [...batchResults];
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 0; i < updatedResults.length; i++) {
+      // Update status to processing
+      updatedResults[i] = { ...updatedResults[i], status: 'processing' };
+      setBatchResults([...updatedResults]);
+      
+      try {
+        // Look up in Discogs
+        const lookupResponse = await lookup.byArtistAlbum(
+          updatedResults[i].artist,
+          updatedResults[i].album
+        );
+        
+        if (lookupResponse.success && lookupResponse.data) {
+          // Use the exact same pattern as handleAddToCollection
+          const record = getRecordWithDefaults(lookupResponse.data);
+          
+          const recordData: VinylRecord = {
+            artist: record.artist,
+            album: record.album,
+            year: record.year,
+            current_release_year: record.current_release_year,
+            barcode: record.barcode,
+            genres: record.genres || [],
+            styles: record.styles || [],
+            musicians: record.musicians || [],
+            master_url: record.master_url || undefined,
+            master_format: record.master_format,
+            current_release_url: record.current_release_url || undefined,
+            current_release_format: record.current_release_format,
+            label: record.label,
+            country: record.country,
+            added_from: 'manual',
+            custom_values_cache: record.custom_values_cache
+          };
+          
+          console.log('Batch: About to add record:', recordData);
+          const addResponse = await records.add(recordData);
+          console.log('Batch: Add response:', addResponse);
+          
+          if (addResponse.success) {
+            updatedResults[i] = {
+              ...updatedResults[i],
+              status: 'success',
+              record: recordData
+            };
+            successCount++;
+            setRecordsChanged(true);
+          } else {
+            updatedResults[i] = {
+              ...updatedResults[i],
+              status: 'error',
+              error: addResponse.error || 'Failed to add to collection'
+            };
+            errorCount++;
+          }
+        } else {
+          updatedResults[i] = {
+            ...updatedResults[i],
+            status: 'error',
+            error: 'Not found in Discogs'
+          };
+          errorCount++;
+        }
+      } catch (err) {
+        updatedResults[i] = {
+          ...updatedResults[i],
+          status: 'error',
+          error: 'Lookup failed'
+        };
+        errorCount++;
+      }
+      
+      // Update progress
+      setBatchProgress(((i + 1) / updatedResults.length) * 100);
+      setBatchResults([...updatedResults]);
+      
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    setIsBatchProcessing(false);
+    
+    notifications.show({
+      title: 'Batch Processing Complete',
+      message: `Added ${successCount} records. ${errorCount} failed.`,
+      color: successCount > 0 ? 'green' : 'red'
+    });
+  };
+
   return (
     <>
       <Modal
@@ -934,6 +1104,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                     }}
                   >
                     Spotify
+                  </Tabs.Tab>
+                  <Tabs.Tab 
+                    value="batch" 
+                    style={{ 
+                      minWidth: 0,
+                      padding: '8px 12px'
+                    }}
+                  >
+                    Batch
                   </Tabs.Tab>
                 </Tabs.List>
 
@@ -1248,6 +1427,108 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                             </Button>
                           </Group>
                         )}
+                      </>
+                    )}
+                  </Stack>
+                </Tabs.Panel>
+
+                <Tabs.Panel value="batch" pt="xs">
+                  <Stack>
+                    <Text size="sm" c="dimmed" mb="md">
+                      Upload a CSV file with Artist and Album columns. Each record will be looked up in Discogs and added to your collection.
+                    </Text>
+                    
+                    <Alert color="blue" title="CSV Format" variant="light">
+                      <Text size="sm">
+                        Expected format: <strong>Artist,Album</strong>
+                      </Text>
+                      <Text size="sm" mt="xs">
+                        Example:
+                      </Text>
+                      <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>
+                        Miles Davis,Kind of Blue<br/>
+                        John Coltrane,A Love Supreme<br/>
+                        Bill Evans,Sunday at the Village Vanguard
+                      </Text>
+                    </Alert>
+
+                    <FileInput
+                      label="Upload CSV File"
+                      placeholder="Click to select file"
+                      accept=".csv,text/csv"
+                      value={csvFile}
+                      onChange={handleCSVUpload}
+                      leftSection={<IconUpload size={16} />}
+                      disabled={isBatchProcessing}
+                    />
+
+                    {batchResults.length > 0 && (
+                      <>
+                        <Group justify="space-between" mt="md">
+                          <Text fw={500}>
+                            {batchResults.length} records loaded
+                          </Text>
+                          <Button
+                            onClick={handleBatchProcess}
+                            loading={isBatchProcessing}
+                            disabled={batchResults.every(r => r.status === 'success')}
+                          >
+                            Process All
+                          </Button>
+                        </Group>
+
+                        {isBatchProcessing && (
+                          <Box>
+                            <Text size="sm" mb="xs">
+                              Processing... {Math.round(batchProgress)}%
+                            </Text>
+                            <Progress value={batchProgress} animated />
+                          </Box>
+                        )}
+
+                        <ScrollArea h={400} mt="md">
+                          <Table striped highlightOnHover>
+                            <Table.Thead>
+                              <Table.Tr>
+                                <Table.Th>Artist</Table.Th>
+                                <Table.Th>Album</Table.Th>
+                                <Table.Th>Status</Table.Th>
+                              </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                              {batchResults.map((result, index) => (
+                                <Table.Tr key={index}>
+                                  <Table.Td>{result.artist}</Table.Td>
+                                  <Table.Td>{result.album}</Table.Td>
+                                  <Table.Td>
+                                    <Group gap="xs">
+                                      {result.status === 'pending' && (
+                                        <Text size="sm" c="dimmed">Pending</Text>
+                                      )}
+                                      {result.status === 'processing' && (
+                                        <Loader size="xs" />
+                                      )}
+                                      {result.status === 'success' && (
+                                        <Group gap={4}>
+                                          <IconCheck size={16} color="green" />
+                                          <Text size="sm" c="green">Added</Text>
+                                        </Group>
+                                      )}
+                                      {result.status === 'error' && (
+                                        <Group gap={4}>
+                                          <IconAlertCircle size={16} color="red" />
+                                          <Text size="sm" c="red">
+                                            {result.error || 'Failed'}
+                                          </Text>
+                                        </Group>
+                                      )}
+                                    </Group>
+                                  </Table.Td>
+                                </Table.Tr>
+                              ))}
+                            </Table.Tbody>
+                          </Table>
+                        </ScrollArea>
                       </>
                     )}
                   </Stack>
