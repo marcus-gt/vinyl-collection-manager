@@ -53,10 +53,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     }
   }, [opened]);
 
-  useEffect(() => {
-    setColumns(initialColumns);
-  }, [initialColumns]);
-
   // Populate form when editing a column from Settings
   useEffect(() => {
     if (editingColumnProp && opened) {
