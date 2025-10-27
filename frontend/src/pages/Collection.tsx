@@ -275,7 +275,7 @@ function EditableStandardCell({
       }} 
       onClick={() => setOpened(true)}
     >
-      <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) handleCancel(); }}>
+      <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) handleCancel(); }} withinPortal>
         <Popover.Target>
           <div style={{ width: '100%' }}>
             <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
@@ -944,7 +944,7 @@ function EditableCustomCell({
         onClick={() => setOpened(true)}
       >
         <Popover 
-          width={400} 
+          width="min(400px, 90vw)" 
           position="bottom" 
           withArrow 
           shadow="md" 
@@ -953,6 +953,7 @@ function EditableCustomCell({
             setOpened(o); 
             if (!o) setSearchQuery(''); // Clear search when closing
           }}
+          withinPortal
         >
           <Popover.Target>
             <div style={{ width: '100%' }}>
@@ -1500,7 +1501,7 @@ function EditableCustomCell({
         onClick={() => setOpened(true)}
       >
         <Popover 
-          width={400} 
+          width="min(400px, 90vw)" 
           position="bottom" 
           withArrow 
           shadow="md" 
@@ -1509,6 +1510,7 @@ function EditableCustomCell({
             setOpened(o); 
             if (!o) setSearchQuery('');
           }}
+          withinPortal
         >
           <Popover.Target>
             <div style={{ width: '100%' }}>
@@ -1659,7 +1661,7 @@ function EditableCustomCell({
         }} 
         onClick={() => setOpened(true)}
       >
-        <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }}>
+        <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }} withinPortal>
           <Popover.Target>
             <div style={{ width: '100%' }}>
               <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
@@ -1761,7 +1763,7 @@ function EditableCustomCell({
       }} 
       onClick={() => setOpened(true)}
     >
-      <Popover width={400} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }}>
+      <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }} withinPortal>
         <Popover.Target>
           <div style={{ width: '100%' }}>
             <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
@@ -1943,7 +1945,7 @@ function EditableDiscogsLinks({
       }} 
       onClick={() => setOpened(true)}
     >
-      <Popover width={500} position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) handleCancel(); }}>
+      <Popover width="min(500px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) handleCancel(); }} withinPortal>
         <Popover.Target>
           <div style={{ width: '100%' }}>
             <Group gap={4} wrap="nowrap">

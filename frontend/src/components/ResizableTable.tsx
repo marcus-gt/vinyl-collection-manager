@@ -1796,7 +1796,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                                 flexShrink: 0
                               }}
                             >
-                              <Popover width={280} position="bottom-start" shadow="md">
+                              <Popover width="min(280px, 90vw)" position="bottom" shadow="md" withinPortal>
                                 <Popover.Target>
                                   <ActionIcon
                                     size="xs"
