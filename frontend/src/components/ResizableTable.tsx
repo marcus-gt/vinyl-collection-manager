@@ -16,7 +16,8 @@ import {
   OnChangeFn,
   RowData,
   ColumnFiltersState,
-  FilterFn
+  FilterFn,
+  ColumnOrderState
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Checkbox } from '@mantine/core';
 import { DatePicker } from '@mantine/dates';
@@ -132,9 +133,19 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     defaultValue: {}
   });
 
+  // Add column ordering state with localStorage persistence
+  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>({
+    key: `table-column-order-${tableId}`,
+    defaultValue: []
+  });
+
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const columnHeaderHeight = 32;
+  
+  // State for drag and drop
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   // Load saved filters on mount
   useEffect(() => {
@@ -575,6 +586,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       columnSizing,
       columnFilters,
       globalFilter: searchQuery,
+      columnOrder,
       pagination: {
         pageIndex: page - 1,
         pageSize: recordsPerPage
@@ -583,6 +595,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnResizeMode,
     onSortingChange: onSortChange,
     onColumnSizingChange: setColumnSizing,
+    onColumnOrderChange: setColumnOrder,
     onColumnFiltersChange: (updater) => {
       const newFilters = typeof updater === 'function' 
         ? updater(columnFilters)
@@ -1684,15 +1697,53 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     <Table.Th
                       key={header.id}
                       colSpan={header.colSpan}
+                      draggable
+                      onDragStart={() => {
+                        setDraggedColumn(header.column.id);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverColumn(header.column.id);
+                      }}
+                      onDragLeave={() => {
+                        setDragOverColumn(null);
+                      }}
+                      onDrop={() => {
+                        if (draggedColumn && draggedColumn !== header.column.id) {
+                          const newOrder = [...table.getAllLeafColumns().map(c => c.id)];
+                          const draggedIdx = newOrder.indexOf(draggedColumn);
+                          const targetIdx = newOrder.indexOf(header.column.id);
+                          
+                          // Remove dragged column and insert at target position
+                          newOrder.splice(draggedIdx, 1);
+                          newOrder.splice(targetIdx, 0, draggedColumn);
+                          
+                          setColumnOrder(newOrder);
+                        }
+                        setDraggedColumn(null);
+                        setDragOverColumn(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedColumn(null);
+                        setDragOverColumn(null);
+                      }}
                       style={{
                         width: header.getSize(),
                         position: 'sticky',
                         top: 0,
                         zIndex: 10,
-                        backgroundColor: 'var(--mantine-color-dark-7)',
+                        backgroundColor: draggedColumn === header.column.id 
+                          ? 'var(--mantine-color-dark-5)' 
+                          : 'var(--mantine-color-dark-7)',
                         userSelect: 'none',
                         height: `${columnHeaderHeight}px`,
-                        maxHeight: `${columnHeaderHeight}px`
+                        maxHeight: `${columnHeaderHeight}px`,
+                        cursor: 'move',
+                        opacity: draggedColumn === header.column.id ? 0.5 : 1,
+                        transition: 'background-color 0.2s, opacity 0.2s',
+                        boxShadow: dragOverColumn === header.column.id && draggedColumn !== header.column.id
+                          ? 'inset 0 0 0 2px var(--mantine-color-blue-5)'
+                          : 'none'
                       }}
                     >
                       {header.isPlaceholder ? null : (
