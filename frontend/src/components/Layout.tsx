@@ -234,14 +234,25 @@ function Layout() {
         </Button>
       )}
       {isCollectionPage && (
-        <Group gap="xs">
-          <Button variant="light" onClick={handleExportCSV} leftSection={<IconDownload size={16} />}>
-            Export CSV
-          </Button>
-          <Button variant="light" onClick={() => setImportModalOpened(true)} leftSection={<IconUpload size={16} />}>
-            Import CSV
-          </Button>
-        </Group>
+        <>
+          <style dangerouslySetInnerHTML={{ __html: `
+            .csv-buttons-wrapper {
+              display: flex;
+              gap: var(--mantine-spacing-xs);
+            }
+            .csv-buttons-wrapper button {
+              flex: 1;
+            }
+          `}} />
+          <div className="csv-buttons-wrapper">
+            <Button variant="light" onClick={handleExportCSV} leftSection={<IconDownload size={16} />}>
+              Export CSV
+            </Button>
+            <Button variant="light" onClick={() => setImportModalOpened(true)} leftSection={<IconUpload size={16} />}>
+              Import CSV
+            </Button>
+          </div>
+        </>
       )}
       <Button variant="light" onClick={() => { handleLogout(); close(); }}>
         Logout
