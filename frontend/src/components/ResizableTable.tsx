@@ -16,8 +16,7 @@ import {
   OnChangeFn,
   RowData,
   ColumnFiltersState,
-  FilterFn,
-  ColumnOrderState
+  FilterFn
 } from '@tanstack/react-table';
 import { Table, Box, Text, LoadingOverlay, Group, TextInput, useMantineTheme, Select, Badge, Popover, ActionIcon, Checkbox } from '@mantine/core';
 import { DatePicker } from '@mantine/dates';
