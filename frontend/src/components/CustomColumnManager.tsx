@@ -5,7 +5,6 @@ import { customColumns as customColumnsService, customValues, records } from '..
 import type { CustomColumn, CustomColumnType } from '../types';
 import { PILL_COLORS } from '../constants/colors';
 import { notifications } from '@mantine/notifications';
-import { modals } from '@mantine/modals';
 
 // Helper function to get color styles for badges
 const getColorStyles = (colorName: string) => {
@@ -90,7 +89,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     try {
       const response = await customColumnsService.getAll();
       if (response.success && response.data) {
-        setColumns(response.data);
         onCustomColumnsChange(response.data);
       }
     } catch (err) {
