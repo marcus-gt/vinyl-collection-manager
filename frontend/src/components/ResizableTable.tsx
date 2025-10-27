@@ -133,17 +133,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     defaultValue: {}
   });
 
-  // Add column ordering state with localStorage persistence
-  const [columnOrder, setColumnOrder] = useLocalStorage<ColumnOrderState>({
-    key: `table-column-order-${tableId}`,
-    defaultValue: []
-  });
-
   const [columnResizeMode] = useState<ColumnResizeMode>('onChange');
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const columnHeaderHeight = 32;
-  
-  // State for drag and drop
+
+  // Column reordering state
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>({
+    key: `table-column-order-${tableId}`,
+    defaultValue: []
+  });
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
@@ -1697,36 +1695,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     <Table.Th
                       key={header.id}
                       colSpan={header.colSpan}
-                      draggable
-                      onDragStart={() => {
-                        setDraggedColumn(header.column.id);
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragOverColumn(header.column.id);
-                      }}
-                      onDragLeave={() => {
-                        setDragOverColumn(null);
-                      }}
-                      onDrop={() => {
-                        if (draggedColumn && draggedColumn !== header.column.id) {
-                          const newOrder = [...table.getAllLeafColumns().map(c => c.id)];
-                          const draggedIdx = newOrder.indexOf(draggedColumn);
-                          const targetIdx = newOrder.indexOf(header.column.id);
-                          
-                          // Remove dragged column and insert at target position
-                          newOrder.splice(draggedIdx, 1);
-                          newOrder.splice(targetIdx, 0, draggedColumn);
-                          
-                          setColumnOrder(newOrder);
-                        }
-                        setDraggedColumn(null);
-                        setDragOverColumn(null);
-                      }}
-                      onDragEnd={() => {
-                        setDraggedColumn(null);
-                        setDragOverColumn(null);
-                      }}
                       style={{
                         width: header.getSize(),
                         position: 'sticky',
@@ -1738,7 +1706,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                         userSelect: 'none',
                         height: `${columnHeaderHeight}px`,
                         maxHeight: `${columnHeaderHeight}px`,
-                        cursor: 'move',
                         opacity: draggedColumn === header.column.id ? 0.5 : 1,
                         transition: 'background-color 0.2s, opacity 0.2s',
                         boxShadow: dragOverColumn === header.column.id && draggedColumn !== header.column.id
@@ -1748,11 +1715,47 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     >
                       {header.isPlaceholder ? null : (
                         <div
+                          draggable
+                          onDragStart={(e) => {
+                            // Only start drag if not clicking on resize handle
+                            const target = e.target as HTMLElement;
+                            if (target.classList.contains('resizer') || target.closest('.resizer')) {
+                              e.preventDefault();
+                              return;
+                            }
+                            setDraggedColumn(header.column.id);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverColumn(header.column.id);
+                          }}
+                          onDragLeave={() => {
+                            setDragOverColumn(null);
+                          }}
+                          onDrop={() => {
+                            if (draggedColumn && draggedColumn !== header.column.id) {
+                              const newOrder = [...table.getAllLeafColumns().map(c => c.id)];
+                              const draggedIdx = newOrder.indexOf(draggedColumn);
+                              const targetIdx = newOrder.indexOf(header.column.id);
+                              
+                              // Remove dragged column and insert at target position
+                              newOrder.splice(draggedIdx, 1);
+                              newOrder.splice(targetIdx, 0, draggedColumn);
+                              
+                              setColumnOrder(newOrder);
+                            }
+                            setDraggedColumn(null);
+                            setDragOverColumn(null);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedColumn(null);
+                            setDragOverColumn(null);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                            cursor: header.column.getCanSort() ? 'pointer' : 'move',
                             position: 'relative',
                             width: '100%',
                             height: '32px',
