@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Modal, Button, TextInput, Select, Stack, Group, Table, ActionIcon, Text, Box, MultiSelect, Switch, Menu, Badge } from '@mantine/core';
-import { IconTrash, IconEdit, IconX } from '@tabler/icons-react';
+import { Modal, Button, TextInput, Select, Stack, Group, ActionIcon, Text, Box, MultiSelect, Switch, Menu, Badge } from '@mantine/core';
+import { IconX } from '@tabler/icons-react';
 import { customColumns as customColumnsService, customValues, records } from '../services/api';
 import type { CustomColumn, CustomColumnType } from '../types';
 import { PILL_COLORS } from '../constants/colors';
@@ -35,7 +35,6 @@ export interface CustomColumnManagerProps {
 }
 
 export function CustomColumnManager({ opened, onClose, customColumns: initialColumns, onCustomColumnsChange, editingColumnProp }: CustomColumnManagerProps) {
-  const [columns, setColumns] = useState<CustomColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Partial<CustomColumn> | null>(null);
   const [name, setName] = useState('');
@@ -166,58 +165,6 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDelete = (column: CustomColumn) => {
-    modals.openConfirmModal({
-      title: 'Delete column',
-      children: (
-        <Stack gap="xs">
-          <Text size="sm">
-            Are you sure you want to delete the "{column.name}" column?
-          </Text>
-          <Text size="xs" c="dimmed">
-            This will permanently remove this column and all its data from all records. This action cannot be undone.
-          </Text>
-        </Stack>
-      ),
-      labels: { confirm: 'Delete', cancel: 'Cancel' },
-      confirmProps: { color: 'red' },
-      onConfirm: async () => {
-        setLoading(true);
-        try {
-          const response = await customColumnsService.delete(column.id);
-          if (response.success) {
-            setColumnsChanged(true);
-            notifications.show({
-              title: 'Success',
-              message: 'Column deleted successfully',
-              color: 'green'
-            });
-            await loadColumns();
-          }
-        } catch (err) {
-          notifications.show({
-            title: 'Error',
-            message: 'Failed to delete column',
-            color: 'red'
-          });
-          console.error(err);
-        } finally {
-          setLoading(false);
-        }
-      }
-    });
-  };
-
-  const handleEdit = (column: CustomColumn) => {
-    setEditingColumn(column);
-    setName(column.name);
-    setType(column.type);
-    setOptions(column.options || []);
-    setOptionColors(column.option_colors || {});
-    setDefaultValue(column.defaultValue || '');
-    setApplyToAll(column.applyToAll || false);
   };
 
   const resetForm = () => {
