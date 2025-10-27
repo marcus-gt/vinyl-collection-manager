@@ -28,12 +28,13 @@ const getColorStyles = (colorName: string) => {
 
 export interface CustomColumnManagerProps {
   opened: boolean;
-  onClose: () => void;
+  onClose: (shouldReturnToSettings?: boolean) => void;
   customColumns: CustomColumn[];
   onCustomColumnsChange: (newColumns: CustomColumn[]) => void;
+  editingColumnProp?: CustomColumn | null;
 }
 
-export function CustomColumnManager({ opened, onClose, customColumns: initialColumns, onCustomColumnsChange }: CustomColumnManagerProps) {
+export function CustomColumnManager({ opened, onClose, customColumns: initialColumns, onCustomColumnsChange, editingColumnProp }: CustomColumnManagerProps) {
   const [columns, setColumns] = useState<CustomColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Partial<CustomColumn> | null>(null);
@@ -58,12 +59,31 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     setColumns(initialColumns);
   }, [initialColumns]);
 
+  // Populate form when editing a column from Settings
+  useEffect(() => {
+    if (editingColumnProp && opened) {
+      setEditingColumn(editingColumnProp);
+      setName(editingColumnProp.name);
+      setType(editingColumnProp.type);
+      setOptions(editingColumnProp.options || []);
+      setOptionColors(editingColumnProp.option_colors || {});
+      setDefaultValue(editingColumnProp.defaultValue || '');
+      setApplyToAll(editingColumnProp.applyToAll || false);
+    }
+  }, [editingColumnProp, opened]);
+
   const handleModalClose = () => {
     if (columnsChanged) {
       // Only trigger table refresh if columns were modified
       window.dispatchEvent(new CustomEvent('refresh-table-data'));
     }
-    onClose();
+    resetForm();
+    onClose(false); // X button - don't return to Settings
+  };
+
+  const handleBackClick = () => {
+    resetForm();
+    onClose(true); // Back button - return to Settings
   };
 
   const loadColumns = async () => {
@@ -132,7 +152,10 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
         }
       }
       await loadColumns();
-      resetForm();
+      // Only reset form and close modal if we're creating a new column (not editing)
+      if (!editingColumn?.id) {
+        resetForm();
+      }
     } catch (err) {
       notifications.show({
         title: 'Error',
@@ -355,7 +378,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
     <Modal
       opened={opened}
       onClose={handleModalClose}
-      title="Manage Custom Columns"
+      title={editingColumn ? "Edit Column" : "Add Column"}
       size="lg"
       styles={{
         inner: {
@@ -627,8 +650,8 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
               )}
               <Group justify="flex-end" style={{ marginLeft: 'auto' }}>
                 {editingColumn && (
-                  <Button variant="light" onClick={resetForm} size="sm">
-                    Cancel
+                  <Button variant="light" onClick={handleBackClick} size="sm">
+                    Back
                   </Button>
                 )}
                 <Button onClick={handleSubmit} loading={loading} size="sm">
@@ -639,7 +662,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
           </Stack>
         </Box>
 
-        <Box>
+        {/* <Box>
           <Text size="sm" fw={500} mb="xs">Existing Columns</Text>
           <Table
             styles={{
@@ -698,7 +721,7 @@ export function CustomColumnManager({ opened, onClose, customColumns: initialCol
               )}
             </Table.Tbody>
           </Table>
-        </Box>
+        </Box> */}
       </Stack>
     </Modal>
   );

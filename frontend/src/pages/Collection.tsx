@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo, memo, useRef } from 'react';
 import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
-import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck } from '@tabler/icons-react';
+import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck, IconSettings } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
 import { records, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn, CustomColumnValue } from '../types';
 import { CustomColumnManager } from '../components/CustomColumnManager';
 import { AddRecordsModal } from '../components/AddRecordsModal';
+import { Settings } from '../components/Settings';
 import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../constants/colors';
 import { ResizableTable } from '../components/ResizableTable';
@@ -2066,7 +2067,10 @@ function Collection() {
   const [sortStatus, setSortStatus] = useState<SortingState>([{ id: 'artist', desc: false }]);
   const [addRecordsModalOpened, setAddRecordsModalOpened] = useState(false);
   const [customColumnManagerOpened, setCustomColumnManagerOpened] = useState(false);
+  const [settingsOpened, setSettingsOpened] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const [editingColumn, setEditingColumn] = useState<CustomColumn | null>(null);
+  const [returnToSettings, setReturnToSettings] = useState(false);
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -2986,6 +2990,7 @@ function Collection() {
             flex: 0 0 auto;
             display: flex;
             gap: var(--mantine-spacing-xs);
+            align-items: center;
           }
           @media (max-width: 768px) {
             .search-controls-wrapper {
@@ -3002,6 +3007,9 @@ function Collection() {
             }
             .buttons-wrapper button {
               flex: 1;
+            }
+            .buttons-wrapper .settings-button {
+              flex: 0 0 auto;
             }
           }
         `}} />
@@ -3027,8 +3035,18 @@ function Collection() {
               onClick={() => setCustomColumnManagerOpened(true)}
               leftSection={<IconColumns size={14} />}
             >
-              Manage Columns
+              Add Column
             </Button>
+            <Tooltip label="Settings">
+              <ActionIcon
+                variant="default"
+                size="lg"
+                onClick={() => setSettingsOpened(true)}
+                className="settings-button"
+              >
+                <IconSettings size={18} />
+              </ActionIcon>
+            </Tooltip>
           </Box>
         </Box>
       </Box>
@@ -3055,17 +3073,53 @@ function Collection() {
 
       {/* Modals */}
       <CustomColumnManager
-        opened={customColumnManagerOpened}
-        onClose={() => setCustomColumnManagerOpened(false)}
+        opened={customColumnManagerOpened || !!editingColumn}
+        onClose={(shouldReturnToSettings) => {
+          setCustomColumnManagerOpened(false);
+          setEditingColumn(null);
+          // Return to Settings only if Back button was clicked and we came from Settings
+          if (shouldReturnToSettings && returnToSettings) {
+            setSettingsOpened(true);
+          }
+          setReturnToSettings(false);
+        }}
         customColumns={customColumns}
         onCustomColumnsChange={(newColumns: CustomColumn[]) => {
           setCustomColumns(newColumns);
           loadCustomColumns();
         }}
+        editingColumnProp={editingColumn}
       />
       <AddRecordsModal
         opened={addRecordsModalOpened}
         onClose={() => setAddRecordsModalOpened(false)}
+      />
+      <Settings
+        opened={settingsOpened}
+        onClose={() => setSettingsOpened(false)}
+        customColumns={customColumns}
+        onEditColumn={(column) => {
+          setEditingColumn(column);
+          setReturnToSettings(true);
+          setSettingsOpened(false);
+        }}
+        onDeleteColumn={async (columnId) => {
+          try {
+            await customColumnsApi.delete(columnId);
+            loadCustomColumns();
+            notifications.show({
+              title: 'Success',
+              message: 'Column deleted successfully',
+              color: 'green'
+            });
+          } catch (error) {
+            notifications.show({
+              title: 'Error',
+              message: 'Failed to delete column',
+              color: 'red'
+            });
+          }
+        }}
       />
 
       <Modal
