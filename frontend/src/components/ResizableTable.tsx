@@ -110,6 +110,7 @@ interface ResizableTableProps<T extends RowData & BaseRowData> {
   customColumns?: CustomColumnData[];
   onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
   searchQuery?: string;
+  columnVisibility?: Record<string, boolean>;
 }
 
 export function ResizableTable<T extends RowData & BaseRowData>({ 
@@ -124,7 +125,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   onPageChange,
   customColumns = [],
   onColumnFiltersChange,
-  searchQuery = ''
+  searchQuery = '',
+  columnVisibility = {}
 }: ResizableTableProps<T>) {
   const theme = useMantineTheme();
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -584,6 +586,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       columnFilters,
       globalFilter: searchQuery,
       columnOrder,
+      columnVisibility,
       pagination: {
         pageIndex: page - 1,
         pageSize: recordsPerPage

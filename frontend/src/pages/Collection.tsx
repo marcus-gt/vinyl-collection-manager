@@ -12,6 +12,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../constants/colors';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
+import { useLocalStorage } from '@mantine/hooks';
 
 const PAGE_SIZE = 40;
 
@@ -2071,6 +2072,14 @@ function Collection() {
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingColumn, setEditingColumn] = useState<CustomColumn | null>(null);
   const [returnToSettings, setReturnToSettings] = useState(false);
+  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>({
+    key: 'table-column-order-vinyl-collection',
+    defaultValue: []
+  });
+  const [columnVisibility, setColumnVisibility] = useLocalStorage<Record<string, boolean>>({
+    key: 'table-column-visibility-vinyl-collection',
+    defaultValue: {}
+  });
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -3069,6 +3078,7 @@ function Collection() {
         onPageChange={setPage}
         customColumns={customColumns}
         searchQuery={searchQuery}
+        columnVisibility={columnVisibility}
       />
 
       {/* Modals */}
@@ -3119,6 +3129,15 @@ function Collection() {
               color: 'red'
             });
           }
+        }}
+        columnOrder={columnOrder}
+        onColumnOrderChange={setColumnOrder}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={(columnId, visible) => {
+          setColumnVisibility(prev => ({
+            ...prev,
+            [columnId]: visible
+          }));
         }}
       />
 
