@@ -33,7 +33,7 @@ export interface CustomColumnManagerProps {
   editingColumnProp?: CustomColumn | null;
 }
 
-export function CustomColumnManager({ opened, onClose, customColumns: onCustomColumnsChange, editingColumnProp }: CustomColumnManagerProps) {
+export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, editingColumnProp }: CustomColumnManagerProps) {
   const [loading, setLoading] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Partial<CustomColumn> | null>(null);
   const [name, setName] = useState('');
