@@ -119,6 +119,10 @@ export function Settings({
       onClose={onClose}
       title="Settings"
       size="lg"
+      styles={{
+        body: { maxHeight: '70vh', overflowY: 'auto' },
+        content: { maxHeight: '80vh' }
+      }}
     >
       <Accordion defaultValue="manage-columns">
         <Accordion.Item value="manage-columns">
@@ -172,8 +176,8 @@ export function Settings({
         <Accordion.Item value="column-order">
           <Accordion.Control>Column Order and Visibility</Accordion.Control>
           <Accordion.Panel>
-            <Box style={{ overflowX: 'auto', width: '100%' }}>
-              <Table>
+            <Box style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+              <Table style={{ minWidth: '500px' }}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th style={{ width: 40 }}></Table.Th>
