@@ -176,17 +176,22 @@ export function Settings({
         <Accordion.Item value="column-order">
           <Accordion.Control>Column Order and Visibility</Accordion.Control>
           <Accordion.Panel>
-            <Table>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ width: 40 }}></Table.Th>
-                  <Table.Th>Column Name</Table.Th>
-                  <Table.Th>Type</Table.Th>
-                  <Table.Th style={{ width: 80 }}>Visible</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {allColumns.map((column, index) => (
+            {allColumns.length === 0 ? (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                No columns to display
+              </Text>
+            ) : (
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{ width: 40 }}></Table.Th>
+                    <Table.Th>Column Name</Table.Th>
+                    <Table.Th>Type</Table.Th>
+                    <Table.Th style={{ width: 80 }}>Visible</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {allColumns.map((column, index) => (
                   <Table.Tr
                     key={column.id}
                     draggable
@@ -234,9 +239,10 @@ export function Settings({
                       </ActionIcon>
                     </Table.Td>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
