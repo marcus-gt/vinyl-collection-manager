@@ -102,6 +102,37 @@ export function Settings({
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
+
+  // Touch event handlers for mobile
+  const handleTouchStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const row = element?.closest('tr');
+    if (row) {
+      const allRows = Array.from(row.parentElement?.children || []);
+      const targetIndex = allRows.indexOf(row);
+      if (targetIndex !== -1 && targetIndex !== index) {
+        setDragOverIndex(targetIndex);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newOrder = [...allColumns];
+      const draggedItem = newOrder[draggedIndex];
+      newOrder.splice(draggedIndex, 1);
+      newOrder.splice(dragOverIndex, 0, draggedItem);
+      onColumnOrderChange(newOrder.map(col => col.id));
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
   
   const handleDelete = (column: CustomColumn) => {
     modals.openConfirmModal({
@@ -208,6 +239,9 @@ export function Settings({
                       setDraggedIndex(null);
                       setDragOverIndex(null);
                     }}
+                    onTouchStart={() => handleTouchStart(index)}
+                    onTouchMove={(e) => handleTouchMove(e, index)}
+                    onTouchEnd={handleTouchEnd}
                     style={{
                       display: 'table-row',
                       cursor: 'move',
@@ -215,7 +249,8 @@ export function Settings({
                       backgroundColor: dragOverIndex === index && draggedIndex !== index
                         ? 'var(--mantine-color-dark-5)'
                         : undefined,
-                      transition: 'background-color 0.2s, opacity 0.2s'
+                      transition: 'background-color 0.2s, opacity 0.2s',
+                      touchAction: 'none'
                     }}
                   >
                     <Table.Td>
