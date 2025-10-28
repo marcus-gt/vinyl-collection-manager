@@ -120,9 +120,57 @@ export function Settings({
       title="Settings"
       size="lg"
     >
-      <Accordion defaultValue="column-order">
+      <Accordion defaultValue="manage-columns">
+        <Accordion.Item value="manage-columns">
+          <Accordion.Control>Manage Custom Columns</Accordion.Control>
+          <Accordion.Panel>
+            {customColumns.length === 0 ? (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                No custom columns yet
+              </Text>
+            ) : (
+              <Table>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Name</Table.Th>
+                    <Table.Th>Type</Table.Th>
+                    <Table.Th style={{ width: 100 }}>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {customColumns.map((column) => (
+                    <Table.Tr key={column.id}>
+                      <Table.Td>{column.name}</Table.Td>
+                      <Table.Td style={{ textTransform: 'capitalize' }}>{column.type}</Table.Td>
+                      <Table.Td>
+                        <Group gap="xs">
+                          <ActionIcon
+                            size="sm"
+                            variant="light"
+                            onClick={() => onEditColumn(column)}
+                          >
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                          <ActionIcon
+                            size="sm"
+                            variant="light"
+                            color="red"
+                            onClick={() => handleDelete(column)}
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            )}
+          </Accordion.Panel>
+        </Accordion.Item>
+
         <Accordion.Item value="column-order">
-          <Accordion.Control>Column Order</Accordion.Control>
+          <Accordion.Control>Column Order and Visibility</Accordion.Control>
           <Accordion.Panel>
             <Table>
               <Table.Thead>
@@ -185,54 +233,6 @@ export function Settings({
                 ))}
               </Table.Tbody>
             </Table>
-          </Accordion.Panel>
-        </Accordion.Item>
-
-        <Accordion.Item value="manage-columns">
-          <Accordion.Control>Manage Columns</Accordion.Control>
-          <Accordion.Panel>
-            {customColumns.length === 0 ? (
-              <Text size="sm" c="dimmed" ta="center" py="md">
-                No custom columns yet
-              </Text>
-            ) : (
-              <Table>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Name</Table.Th>
-                    <Table.Th>Type</Table.Th>
-                    <Table.Th style={{ width: 100 }}>Actions</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {customColumns.map((column) => (
-                    <Table.Tr key={column.id}>
-                      <Table.Td>{column.name}</Table.Td>
-                      <Table.Td style={{ textTransform: 'capitalize' }}>{column.type}</Table.Td>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <ActionIcon
-                            size="sm"
-                            variant="light"
-                            onClick={() => onEditColumn(column)}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                          <ActionIcon
-                            size="sm"
-                            variant="light"
-                            color="red"
-                            onClick={() => handleDelete(column)}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            )}
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
