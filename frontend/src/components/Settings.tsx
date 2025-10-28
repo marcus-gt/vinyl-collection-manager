@@ -181,7 +181,7 @@ export function Settings({
                 No columns to display
               </Text>
             ) : (
-              <Table>
+              <Table layout="fixed" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th style={{ width: 40 }}></Table.Th>
@@ -190,7 +190,7 @@ export function Settings({
                     <Table.Th style={{ width: 80 }}>Visible</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
-                <Table.Tbody>
+                <Table.Tbody style={{ display: 'table-row-group' }}>
                   {allColumns.map((column, index) => (
                   <Table.Tr
                     key={column.id}
@@ -203,6 +203,7 @@ export function Settings({
                       setDragOverIndex(null);
                     }}
                     style={{
+                      display: 'table-row',
                       cursor: 'move',
                       opacity: draggedIndex === index ? 0.5 : 1,
                       backgroundColor: dragOverIndex === index && draggedIndex !== index
