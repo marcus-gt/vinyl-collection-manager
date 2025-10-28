@@ -57,19 +57,25 @@ export function Settings({
   ];
 
   // Build ordered column list
-  const allColumns: ColumnOrderItem[] = columnOrder
-    .map(id => {
-      const standardCol = standardColumns.find(c => c.id === id);
-      if (standardCol) {
-        return { id: standardCol.id, name: standardCol.name, type: 'standard' as const } as ColumnOrderItem;
-      }
-      const customCol = customColumns.find(c => c.id === id);
-      if (customCol) {
-        return { id: customCol.id, name: customCol.name, type: 'custom' as const, customColumn: customCol } as ColumnOrderItem;
-      }
-      return null;
-    })
-    .filter((col): col is ColumnOrderItem => col !== null);
+  const allColumns: ColumnOrderItem[] = columnOrder.length > 0
+    ? columnOrder
+        .map(id => {
+          const standardCol = standardColumns.find(c => c.id === id);
+          if (standardCol) {
+            return { id: standardCol.id, name: standardCol.name, type: 'standard' as const } as ColumnOrderItem;
+          }
+          const customCol = customColumns.find(c => c.id === id);
+          if (customCol) {
+            return { id: customCol.id, name: customCol.name, type: 'custom' as const, customColumn: customCol } as ColumnOrderItem;
+          }
+          return null;
+        })
+        .filter((col): col is ColumnOrderItem => col !== null)
+    : [
+        // Fallback: show all standard columns + custom columns if columnOrder is empty
+        ...standardColumns.map(col => ({ id: col.id, name: col.name, type: 'standard' as const })),
+        ...customColumns.map(col => ({ id: col.id, name: col.name, type: 'custom' as const, customColumn: col }))
+      ];
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
