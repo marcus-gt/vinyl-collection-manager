@@ -176,69 +176,67 @@ export function Settings({
         <Accordion.Item value="column-order">
           <Accordion.Control>Column Order and Visibility</Accordion.Control>
           <Accordion.Panel>
-            <Box style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-              <Table style={{ minWidth: '500px' }}>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ width: 40 }}></Table.Th>
-                    <Table.Th>Column Name</Table.Th>
-                    <Table.Th>Type</Table.Th>
-                    <Table.Th style={{ width: 80 }}>Visible</Table.Th>
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: 40 }}></Table.Th>
+                  <Table.Th>Column Name</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th style={{ width: 80 }}>Visible</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {allColumns.map((column, index) => (
+                  <Table.Tr
+                    key={column.id}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDrop={() => handleDrop(index)}
+                    onDragEnd={() => {
+                      setDraggedIndex(null);
+                      setDragOverIndex(null);
+                    }}
+                    style={{
+                      cursor: 'move',
+                      opacity: draggedIndex === index ? 0.5 : 1,
+                      backgroundColor: dragOverIndex === index && draggedIndex !== index
+                        ? 'var(--mantine-color-dark-5)'
+                        : undefined,
+                      transition: 'background-color 0.2s, opacity 0.2s'
+                    }}
+                  >
+                    <Table.Td>
+                      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <IconGripVertical size={16} style={{ color: 'var(--mantine-color-dark-3)' }} />
+                      </Box>
+                    </Table.Td>
+                    <Table.Td>{column.name}</Table.Td>
+                    <Table.Td style={{ textTransform: 'capitalize' }}>
+                      {column.type === 'custom' && column.customColumn 
+                        ? column.customColumn.type 
+                        : column.type}
+                    </Table.Td>
+                    <Table.Td>
+                      <ActionIcon
+                        variant="subtle"
+                        color={columnVisibility[column.id] !== false ? 'blue' : 'gray'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onColumnVisibilityChange(column.id, columnVisibility[column.id] === false);
+                        }}
+                      >
+                        {columnVisibility[column.id] !== false ? (
+                          <IconEye size={18} />
+                        ) : (
+                          <IconEyeOff size={18} />
+                        )}
+                      </ActionIcon>
+                    </Table.Td>
                   </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {allColumns.map((column, index) => (
-                    <Table.Tr
-                      key={column.id}
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDrop={() => handleDrop(index)}
-                      onDragEnd={() => {
-                        setDraggedIndex(null);
-                        setDragOverIndex(null);
-                      }}
-                      style={{
-                        cursor: 'move',
-                        opacity: draggedIndex === index ? 0.5 : 1,
-                        backgroundColor: dragOverIndex === index && draggedIndex !== index
-                          ? 'var(--mantine-color-dark-5)'
-                          : undefined,
-                        transition: 'background-color 0.2s, opacity 0.2s'
-                      }}
-                    >
-                      <Table.Td>
-                        <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <IconGripVertical size={16} style={{ color: 'var(--mantine-color-dark-3)' }} />
-                        </Box>
-                      </Table.Td>
-                      <Table.Td>{column.name}</Table.Td>
-                      <Table.Td style={{ textTransform: 'capitalize' }}>
-                        {column.type === 'custom' && column.customColumn 
-                          ? column.customColumn.type 
-                          : column.type}
-                      </Table.Td>
-                      <Table.Td>
-                        <ActionIcon
-                          variant="subtle"
-                          color={columnVisibility[column.id] !== false ? 'blue' : 'gray'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onColumnVisibilityChange(column.id, columnVisibility[column.id] === false);
-                          }}
-                        >
-                          {columnVisibility[column.id] !== false ? (
-                            <IconEye size={18} />
-                          ) : (
-                            <IconEyeOff size={18} />
-                          )}
-                        </ActionIcon>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Box>
+                ))}
+              </Table.Tbody>
+            </Table>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
