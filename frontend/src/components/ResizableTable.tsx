@@ -1716,6 +1716,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                     <Table.Th
                       key={header.id}
                       colSpan={header.colSpan}
+                      data-column-id={header.column.id}
                       style={{
                         width: header.getSize(),
                         position: 'sticky',
@@ -1772,6 +1773,41 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                             setDraggedColumn(null);
                             setDragOverColumn(null);
                           }}
+                          onTouchStart={(e) => {
+                            // Only start drag if not touching resize handle or filter button
+                            const target = e.target as HTMLElement;
+                            if (target.classList.contains('resizer') || target.closest('.resizer') || target.closest('[data-filter-button]')) {
+                              return;
+                            }
+                            setDraggedColumn(header.column.id);
+                          }}
+                          onTouchMove={(e) => {
+                            if (!draggedColumn) return;
+                            const touch = e.touches[0];
+                            const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                            const headerCell = element?.closest('[data-column-id]');
+                            if (headerCell) {
+                              const columnId = headerCell.getAttribute('data-column-id');
+                              if (columnId && columnId !== draggedColumn) {
+                                setDragOverColumn(columnId);
+                              }
+                            }
+                          }}
+                          onTouchEnd={() => {
+                            if (draggedColumn && dragOverColumn && draggedColumn !== dragOverColumn) {
+                              const newOrder = [...table.getAllLeafColumns().map(c => c.id)];
+                              const draggedIdx = newOrder.indexOf(draggedColumn);
+                              const targetIdx = newOrder.indexOf(dragOverColumn);
+                              
+                              // Remove dragged column and insert at target position
+                              newOrder.splice(draggedIdx, 1);
+                              newOrder.splice(targetIdx, 0, draggedColumn);
+                              
+                              setColumnOrder(newOrder);
+                            }
+                            setDraggedColumn(null);
+                            setDragOverColumn(null);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1780,7 +1816,8 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                             position: 'relative',
                             width: '100%',
                             height: '32px',
-                            maxHeight: '32px'
+                            maxHeight: '32px',
+                            touchAction: 'none'
                           }}
                           onClick={header.column.getToggleSortingHandler()}
                         >
