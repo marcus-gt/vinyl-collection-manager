@@ -721,4 +721,49 @@ export const musicianNetwork = {
       return { success: false, error: 'Failed to get musician network data' };
     }
   }
+};
+
+// User Settings API
+export interface UserSetting {
+  id: string;
+  user_id: string;
+  setting_key: string;
+  setting_value: any;
+  created_at: string;
+  updated_at: string;
+}
+
+export const userSettings = {
+  get: async (key: string): Promise<ApiResponse<UserSetting>> => {
+    try {
+      const response = await api.get<ApiResponse<UserSetting>>(`/api/settings/${key}`);
+      return response.data;
+    } catch (err) {
+      console.error(`Failed to get setting ${key}:`, err);
+      return { success: false, error: `Failed to get setting ${key}` };
+    }
+  },
+
+  set: async (key: string, value: any): Promise<ApiResponse<UserSetting>> => {
+    try {
+      const response = await api.post<ApiResponse<UserSetting>>('/api/settings', {
+        setting_key: key,
+        setting_value: value
+      });
+      return response.data;
+    } catch (err) {
+      console.error(`Failed to set setting ${key}:`, err);
+      return { success: false, error: `Failed to set setting ${key}` };
+    }
+  },
+
+  getAll: async (): Promise<ApiResponse<UserSetting[]>> => {
+    try {
+      const response = await api.get<ApiResponse<UserSetting[]>>('/api/settings');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get all settings:', err);
+      return { success: false, error: 'Failed to get all settings' };
+    }
+  }
 }; 

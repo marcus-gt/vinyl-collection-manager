@@ -111,6 +111,8 @@ interface ResizableTableProps<T extends RowData & BaseRowData> {
   onColumnFiltersChange?: (filters: ColumnFiltersState) => void;
   searchQuery?: string;
   columnVisibility?: Record<string, boolean>;
+  columnOrder?: string[];
+  onColumnOrderChange?: (order: string[]) => void;
 }
 
 export function ResizableTable<T extends RowData & BaseRowData>({ 
@@ -126,7 +128,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
   customColumns = [],
   onColumnFiltersChange,
   searchQuery = '',
-  columnVisibility = {}
+  columnVisibility = {},
+  columnOrder: externalColumnOrder,
+  onColumnOrderChange: externalOnColumnOrderChange
 }: ResizableTableProps<T>) {
   const theme = useMantineTheme();
   const [columnSizing, setColumnSizing] = useLocalStorage<Record<string, number>>({
@@ -139,10 +143,25 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     const columnHeaderHeight = 32;
 
   // Column reordering state
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>({
+  // Use external columnOrder if provided, otherwise fall back to localStorage
+  const [localColumnOrder, setLocalColumnOrder] = useLocalStorage<string[]>({
     key: `table-column-order-${tableId}`,
     defaultValue: []
   });
+  
+  const columnOrder = externalColumnOrder !== undefined ? externalColumnOrder : localColumnOrder;
+  
+  // Wrap setColumnOrder to handle both direct values and updater functions
+  const setColumnOrder = (updaterOrValue: string[] | ((old: string[]) => string[])) => {
+    if (externalOnColumnOrderChange) {
+      const newOrder = typeof updaterOrValue === 'function' 
+        ? updaterOrValue(columnOrder)
+        : updaterOrValue;
+      externalOnColumnOrderChange(newOrder);
+    } else {
+      setLocalColumnOrder(updaterOrValue);
+    }
+  };
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 

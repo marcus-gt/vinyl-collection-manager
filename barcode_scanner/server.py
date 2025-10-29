@@ -898,6 +898,68 @@ def delete_custom_column(column_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# User Settings API Routes
+@app.route('/api/settings', methods=['GET'])
+def get_all_settings():
+    """Get all settings for the current user."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        client = get_supabase_client()
+        response = client.table('user_settings').select('*').eq('user_id', user_id).execute()
+        return jsonify({'success': True, 'data': response.data}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/settings/<setting_key>', methods=['GET'])
+def get_setting(setting_key):
+    """Get a specific setting for the current user."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        client = get_supabase_client()
+        response = client.table('user_settings').select('*').eq('user_id', user_id).eq('setting_key', setting_key).execute()
+        
+        if not response.data:
+            return jsonify({'success': False, 'error': 'Setting not found'}), 404
+        
+        return jsonify({'success': True, 'data': response.data[0]}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/settings', methods=['POST'])
+def set_setting():
+    """Create or update a setting for the current user."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json()
+        setting_key = data.get('setting_key')
+        setting_value = data.get('setting_value')
+        
+        if not setting_key:
+            return jsonify({'success': False, 'error': 'setting_key is required'}), 400
+        
+        client = get_supabase_client()
+        
+        # Use upsert to create or update
+        response = client.table('user_settings').upsert({
+            'user_id': user_id,
+            'setting_key': setting_key,
+            'setting_value': setting_value,
+            'updated_at': datetime.utcnow().isoformat()
+        }, on_conflict='user_id,setting_key').execute()
+        
+        return jsonify({'success': True, 'data': response.data[0]}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/records/<record_id>/custom-values', methods=['GET'])
 def get_custom_values(record_id):
     """Get all custom values for a record."""

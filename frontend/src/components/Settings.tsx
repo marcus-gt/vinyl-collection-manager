@@ -53,7 +53,7 @@ export function Settings({
     { id: 'current_release_year', name: 'Release Year' },
     { id: 'current_release_format', name: 'Format' },
     { id: 'master_format', name: 'Master Format' },
-    { id: 'discogs_links', name: 'Discogs Links' }
+    { id: 'links', name: 'Discogs Links' }
   ];
 
   // Build ordered column list
@@ -161,7 +161,7 @@ export function Settings({
         content: { maxHeight: '80vh' }
       }}
     >
-      <Accordion defaultValue="manage-columns">
+      <Accordion>
         <Accordion.Item value="manage-columns">
           <Accordion.Control>Manage Custom Columns</Accordion.Control>
           <Accordion.Panel>

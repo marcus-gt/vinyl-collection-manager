@@ -12,7 +12,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { PILL_COLORS } from '../constants/colors';
 import { ResizableTable } from '../components/ResizableTable';
 import { SortingState, ColumnDef, Row } from '@tanstack/react-table';
-import { useLocalStorage } from '@mantine/hooks';
+import { useBackendSettings } from '../hooks/useBackendSettings';
 
 const PAGE_SIZE = 40;
 
@@ -2072,14 +2072,8 @@ function Collection() {
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingColumn, setEditingColumn] = useState<CustomColumn | null>(null);
   const [returnToSettings, setReturnToSettings] = useState(false);
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>({
-    key: 'table-column-order-vinyl-collection',
-    defaultValue: []
-  });
-  const [columnVisibility, setColumnVisibility] = useLocalStorage<Record<string, boolean>>({
-    key: 'table-column-visibility-vinyl-collection',
-    defaultValue: {}
-  });
+  const [columnOrder, setColumnOrder] = useBackendSettings<string[]>('table-column-order', []);
+  const [columnVisibility, setColumnVisibility] = useBackendSettings<Record<string, boolean>>('table-column-visibility', {});
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -2277,11 +2271,86 @@ function Collection() {
     }
   };
 
+  // Define standard column IDs (must match the table column definitions)
+  const STANDARD_COLUMN_IDS = [
+    'artist',
+    'album',
+    'year',
+    'current_release_year',
+    'label',
+    'country',
+    'genres',
+    'styles',
+    'current_release_format',
+    'master_format',
+    'musicians',
+    'links', // Discogs Links column
+    'added_from',
+    'created_at'
+  ];
+
   const loadCustomColumns = async () => {
     try {
       const response = await customColumnsApi.getAll();
       if (response.success && response.data) {
         setCustomColumns(response.data);
+        
+        // Auto-update column order to include ALL columns (standard + custom)
+        setColumnOrder(prevOrder => {
+          const customColumnIds = response.data!.map(col => col.id);
+          
+          // If prevOrder is empty, initialize with all standard columns + custom columns
+          if (prevOrder.length === 0) {
+            return [...STANDARD_COLUMN_IDS, ...customColumnIds];
+          }
+          
+          // Build new order preserving user's arrangement
+          const newOrder: string[] = [];
+          const processedIds = new Set<string>();
+          
+          // Separate standard and custom columns from prevOrder
+          const standardsInPrevOrder: string[] = [];
+          const customsInPrevOrder: string[] = [];
+          
+          for (const id of prevOrder) {
+            if (STANDARD_COLUMN_IDS.includes(id)) {
+              standardsInPrevOrder.push(id);
+            } else if (customColumnIds.includes(id)) {
+              customsInPrevOrder.push(id);
+            }
+            // Skip deleted custom columns
+          }
+          
+          // 1. Add standard columns first (in their saved order)
+          for (const id of standardsInPrevOrder) {
+            newOrder.push(id);
+            processedIds.add(id);
+          }
+          
+          // 2. Add any missing standard columns (in default order)
+          for (const id of STANDARD_COLUMN_IDS) {
+            if (!processedIds.has(id)) {
+              newOrder.push(id);
+              processedIds.add(id);
+            }
+          }
+          
+          // 3. Add custom columns (in their saved order)
+          for (const id of customsInPrevOrder) {
+            newOrder.push(id);
+            processedIds.add(id);
+          }
+          
+          // 4. Add any new custom columns to the end
+          for (const id of customColumnIds) {
+            if (!processedIds.has(id)) {
+              newOrder.push(id);
+              processedIds.add(id);
+            }
+          }
+          
+          return newOrder;
+        });
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
@@ -3079,6 +3148,8 @@ function Collection() {
         customColumns={customColumns}
         searchQuery={searchQuery}
         columnVisibility={columnVisibility}
+        columnOrder={columnOrder}
+        onColumnOrderChange={setColumnOrder}
       />
 
       {/* Modals */}
@@ -3116,6 +3187,17 @@ function Collection() {
         onDeleteColumn={async (columnId) => {
           try {
             await customColumnsApi.delete(columnId);
+            
+            // Remove deleted column from column order
+            setColumnOrder(prevOrder => prevOrder.filter(id => id !== columnId));
+            
+            // Remove from visibility settings
+            setColumnVisibility(prev => {
+              const newVisibility = { ...prev };
+              delete newVisibility[columnId];
+              return newVisibility;
+            });
+            
             loadCustomColumns();
             notifications.show({
               title: 'Success',
