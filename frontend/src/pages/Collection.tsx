@@ -115,6 +115,7 @@ interface EditableStandardCellProps {
   recordId: string;
   inputType: 'text' | 'number' | 'textarea' | 'array';
   requirePencilClick?: boolean; // If true, shows pencil icon for two-step edit (default: true for standard columns)
+  noTruncate?: boolean; // If true, shows full content without lineClamp
   onUpdate: (recordId: string, fieldName: string, newValue: any) => void;
 }
 
@@ -126,6 +127,7 @@ function EditableStandardCell({
   recordId, 
   inputType, 
   requirePencilClick = true,
+  noTruncate = false,
   onUpdate 
 }: EditableStandardCellProps) {
   const [localValue, setLocalValue] = useState(value);
@@ -280,7 +282,14 @@ function EditableStandardCell({
       <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) handleCancel(); }} withinPortal>
         <Popover.Target>
           <div style={{ width: '100%' }}>
-            <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+            <Text 
+              size="sm" 
+              lineClamp={noTruncate ? undefined : 1} 
+              style={{ 
+                maxWidth: '90vw',
+                ...(noTruncate ? { wordBreak: 'break-word', whiteSpace: 'pre-wrap' } : {})
+              }}
+            >
               {renderDisplayValue()}
             </Text>
           </div>
@@ -2490,7 +2499,7 @@ function Collection() {
       noTruncate?: boolean; // New option to disable truncation for modal
     }
   ) => {
-    const cell = (
+    return (
       <EditableStandardCell
         value={(record as any)[fieldName] || (inputType === 'array' ? [] : '')}
         displayValue={options?.displayValue}
@@ -2499,6 +2508,7 @@ function Collection() {
         recordId={record.id!}
         inputType={inputType}
         requirePencilClick={options?.requirePencilClick ?? true}
+        noTruncate={options?.noTruncate}
         onUpdate={(recordId, fieldName, newValue) => {
           setUserRecords(prevRecords =>
             prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
@@ -2507,30 +2517,6 @@ function Collection() {
         }}
       />
     );
-    
-    // If noTruncate is true, wrap in a div that shows full content
-    if (options?.noTruncate) {
-      return (
-        <Box onClick={() => {
-          // Find and click the cell to open the popover
-          const element = document.activeElement as HTMLElement;
-          if (element) {
-            const boxes = document.querySelectorAll('[style*="cursor: pointer"]');
-            boxes.forEach(box => {
-              if (box.contains(element)) {
-                (box as HTMLElement).click();
-              }
-            });
-          }
-        }}>
-          <Text size="sm" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', cursor: 'pointer' }}>
-            {options?.displayValue || (record as any)[fieldName] || '-'}
-          </Text>
-        </Box>
-      );
-    }
-    
-    return cell;
   };
 
   const tableColumns = useMemo(() => {
@@ -3411,8 +3397,8 @@ function Collection() {
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Source</Text>
-              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
-                {createEditableStandardCell(previewRecord, 'added_from', 'Source', 'text', { noTruncate: true })}
+              <Box style={{ flex: 1, paddingTop: '8px', minWidth: 0 }}>
+                <Text size="sm" style={{ wordBreak: 'break-word' }}>{previewRecord.added_from || '-'}</Text>
               </Box>
             </Box>
 
