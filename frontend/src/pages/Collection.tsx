@@ -2487,9 +2487,10 @@ function Collection() {
     options?: {
       requirePencilClick?: boolean;
       displayValue?: string;
+      noTruncate?: boolean; // New option to disable truncation for modal
     }
   ) => {
-    return (
+    const cell = (
       <EditableStandardCell
         value={(record as any)[fieldName] || (inputType === 'array' ? [] : '')}
         displayValue={options?.displayValue}
@@ -2506,6 +2507,30 @@ function Collection() {
         }}
       />
     );
+    
+    // If noTruncate is true, wrap in a div that shows full content
+    if (options?.noTruncate) {
+      return (
+        <Box onClick={() => {
+          // Find and click the cell to open the popover
+          const element = document.activeElement as HTMLElement;
+          if (element) {
+            const boxes = document.querySelectorAll('[style*="cursor: pointer"]');
+            boxes.forEach(box => {
+              if (box.contains(element)) {
+                (box as HTMLElement).click();
+              }
+            });
+          }
+        }}>
+          <Text size="sm" style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', cursor: 'pointer' }}>
+            {options?.displayValue || (record as any)[fieldName] || '-'}
+          </Text>
+        </Box>
+      );
+    }
+    
+    return cell;
   };
 
   const tableColumns = useMemo(() => {
@@ -3296,160 +3321,185 @@ function Collection() {
         fullScreen={window.innerWidth < 768}
       >
         {previewRecord && (
-          <Stack gap="md">
-            {/* Standard Fields - All Editable */}
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Artist</Text>
-              {createEditableStandardCell(previewRecord, 'artist', 'Artist', 'textarea')}
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Album</Text>
-              {createEditableStandardCell(previewRecord, 'album', 'Album', 'textarea')}
-            </Box>
-
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Original Year</Text>
-                {createEditableStandardCell(previewRecord, 'year', 'Original Year', 'number')}
+          <Stack gap="xs">
+            {/* All Fields - Notion-style key: value layout */}
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Artist</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'artist', 'Artist', 'textarea', { noTruncate: true })}
               </Box>
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Release Year</Text>
-                {createEditableStandardCell(previewRecord, 'current_release_year', 'Release Year', 'number')}
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Album</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'album', 'Album', 'textarea', { noTruncate: true })}
               </Box>
-            </Group>
+            </Box>
 
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Label</Text>
-                {createEditableStandardCell(previewRecord, 'label', 'Label', 'textarea')}
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Original Year</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'year', 'Original Year', 'number', { noTruncate: true })}
               </Box>
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Country</Text>
-                {createEditableStandardCell(previewRecord, 'country', 'Country', 'textarea')}
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Release Year</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'current_release_year', 'Release Year', 'number', { noTruncate: true })}
               </Box>
-            </Group>
-
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Genres</Text>
-              {createEditableStandardCell(previewRecord, 'genres', 'Genres (comma-separated)', 'array', {
-                displayValue: previewRecord.genres?.join(', ') || '-'
-              })}
             </Box>
 
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Styles</Text>
-              {createEditableStandardCell(previewRecord, 'styles', 'Styles (comma-separated)', 'array', {
-                displayValue: previewRecord.styles?.join(', ') || '-'
-              })}
-            </Box>
-
-            <Group grow>
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Format</Text>
-                {createEditableStandardCell(previewRecord, 'current_release_format', 'Format', 'textarea')}
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Label</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'label', 'Label', 'textarea', { noTruncate: true })}
               </Box>
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Master Format</Text>
-                {createEditableStandardCell(previewRecord, 'master_format', 'Master Format', 'textarea')}
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Country</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'country', 'Country', 'textarea', { noTruncate: true })}
               </Box>
-            </Group>
-
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Musicians</Text>
-              {createEditableStandardCell(previewRecord, 'musicians', 'Musicians (comma-separated)', 'array', {
-                displayValue: previewRecord.musicians?.join(', ') || '-'
-              })}
             </Box>
 
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Source</Text>
-              {createEditableStandardCell(previewRecord, 'added_from', 'Source', 'text')}
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Added</Text>
-              <Text size="sm">{previewRecord.created_at ? new Date(previewRecord.created_at).toLocaleDateString() : '-'}</Text>
-            </Box>
-
-            <Box>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Discogs Links</Text>
-              <EditableDiscogsLinks
-                recordId={previewRecord.id!}
-                masterUrl={previewRecord.master_url || ''}
-                currentReleaseUrl={previewRecord.current_release_url || ''}
-                onUpdate={(recordId, updates) => {
-                  setUserRecords(prevRecords =>
-                    prevRecords.map(r => {
-                      if (r.id === recordId) {
-                        return {
-                          ...r,
-                          master_url: updates.master_url ?? r.master_url,
-                          current_release_url: updates.current_release_url ?? r.current_release_url
-                        };
-                      }
-                      return r;
-                    })
-                  );
-                  setPreviewRecord(prev => {
-                    if (!prev) return null;
-                    return {
-                      ...prev,
-                      master_url: updates.master_url ?? prev.master_url,
-                      current_release_url: updates.current_release_url ?? prev.current_release_url
-                    };
-                  });
-                }}
-              />
-            </Box>
-
-            {/* Custom Columns - All Editable */}
-            {customColumns.length > 0 && (
-              <>
-                <Text size="sm" fw={600} mt="md" mb="xs">Custom Fields</Text>
-                {customColumns.map((column) => {
-                  const value = previewRecord.custom_values_cache?.[column.id];
-                  return (
-                    <Box key={column.id}>
-                      <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>{column.name}</Text>
-                      <EditableCustomCell
-                        recordId={previewRecord.id!}
-                        column={column}
-                        value={value}
-                        allRecords={userRecords}
-                        getAllRecords={() => userRecordsRef.current}
-                        onUpdate={(recordId, columnId, newValue) => {
-                          setUserRecords(prevRecords =>
-                            prevRecords.map(r => {
-                              if (r.id === recordId) {
-                                return {
-                                  ...r,
-                                  custom_values_cache: {
-                                    ...r.custom_values_cache,
-                                    [columnId]: newValue
-                                  }
-                                };
-                              }
-                              return r;
-                            })
-                          );
-                          setPreviewRecord(prev => {
-                            if (!prev) return null;
-                            return {
-                              ...prev,
-                              custom_values_cache: {
-                                ...prev.custom_values_cache,
-                                [columnId]: newValue
-                              }
-                            };
-                          });
-                        }}
-                      />
-                    </Box>
-                  );
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Genres</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'genres', 'Genres (comma-separated)', 'array', {
+                  displayValue: previewRecord.genres?.join(', ') || '-',
+                  noTruncate: true
                 })}
-              </>
-            )}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Styles</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'styles', 'Styles (comma-separated)', 'array', {
+                  displayValue: previewRecord.styles?.join(', ') || '-',
+                  noTruncate: true
+                })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Format</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'current_release_format', 'Format', 'textarea', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Master Format</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'master_format', 'Master Format', 'textarea', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Musicians</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'musicians', 'Musicians (comma-separated)', 'array', {
+                  displayValue: previewRecord.musicians?.join(', ') || '-',
+                  noTruncate: true
+                })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Source</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                {createEditableStandardCell(previewRecord, 'added_from', 'Source', 'text', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Added</Text>
+              <Box style={{ flex: 1, paddingTop: '8px', minWidth: 0 }}>
+                <Text size="sm" style={{ wordBreak: 'break-word' }}>{previewRecord.created_at ? new Date(previewRecord.created_at).toLocaleDateString() : '-'}</Text>
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Discogs Links</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                <EditableDiscogsLinks
+                  recordId={previewRecord.id!}
+                  masterUrl={previewRecord.master_url || ''}
+                  currentReleaseUrl={previewRecord.current_release_url || ''}
+                  onUpdate={(recordId, updates) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => {
+                        if (r.id === recordId) {
+                          return {
+                            ...r,
+                            master_url: updates.master_url ?? r.master_url,
+                            current_release_url: updates.current_release_url ?? r.current_release_url
+                          };
+                        }
+                        return r;
+                      })
+                    );
+                    setPreviewRecord(prev => {
+                      if (!prev) return null;
+                      return {
+                        ...prev,
+                        master_url: updates.master_url ?? prev.master_url,
+                        current_release_url: updates.current_release_url ?? prev.current_release_url
+                      };
+                    });
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Custom Columns */}
+            {customColumns.map((column) => {
+              const value = previewRecord.custom_values_cache?.[column.id];
+              return (
+                <Box key={column.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+                  <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>{column.name}</Text>
+                  <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
+                    <EditableCustomCell
+                      recordId={previewRecord.id!}
+                      column={column}
+                      value={value}
+                      allRecords={userRecords}
+                      getAllRecords={() => userRecordsRef.current}
+                      onUpdate={(recordId, columnId, newValue) => {
+                        setUserRecords(prevRecords =>
+                          prevRecords.map(r => {
+                            if (r.id === recordId) {
+                              return {
+                                ...r,
+                                custom_values_cache: {
+                                  ...r.custom_values_cache,
+                                  [columnId]: newValue
+                                }
+                              };
+                            }
+                            return r;
+                          })
+                        );
+                        setPreviewRecord(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            custom_values_cache: {
+                              ...prev.custom_values_cache,
+                              [columnId]: newValue
+                            }
+                          };
+                        });
+                      }}
+                    />
+                  </Box>
+                </Box>
+              );
+            })}
           </Stack>
         )}
       </Modal>
