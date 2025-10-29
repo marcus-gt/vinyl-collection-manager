@@ -2474,6 +2474,40 @@ function Collection() {
     });
   };
 
+  const handleCancelPreview = () => {
+    setPreviewRecord(null);
+  };
+
+  // Helper function to create editable cell for standard fields (shared by table and modal)
+  const createEditableStandardCell = (
+    record: VinylRecord,
+    fieldName: string,
+    fieldLabel: string,
+    inputType: 'text' | 'number' | 'textarea' | 'array',
+    options?: {
+      requirePencilClick?: boolean;
+      displayValue?: string;
+    }
+  ) => {
+    return (
+      <EditableStandardCell
+        value={(record as any)[fieldName] || (inputType === 'array' ? [] : '')}
+        displayValue={options?.displayValue}
+        fieldName={fieldName}
+        fieldLabel={fieldLabel}
+        recordId={record.id!}
+        inputType={inputType}
+        requirePencilClick={options?.requirePencilClick ?? true}
+        onUpdate={(recordId, fieldName, newValue) => {
+          setUserRecords(prevRecords =>
+            prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+          );
+          setPreviewRecord(prev => prev ? { ...prev, [fieldName]: newValue } : null);
+        }}
+      />
+    );
+  };
+
   const tableColumns = useMemo(() => {
     // Helper function to wrap a cell with the preview icon
     const wrapWithPreviewIcon = (originalCell: any, row: Row<VinylRecord>) => (
@@ -2485,10 +2519,10 @@ function Collection() {
           size="sm"
           variant="subtle"
           color="gray"
-          onClick={(e) => {
-            e.stopPropagation();
-            setPreviewRecord(row.original);
-          }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewRecord(row.original);
+                    }}
           style={{ flexShrink: 0 }}
         >
           <IconFileText size={16} />
@@ -2702,20 +2736,12 @@ function Collection() {
               minSize: 100,
               maxSize: 500,
               filterFn: 'textMultiTermContains' as any,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <EditableStandardCell
-                  value={row.original.genres || []}
-                  displayValue={row.original.genres?.join(', ') || '-'}
-                  fieldName="genres"
-                  fieldLabel="Genres (comma-separated)"
-                  recordId={row.original.id!}
-                  inputType="array"
-                  onUpdate={(recordId, fieldName, newValue) => {
-                    setUserRecords(prevRecords =>
-                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
-                    );
-                  }}
-                />
+              cell: ({ row }: { row: Row<VinylRecord> }) => createEditableStandardCell(
+                row.original,
+                'genres',
+                'Genres (comma-separated)',
+                'array',
+                { displayValue: row.original.genres?.join(', ') || '-' }
               )
             },
             { 
@@ -2728,20 +2754,12 @@ function Collection() {
               minSize: 100,
               maxSize: 500,
               filterFn: 'textMultiTermContains' as any,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <EditableStandardCell
-                  value={row.original.styles || []}
-                  displayValue={row.original.styles?.join(', ') || '-'}
-                  fieldName="styles"
-                  fieldLabel="Styles (comma-separated)"
-                  recordId={row.original.id!}
-                  inputType="array"
-                  onUpdate={(recordId, fieldName, newValue) => {
-                    setUserRecords(prevRecords =>
-                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
-                    );
-                  }}
-                />
+              cell: ({ row }: { row: Row<VinylRecord> }) => createEditableStandardCell(
+                row.original,
+                'styles',
+                'Styles (comma-separated)',
+                'array',
+                { displayValue: row.original.styles?.join(', ') || '-' }
               )
             },
             { 
@@ -2754,20 +2772,12 @@ function Collection() {
               minSize: 100,
               maxSize: 500,
               filterFn: 'textMultiTermContains' as any,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <EditableStandardCell
-                  value={row.original.musicians || []}
-                  displayValue={row.original.musicians?.join(', ') || '-'}
-                  fieldName="musicians"
-                  fieldLabel="Musicians (comma-separated)"
-                  recordId={row.original.id!}
-                  inputType="array"
-                  onUpdate={(recordId, fieldName, newValue) => {
-                    setUserRecords(prevRecords =>
-                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
-                    );
-                  }}
-                />
+              cell: ({ row }: { row: Row<VinylRecord> }) => createEditableStandardCell(
+                row.original,
+                'musicians',
+                'Musicians (comma-separated)',
+                'array',
+                { displayValue: row.original.musicians?.join(', ') || '-' }
               )
             },
             { 
@@ -2850,55 +2860,12 @@ function Collection() {
                 return cellValue === internalValue;
               },
               enableColumnFilter: true,
-              cell: ({ row }: { row: Row<VinylRecord> }) => {
-                const source = row.original.added_from;
-                const displayMap: Record<string, string> = {
-                  'manual': 'Manual',
-                  'spotify': 'Spotify URL',
-                  'spotify_list': 'Spotify List Manual',
-                  'spotify_list_sub': 'Spotify List Auto',
-                  'barcode': 'Barcode',
-                  'discogs_url': 'Discogs',
-                  'csv_import': 'CSV Import'
-                };
-                const colorMap: Record<string, string> = {
-                  'manual': 'gray',
-                  'spotify': 'green',
-                  'spotify_list': 'green',
-                  'spotify_list_sub': 'green',
-                  'barcode': 'blue',
-                  'discogs_url': 'orange',
-                  'csv_import': 'purple'
-                };
-                
-                const displayText = source ? displayMap[source] || source : '-';
-                const color = source ? colorMap[source] : 'gray';
-                
-                return (
-                  <Box style={{ position: 'relative' }}>
-                    <Text size="sm" lineClamp={1} style={{ cursor: 'default', maxWidth: '90vw' }}>
-                      {source ? (
-                        <Badge
-                          size="sm"
-                          radius="md"
-                          style={getColorStyles(color)}
-                          styles={{
-                            root: {
-                              textTransform: 'none',
-                              cursor: 'default',
-                              padding: '3px 8px'
-                            }
-                          }}
-                        >
-                          {displayText}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">-</Text>
-                      )}
-                    </Text>
-                  </Box>
-                );
-              }
+              cell: ({ row }: { row: Row<VinylRecord> }) => createEditableStandardCell(
+                row.original,
+                'added_from',
+                'Source',
+                'text'
+              )
             },
             {
               id: 'links',
@@ -3320,78 +3287,84 @@ function Collection() {
         </Stack>
       </Modal>
 
-      {/* Record Preview Modal */}
+      {/* Record Preview/Edit Modal */}
       <Modal
         opened={!!previewRecord}
-        onClose={() => setPreviewRecord(null)}
+        onClose={handleCancelPreview}
         title={previewRecord ? `${previewRecord.artist} - ${previewRecord.album}` : 'Record Details'}
         size="lg"
         fullScreen={window.innerWidth < 768}
       >
         {previewRecord && (
           <Stack gap="md">
-            {/* Standard Fields */}
+            {/* Standard Fields - All Editable */}
             <Box>
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Artist</Text>
-              <Text size="sm">{previewRecord.artist || '-'}</Text>
+              {createEditableStandardCell(previewRecord, 'artist', 'Artist', 'textarea')}
             </Box>
 
             <Box>
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Album</Text>
-              <Text size="sm">{previewRecord.album || '-'}</Text>
+              {createEditableStandardCell(previewRecord, 'album', 'Album', 'textarea')}
             </Box>
 
             <Group grow>
               <Box>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Original Year</Text>
-                <Text size="sm">{previewRecord.year || '-'}</Text>
+                {createEditableStandardCell(previewRecord, 'year', 'Original Year', 'number')}
               </Box>
               <Box>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Release Year</Text>
-                <Text size="sm">{previewRecord.current_release_year || '-'}</Text>
+                {createEditableStandardCell(previewRecord, 'current_release_year', 'Release Year', 'number')}
               </Box>
             </Group>
 
             <Group grow>
               <Box>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Label</Text>
-                <Text size="sm">{previewRecord.label || '-'}</Text>
+                {createEditableStandardCell(previewRecord, 'label', 'Label', 'textarea')}
               </Box>
               <Box>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Country</Text>
-                <Text size="sm">{previewRecord.country || '-'}</Text>
+                {createEditableStandardCell(previewRecord, 'country', 'Country', 'textarea')}
               </Box>
             </Group>
 
             <Box>
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Genres</Text>
-              <Text size="sm">{previewRecord.genres || '-'}</Text>
+              {createEditableStandardCell(previewRecord, 'genres', 'Genres (comma-separated)', 'array', {
+                displayValue: previewRecord.genres?.join(', ') || '-'
+              })}
             </Box>
 
             <Box>
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Styles</Text>
-              <Text size="sm">{previewRecord.styles || '-'}</Text>
+              {createEditableStandardCell(previewRecord, 'styles', 'Styles (comma-separated)', 'array', {
+                displayValue: previewRecord.styles?.join(', ') || '-'
+              })}
             </Box>
 
             <Group grow>
               <Box>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Format</Text>
-                <Text size="sm">{previewRecord.current_release_format || '-'}</Text>
+                {createEditableStandardCell(previewRecord, 'current_release_format', 'Format', 'textarea')}
               </Box>
               <Box>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Master Format</Text>
-                <Text size="sm">{previewRecord.master_format || '-'}</Text>
+                {createEditableStandardCell(previewRecord, 'master_format', 'Master Format', 'textarea')}
               </Box>
             </Group>
 
             <Box>
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Musicians</Text>
-              <Text size="sm">{previewRecord.musicians || '-'}</Text>
+              {createEditableStandardCell(previewRecord, 'musicians', 'Musicians (comma-separated)', 'array', {
+                displayValue: previewRecord.musicians?.join(', ') || '-'
+              })}
             </Box>
 
             <Box>
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Source</Text>
-              <Text size="sm">{previewRecord.added_from || '-'}</Text>
+              {createEditableStandardCell(previewRecord, 'added_from', 'Source', 'text')}
             </Box>
 
             <Box>
@@ -3399,38 +3372,38 @@ function Collection() {
               <Text size="sm">{previewRecord.created_at ? new Date(previewRecord.created_at).toLocaleDateString() : '-'}</Text>
             </Box>
 
-            {previewRecord.master_url || previewRecord.current_release_url ? (
-              <Box>
-                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Discogs Links</Text>
-                <Group gap="xs">
-                  {previewRecord.master_url && (
-                    <Button
-                      component="a"
-                      href={previewRecord.master_url}
-                      target="_blank"
-                      variant="light"
-                      size="xs"
-                    >
-                      Original
-                    </Button>
-                  )}
-                  {previewRecord.current_release_url && (
-                    <Button
-                      component="a"
-                      href={previewRecord.current_release_url}
-                      target="_blank"
-                      variant="light"
-                      color="blue"
-                      size="xs"
-                    >
-                      Current
-                    </Button>
-                  )}
-                </Group>
-              </Box>
-            ) : null}
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Discogs Links</Text>
+              <EditableDiscogsLinks
+                recordId={previewRecord.id!}
+                masterUrl={previewRecord.master_url || ''}
+                currentReleaseUrl={previewRecord.current_release_url || ''}
+                onUpdate={(recordId, updates) => {
+                  setUserRecords(prevRecords =>
+                    prevRecords.map(r => {
+                      if (r.id === recordId) {
+                        return {
+                          ...r,
+                          master_url: updates.master_url ?? r.master_url,
+                          current_release_url: updates.current_release_url ?? r.current_release_url
+                        };
+                      }
+                      return r;
+                    })
+                  );
+                  setPreviewRecord(prev => {
+                    if (!prev) return null;
+                    return {
+                      ...prev,
+                      master_url: updates.master_url ?? prev.master_url,
+                      current_release_url: updates.current_release_url ?? prev.current_release_url
+                    };
+                  });
+                }}
+              />
+            </Box>
 
-            {/* Custom Columns */}
+            {/* Custom Columns - All Editable */}
             {customColumns.length > 0 && (
               <>
                 <Text size="sm" fw={600} mt="md" mb="xs">Custom Fields</Text>
@@ -3439,44 +3412,39 @@ function Collection() {
                   return (
                     <Box key={column.id}>
                       <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>{column.name}</Text>
-                      {column.type === 'multi-select' && value ? (
-                        <Group gap="xs">
-                          {value.split(',').map((opt, idx) => (
-                            <Badge
-                              key={idx}
-                              size="sm"
-                              style={{
-                                backgroundColor: column.option_colors?.[opt] ? 
-                                  PILL_COLORS.options.find(c => c.value === column.option_colors![opt])?.background : 
-                                  'var(--mantine-color-gray-7)',
-                                color: column.option_colors?.[opt] ? 
-                                  PILL_COLORS.options.find(c => c.value === column.option_colors![opt])?.color : 
-                                  'var(--mantine-color-gray-0)',
-                              }}
-                            >
-                              {opt}
-                            </Badge>
-                          ))}
-                        </Group>
-                      ) : column.type === 'single-select' && value ? (
-                        <Badge
-                          size="sm"
-                          style={{
-                            backgroundColor: column.option_colors?.[value] ? 
-                              PILL_COLORS.options.find(c => c.value === column.option_colors![value])?.background : 
-                              'var(--mantine-color-gray-7)',
-                            color: column.option_colors?.[value] ? 
-                              PILL_COLORS.options.find(c => c.value === column.option_colors![value])?.color : 
-                              'var(--mantine-color-gray-0)',
-                          }}
-                        >
-                          {value}
-                        </Badge>
-                      ) : column.type === 'boolean' ? (
-                        <Checkbox checked={value === 'true'} readOnly />
-                      ) : (
-                        <Text size="sm">{value || '-'}</Text>
-                      )}
+                      <EditableCustomCell
+                        recordId={previewRecord.id!}
+                        column={column}
+                        value={value}
+                        allRecords={userRecords}
+                        getAllRecords={() => userRecordsRef.current}
+                        onUpdate={(recordId, columnId, newValue) => {
+                          setUserRecords(prevRecords =>
+                            prevRecords.map(r => {
+                              if (r.id === recordId) {
+                                return {
+                                  ...r,
+                                  custom_values_cache: {
+                                    ...r.custom_values_cache,
+                                    [columnId]: newValue
+                                  }
+                                };
+                              }
+                              return r;
+                            })
+                          );
+                          setPreviewRecord(prev => {
+                            if (!prev) return null;
+                            return {
+                              ...prev,
+                              custom_values_cache: {
+                                ...prev.custom_values_cache,
+                                [columnId]: newValue
+                              }
+                            };
+                          });
+                        }}
+                      />
                     </Box>
                   );
                 })}
