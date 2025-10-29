@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, memo, useRef } from 'react';
 import { TextInput, Textarea, Button, Group, Stack, Text, ActionIcon, Modal, Tooltip, Popover, Box, Badge, Checkbox, Menu } from '@mantine/core';
-import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck, IconSettings } from '@tabler/icons-react';
+import { IconTrash, IconX, IconSearch, IconPlus, IconColumns, IconPencil, IconCheck, IconSettings, IconFileText } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { modals } from '@mantine/modals';
 import { records, customColumns as customColumnsApi } from '../services/api';
@@ -2074,6 +2074,7 @@ function Collection() {
   const [returnToSettings, setReturnToSettings] = useState(false);
   const [columnOrder, setColumnOrder] = useBackendSettings<string[]>('table-column-order', []);
   const [columnVisibility, setColumnVisibility] = useBackendSettings<Record<string, boolean>>('table-column-visibility', {});
+  const [previewRecord, setPreviewRecord] = useState<VinylRecord | null>(null);
   
   // Keep ref in sync with state
   useEffect(() => {
@@ -2474,6 +2475,27 @@ function Collection() {
   };
 
   const tableColumns = useMemo(() => {
+    // Helper function to wrap a cell with the preview icon
+    const wrapWithPreviewIcon = (originalCell: any, row: Row<VinylRecord>) => (
+      <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          {originalCell}
+        </Box>
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="gray"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewRecord(row.original);
+          }}
+          style={{ flexShrink: 0 }}
+        >
+          <IconFileText size={16} />
+        </ActionIcon>
+      </Box>
+    );
+
     const standardColumns: ColumnDef<VinylRecord>[] = [
             { 
               id: 'artist',
@@ -3042,8 +3064,48 @@ function Collection() {
       ),
     };
 
-    return [...standardColumns, actionsColumn];
-  }, [customColumns]);
+    // Combine all columns
+    const allColumns = [...standardColumns, actionsColumn];
+    
+    // Find the first visible column based on columnOrder
+    // If columnOrder is empty, default to first column
+    let firstVisibleColumnId: string | null = null;
+    
+    if (columnOrder.length > 0) {
+      // Find first column in columnOrder that exists in allColumns and is visible
+      for (const colId of columnOrder) {
+        if (columnVisibility[colId] !== false && allColumns.some(col => col.id === colId)) {
+          firstVisibleColumnId = colId;
+          break;
+        }
+      }
+    } else {
+      // If no columnOrder, use first column
+      firstVisibleColumnId = allColumns[0]?.id || null;
+    }
+    
+    // Wrap the first visible column's cell with the preview icon
+    if (firstVisibleColumnId) {
+      const columnIndex = allColumns.findIndex(col => col.id === firstVisibleColumnId);
+      if (columnIndex !== -1) {
+        const originalColumn = allColumns[columnIndex];
+        const originalCellFn = originalColumn.cell;
+        
+        // Create new column with wrapped cell
+        allColumns[columnIndex] = {
+          ...originalColumn,
+          cell: (props: any) => {
+            const originalCell = typeof originalCellFn === 'function' 
+              ? originalCellFn(props) 
+              : originalCellFn;
+            return wrapWithPreviewIcon(originalCell, props.row);
+          }
+        };
+      }
+    }
+
+    return allColumns;
+  }, [customColumns, columnOrder, columnVisibility]);
 
   return (
     <Box
@@ -3256,6 +3318,172 @@ function Collection() {
             </Button>
           </Group>
         </Stack>
+      </Modal>
+
+      {/* Record Preview Modal */}
+      <Modal
+        opened={!!previewRecord}
+        onClose={() => setPreviewRecord(null)}
+        title={previewRecord ? `${previewRecord.artist} - ${previewRecord.album}` : 'Record Details'}
+        size="lg"
+        fullScreen={window.innerWidth < 768}
+      >
+        {previewRecord && (
+          <Stack gap="md">
+            {/* Standard Fields */}
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Artist</Text>
+              <Text size="sm">{previewRecord.artist || '-'}</Text>
+            </Box>
+
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Album</Text>
+              <Text size="sm">{previewRecord.album || '-'}</Text>
+            </Box>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Original Year</Text>
+                <Text size="sm">{previewRecord.year || '-'}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Release Year</Text>
+                <Text size="sm">{previewRecord.current_release_year || '-'}</Text>
+              </Box>
+            </Group>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Label</Text>
+                <Text size="sm">{previewRecord.label || '-'}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Country</Text>
+                <Text size="sm">{previewRecord.country || '-'}</Text>
+              </Box>
+            </Group>
+
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Genres</Text>
+              <Text size="sm">{previewRecord.genres || '-'}</Text>
+            </Box>
+
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Styles</Text>
+              <Text size="sm">{previewRecord.styles || '-'}</Text>
+            </Box>
+
+            <Group grow>
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Format</Text>
+                <Text size="sm">{previewRecord.current_release_format || '-'}</Text>
+              </Box>
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Master Format</Text>
+                <Text size="sm">{previewRecord.master_format || '-'}</Text>
+              </Box>
+            </Group>
+
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Musicians</Text>
+              <Text size="sm">{previewRecord.musicians || '-'}</Text>
+            </Box>
+
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Source</Text>
+              <Text size="sm">{previewRecord.added_from || '-'}</Text>
+            </Box>
+
+            <Box>
+              <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Added</Text>
+              <Text size="sm">{previewRecord.created_at ? new Date(previewRecord.created_at).toLocaleDateString() : '-'}</Text>
+            </Box>
+
+            {previewRecord.master_url || previewRecord.current_release_url ? (
+              <Box>
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>Discogs Links</Text>
+                <Group gap="xs">
+                  {previewRecord.master_url && (
+                    <Button
+                      component="a"
+                      href={previewRecord.master_url}
+                      target="_blank"
+                      variant="light"
+                      size="xs"
+                    >
+                      Original
+                    </Button>
+                  )}
+                  {previewRecord.current_release_url && (
+                    <Button
+                      component="a"
+                      href={previewRecord.current_release_url}
+                      target="_blank"
+                      variant="light"
+                      color="blue"
+                      size="xs"
+                    >
+                      Current
+                    </Button>
+                  )}
+                </Group>
+              </Box>
+            ) : null}
+
+            {/* Custom Columns */}
+            {customColumns.length > 0 && (
+              <>
+                <Text size="sm" fw={600} mt="md" mb="xs">Custom Fields</Text>
+                {customColumns.map((column) => {
+                  const value = previewRecord.custom_values_cache?.[column.id];
+                  return (
+                    <Box key={column.id}>
+                      <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb={4}>{column.name}</Text>
+                      {column.type === 'multi-select' && value ? (
+                        <Group gap="xs">
+                          {value.split(',').map((opt, idx) => (
+                            <Badge
+                              key={idx}
+                              size="sm"
+                              style={{
+                                backgroundColor: column.option_colors?.[opt] ? 
+                                  PILL_COLORS.options.find(c => c.value === column.option_colors![opt])?.background : 
+                                  'var(--mantine-color-gray-7)',
+                                color: column.option_colors?.[opt] ? 
+                                  PILL_COLORS.options.find(c => c.value === column.option_colors![opt])?.color : 
+                                  'var(--mantine-color-gray-0)',
+                              }}
+                            >
+                              {opt}
+                            </Badge>
+                          ))}
+                        </Group>
+                      ) : column.type === 'single-select' && value ? (
+                        <Badge
+                          size="sm"
+                          style={{
+                            backgroundColor: column.option_colors?.[value] ? 
+                              PILL_COLORS.options.find(c => c.value === column.option_colors![value])?.background : 
+                              'var(--mantine-color-gray-7)',
+                            color: column.option_colors?.[value] ? 
+                              PILL_COLORS.options.find(c => c.value === column.option_colors![value])?.color : 
+                              'var(--mantine-color-gray-0)',
+                          }}
+                        >
+                          {value}
+                        </Badge>
+                      ) : column.type === 'boolean' ? (
+                        <Checkbox checked={value === 'true'} readOnly />
+                      ) : (
+                        <Text size="sm">{value || '-'}</Text>
+                      )}
+                    </Box>
+                  );
+                })}
+              </>
+            )}
+          </Stack>
+        )}
       </Modal>
     </Box>
   );
