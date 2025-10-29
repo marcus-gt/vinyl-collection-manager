@@ -42,7 +42,7 @@ export function Settings({
   const standardColumns = [
     { id: 'artist', name: 'Artist' },
     { id: 'album', name: 'Album' },
-    { id: 'year', name: 'Year' },
+    { id: 'year', name: 'Original Year' },
     { id: 'label', name: 'Label' },
     { id: 'country', name: 'Country' },
     { id: 'genres', name: 'Genres' },
@@ -170,7 +170,11 @@ export function Settings({
                 No custom columns yet
               </Text>
             ) : (
-              <Table>
+              <>
+                <Text size="sm" c="dimmed" mb="md">
+                  Edit or delete your custom columns
+                </Text>
+                <Table>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Name</Table.Th>
@@ -206,6 +210,7 @@ export function Settings({
                   ))}
                 </Table.Tbody>
               </Table>
+              </>
             )}
           </Accordion.Panel>
         </Accordion.Item>
@@ -218,7 +223,11 @@ export function Settings({
                 No columns to display
               </Text>
             ) : (
-              <Table layout="fixed" style={{ tableLayout: 'fixed', width: '100%' }}>
+              <>
+                <Text size="sm" c="dimmed" mb="md">
+                  Drag to rearrange columns and toggle visibility
+                </Text>
+                <Table layout="fixed" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th style={{ width: 40 }}></Table.Th>
@@ -284,6 +293,7 @@ export function Settings({
                   ))}
                 </Table.Tbody>
               </Table>
+              </>
             )}
           </Accordion.Panel>
         </Accordion.Item>
