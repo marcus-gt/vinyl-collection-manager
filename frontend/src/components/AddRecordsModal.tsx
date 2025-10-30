@@ -201,81 +201,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handleManualLookup = async () => {
-    if (!barcode.trim()) {
-      setError('Please enter a barcode');
-      return;
-    }
-    
-    setLoading(true);
-    setError(undefined);
-    setSuccess(undefined);
-    
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      const response = await lookup.byBarcode(barcode, abortControllerRef.current.signal);
-      if (response.success && response.data) {
-        setRecord(getRecordWithDefaults(response.data));
-        setError(undefined);
-      } else {
-        setError(response.error || 'Failed to find record');
-        setRecord(undefined);
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return;
-      }
-      setError('Failed to lookup barcode');
-      setRecord(undefined);
-    } finally {
-      if (abortControllerRef.current) {
-        abortControllerRef.current = undefined;
-      }
-      setLoading(false);
-    }
-  };
-
-  const handleDiscogsLookup = async () => {
-    if (!discogsUrl.trim()) {
-      setError('Please enter a Discogs URL');
-      return;
-    }
-
-    if (!discogsUrl.includes('discogs.com/release/') && !discogsUrl.includes('discogs.com/master/')) {
-      setError('Invalid Discogs URL. Please use a release or master URL');
-      return;
-    }
-    
-    setLoading(true);
-    setError(undefined);
-    setSuccess(undefined);
-    
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      const response = await lookup.byDiscogsUrl(discogsUrl, abortControllerRef.current.signal);
-      if (response.success && response.data) {
-        setRecord(getRecordWithDefaults(response.data));
-        setError(undefined);
-      } else {
-        setError(response.error || 'Failed to find record');
-        setRecord(undefined);
-      }
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        return;
-      }
-      setError('Failed to lookup Discogs release');
-      setRecord(undefined);
-    } finally {
-      if (abortControllerRef.current) {
-        abortControllerRef.current = undefined;
-      }
-      setLoading(false);
-    }
-  };
-
   const handleArtistAlbumLookup = async () => {
     if (!artist.trim() || !album.trim()) {
       setError('Please enter both artist and album name');
@@ -464,28 +389,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     }
   };
 
-  const handleAddBasicInfo = () => {
-    if (!artist.trim() || !album.trim()) {
-      setError('Please enter both artist and album name');
-      return;
-    }
-    
-    setManualRecord({
-      artist: artist.trim(),
-      album: album.trim(),
-      year: undefined,
-      label: '',
-      genres: [],
-      styles: [],
-      musicians: [],
-      genresText: '',
-      stylesText: '',
-      musiciansText: ''
-    });
-    
-    setShowManualForm(true);
-  };
-
   const handleModalClose = () => {
     console.log('Modal closing, recordsChanged:', recordsChanged);
     if (recordsChanged) {
@@ -497,75 +400,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       console.log('No changes detected, skipping table refresh');
     }
     onClose();
-  };
-
-  const handleManualSubmit = async () => {
-    setLoading(true);
-    setError(undefined);
-    setSuccess(undefined);
-    
-    try {
-      const recordToSubmit: VinylRecord = {
-        artist: manualRecord.artist,
-        album: manualRecord.album,
-        genres: [],           // Required but can be empty
-        styles: [],           // Required but can be empty
-        musicians: [],        // Required but can be empty
-        added_from: 'manual', // Required
-        custom_values_cache: {}, // Required but can be empty
-        // Optional fields
-        year: manualRecord.year,
-        label: manualRecord.label,
-        master_url: undefined,
-        current_release_url: undefined
-      };
-
-      if (!recordToSubmit.artist || !recordToSubmit.album) {
-        setError('Artist and album are required');
-        return;
-      }
-
-      console.log('Submitting record:', recordToSubmit);
-      const response = await records.add(recordToSubmit);
-      console.log('Submit response:', response);
-
-      if (response.success) {
-        console.log('Record added successfully, setting recordsChanged to true');
-        setSuccess('Added to collection!');
-        setRecordsChanged(true);  // Record was successfully added
-        // Reset form
-        setArtist('');
-        setAlbum('');
-        setRecord(undefined);
-        if (showManualForm) {
-          setShowManualForm(false);
-          setManualRecord({
-            artist: '',
-            album: '',
-            year: undefined,
-            label: '',
-            genres: [],
-            styles: [],
-            musicians: [],
-            genresText: '',
-            stylesText: '',
-            musiciansText: ''
-          });
-        }
-        // Clear success message after delay
-        setTimeout(() => {
-          setSuccess(undefined);
-        }, 3000);
-      } else {
-        console.log('Failed to add record:', response.error);
-        setError(response.error || 'Failed to add to collection');
-      }
-    } catch (err) {
-      console.error('Error adding record:', err);
-      setError('Failed to add to collection');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleAddToCollection = async () => {
