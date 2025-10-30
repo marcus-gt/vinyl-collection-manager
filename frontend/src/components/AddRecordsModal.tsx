@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon } from '@mantine/core';
-import { IconX, IconBrandSpotify } from '@tabler/icons-react';
+import { IconX, IconBrandSpotify, IconBarcode } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -1021,7 +1021,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         title={
           <Group justify="space-between" align="center">
             <Text>Add Records</Text>
-            {loading && <Loader size="sm" />}
+            {loading && <Loader size="sm" color="blue" />}
           </Group>
         }
         size="lg"
@@ -1091,7 +1091,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                           </Text>
                           {loading && (
                             <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                              <Loader size="sm" />
+                              <Loader size="sm" color="blue" />
                               <Text size="sm" c="dimmed">
                                 Looking up record in Discogs...
                               </Text>
@@ -1113,28 +1113,50 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                     </>
                   ) : (
                     <Stack>
-                      <TextInput
-                        label="URL or Barcode"
-                        placeholder="Discogs URL, Spotify URL, or numeric barcode"
-                        description={urlOrBarcode.trim() && artist.trim() && album.trim() ? "⚠️ URL/Barcode will be used (has priority over artist/album)" : undefined}
-                        value={urlOrBarcode}
-                        onChange={(e) => setUrlOrBarcode(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
-                        disabled={loading}
-                        rightSection={
-                          urlOrBarcode ? (
-                            <ActionIcon
-                              onClick={() => setUrlOrBarcode('')}
-                              variant="subtle"
-                              color="gray"
-                              size="sm"
+                      <Box>
+                        <Text size="sm" fw={500} mb={4}>URL or Barcode</Text>
+                        <Group gap="xs" align="flex-end" wrap="nowrap">
+                          <Box style={{ flex: '0 0 80%' }}>
+                            <TextInput
+                              placeholder="Discogs URL, Spotify URL, or numeric barcode"
+                              value={urlOrBarcode}
+                              onChange={(e) => setUrlOrBarcode(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
                               disabled={loading}
-                            >
-                              <IconX size={16} />
-                            </ActionIcon>
-                          ) : null
-                        }
-                      />
+                              rightSection={
+                                urlOrBarcode ? (
+                                  <ActionIcon
+                                    onClick={() => setUrlOrBarcode('')}
+                                    variant="subtle"
+                                    color="gray"
+                                    size="sm"
+                                    disabled={loading}
+                                  >
+                                    <IconX size={16} />
+                                  </ActionIcon>
+                                ) : null
+                              }
+                            />
+                          </Box>
+                          <Button 
+                            onClick={() => {
+                              setIsScanning(true);
+                              setError(undefined);
+                              setSuccess(undefined);
+                            }} 
+                            variant="light"
+                            disabled={loading}
+                            style={{ flex: '0 0 20%' }}
+                          >
+                            <IconBarcode size={20} />
+                          </Button>
+                        </Group>
+                        {urlOrBarcode.trim() && artist.trim() && album.trim() && (
+                          <Text size="xs" c="dimmed" mt={4}>
+                            ⚠️ URL/Barcode will be used (has priority over artist/album)
+                          </Text>
+                        )}
+                      </Box>
                       
                       <Divider label="OR" labelPosition="center" />
                       
@@ -1154,26 +1176,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         disabled={loading}
                       />
                       
-                      <Group grow>
-                        <Button 
-                          onClick={() => {
-                            setIsScanning(true);
-                            setError(undefined);
-                            setSuccess(undefined);
-                          }} 
-                          variant="light"
-                          disabled={loading}
-                        >
-                          Start Camera
-                        </Button>
-                        <Button 
-                          onClick={handleUnifiedSearch} 
-                          loading={loading}
-                          disabled={!urlOrBarcode.trim() && (!artist.trim() || !album.trim())}
-                        >
-                          Search
-                        </Button>
-                      </Group>
+                      <Button 
+                        onClick={handleUnifiedSearch} 
+                        loading={loading}
+                        disabled={!urlOrBarcode.trim() && (!artist.trim() || !album.trim())}
+                        fullWidth
+                        variant="light"
+                      >
+                        Search
+                      </Button>
                     </Stack>
                   )}
                 </Tabs.Panel>
@@ -1182,7 +1193,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                   <Stack>
                     {loadingSpotify ? (
                       <Stack align="center" gap="md">
-                        <Loader size="sm" />
+                        <Loader size="sm" color="blue" />
                         <Text c="dimmed" size="sm">Checking Spotify connection...</Text>
                       </Stack>
                     ) : !isSpotifyAuthenticated ? (
@@ -1284,7 +1295,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
                         {loadingSpotify ? (
                           <Stack align="center" gap="md">
-                            <Loader size="sm" />
+                            <Loader size="sm" color="blue" />
                             <Text c="dimmed" size="sm">Loading playlists...</Text>
                           </Stack>
                         ) : (
@@ -1364,16 +1375,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
               </Tabs>
 
               {loading && (
-                <Group justify="center">
-                  <Button 
-                    variant="light" 
-                    color="red" 
-                    onClick={handleCancel}
-                    leftSection={<IconX size={16} />}
-                  >
-                    Cancel Search
-                  </Button>
-                </Group>
+                <Button 
+                  variant="light" 
+                  color="red" 
+                  onClick={handleCancel}
+                  leftSection={<IconX size={16} />}
+                  fullWidth
+                >
+                  Cancel Search
+                </Button>
               )}
 
               {error && (
@@ -1608,19 +1618,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         </>
                       )}
 
-                      <Group gap="xs" mt="xs">
-                        {record.master_url && (
-                          <Button 
-                            component="a" 
-                            href={record.master_url} 
-                            target="_blank" 
-                            variant="light" 
-                            size="xs"
-                          >
-                            View Master
-                          </Button>
-                        )}
-                        {record.current_release_url && (
+                      {record.current_release_url && (
+                        <Group gap="xs" mt="xs">
                           <Button 
                             component="a" 
                             href={record.current_release_url} 
@@ -1630,18 +1629,33 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                           >
                             View Release
                           </Button>
-                        )}
-                      </Group>
+                        </Group>
+                      )}
                     </div>
 
-                    <Group>
+                    {record.master_url && (
+                      <Button 
+                        component="a" 
+                        href={record.master_url} 
+                        target="_blank" 
+                        variant="light"
+                        fullWidth
+                      >
+                        View on Discogs
+                      </Button>
+                    )}
+
+                    <Group grow>
                       <Button 
                         onClick={handleAddToCollection} 
                         loading={loading}
+                        color="green"
+                        variant="light"
                       >
-                        Add to Collection
+                        Add
                       </Button>
                       <Button 
+                        color="red"
                         variant="light" 
                         onClick={handleClear}
                         disabled={loading}

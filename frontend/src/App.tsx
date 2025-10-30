@@ -90,22 +90,22 @@ function App() {
   return (
     <MantineProvider defaultColorScheme="dark" theme={theme}>
       <ModalsProvider>
-        <Notifications />
-        <AuthProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Navigate to="/collection" replace />} />
-                <Route
-                  path="collection"
-                  element={
-                    <PrivateRoute>
-                      <Collection />
-                    </PrivateRoute>
-                  }
-                />
+      <Notifications />
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Navigate to="/collection" replace />} />
+              <Route
+                path="collection"
+                element={
+                  <PrivateRoute>
+                    <Collection />
+                  </PrivateRoute>
+                }
+              />
                 <Route
                   path="musician-network"
                   element={
@@ -114,10 +114,10 @@ function App() {
                     </PrivateRoute>
                   }
                 />
-              </Route>
-            </Routes>
-          </Router>
-        </AuthProvider>
+            </Route>
+          </Routes>
+        </Router>
+      </AuthProvider>
       </ModalsProvider>
     </MantineProvider>
   );

@@ -59,17 +59,17 @@ export function Settings({
   // Build ordered column list
   const allColumns: ColumnOrderItem[] = columnOrder.length > 0
     ? columnOrder
-        .map(id => {
-          const standardCol = standardColumns.find(c => c.id === id);
-          if (standardCol) {
-            return { id: standardCol.id, name: standardCol.name, type: 'standard' as const } as ColumnOrderItem;
-          }
-          const customCol = customColumns.find(c => c.id === id);
-          if (customCol) {
-            return { id: customCol.id, name: customCol.name, type: 'custom' as const, customColumn: customCol } as ColumnOrderItem;
-          }
-          return null;
-        })
+    .map(id => {
+      const standardCol = standardColumns.find(c => c.id === id);
+      if (standardCol) {
+        return { id: standardCol.id, name: standardCol.name, type: 'standard' as const } as ColumnOrderItem;
+      }
+      const customCol = customColumns.find(c => c.id === id);
+      if (customCol) {
+        return { id: customCol.id, name: customCol.name, type: 'custom' as const, customColumn: customCol } as ColumnOrderItem;
+      }
+      return null;
+    })
         .filter((col): col is ColumnOrderItem => col !== null)
     : [
         // Fallback: show all standard columns + custom columns if columnOrder is empty
@@ -228,16 +228,16 @@ export function Settings({
                   Drag to rearrange columns and toggle visibility
                 </Text>
                 <Table layout="fixed" style={{ tableLayout: 'fixed', width: '100%' }}>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th style={{ width: 40 }}></Table.Th>
-                    <Table.Th>Column Name</Table.Th>
-                    <Table.Th>Type</Table.Th>
-                    <Table.Th style={{ width: 80 }}>Visible</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: 40 }}></Table.Th>
+                  <Table.Th>Column Name</Table.Th>
+                  <Table.Th>Type</Table.Th>
+                  <Table.Th style={{ width: 80 }}>Visible</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
                 <Table.Tbody style={{ display: 'table-row-group' }}>
-                  {allColumns.map((column, index) => (
+                {allColumns.map((column, index) => (
                   <Table.Tr
                     key={column.id}
                     draggable
@@ -290,9 +290,9 @@ export function Settings({
                       </ActionIcon>
                     </Table.Td>
                   </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                ))}
+              </Table.Tbody>
+            </Table>
               </>
             )}
           </Accordion.Panel>
