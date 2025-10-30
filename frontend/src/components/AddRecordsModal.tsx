@@ -425,19 +425,36 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     abortControllerRef.current = new AbortController();
     
     try {
-      const response = await spotify.getAlbumFromUrlPublic(url, abortControllerRef.current.signal);
-      if (response.success && response.data) {
-        setRecord(getRecordWithDefaults(response.data));
+      // First, get album info from Spotify
+      const spotifyResponse = await spotify.getAlbumFromUrlPublic(url, abortControllerRef.current.signal);
+      if (!spotifyResponse.success || !spotifyResponse.data) {
+        setError(spotifyResponse.error || 'Failed to find album on Spotify');
+        setRecord(undefined);
+        return;
+      }
+      
+      // Extract artist and album from Spotify data
+      const { artist: spotifyArtist, album: spotifyAlbum } = spotifyResponse.data;
+      
+      // Then use that info to search Discogs
+      const discogsResponse = await lookup.byArtistAlbum(
+        spotifyArtist, 
+        spotifyAlbum, 
+        abortControllerRef.current.signal
+      );
+      
+      if (discogsResponse.success && discogsResponse.data) {
+        setRecord(getRecordWithDefaults(discogsResponse.data));
         setError(undefined);
       } else {
-        setError(response.error || 'Failed to find album');
+        setError(`Found on Spotify: ${spotifyArtist} - ${spotifyAlbum}, but couldn't find on Discogs`);
         setRecord(undefined);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         return;
       }
-      setError('Failed to lookup Spotify album');
+      setError('Failed to lookup album');
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
