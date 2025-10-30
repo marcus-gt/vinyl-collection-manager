@@ -12,7 +12,6 @@ interface BarcodeScannerProps {
 export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-  const videoRef = useState<HTMLVideoElement | null>(null)[0];
 
   const handleScan = (detectedCodes: IDetectedBarcode[]) => {
     if (detectedCodes && detectedCodes.length > 0 && !isPaused && !isLoading) {
@@ -45,7 +44,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
     setError(null);
   };
 
-  const handleTapToFocus = async (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+  const handleTapToFocus = async () => {
     // Find the video element
     const videoElement = document.querySelector('video');
     if (!videoElement) return;
