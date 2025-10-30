@@ -561,6 +561,29 @@ export const spotify = {
     }
   },
 
+  getAlbumFromUrlPublic: async (url: string, signal?: AbortSignal): Promise<{
+    success: boolean;
+    error?: string;
+    data?: {
+      album: string;
+      artist: string;
+      year: string;
+      added_from: string;
+    };
+  }> => {
+    try {
+      const response = await fetch(`/api/spotify/album-from-url-public?url=${encodeURIComponent(url)}`, { signal });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error getting album from URL (public):', error);
+      return {
+        success: false,
+        error: 'Failed to get album information'
+      };
+    }
+  },
+
   subscribeToPlaylist: async (playlistId: string, playlistName: string): Promise<ApiResponse<void>> => {
     try {
       const response = await api.post('/api/spotify/playlist/subscribe', {

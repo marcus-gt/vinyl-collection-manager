@@ -29,6 +29,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [discogsUrl, setDiscogsUrl] = useState('');
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
+  const [urlOrBarcode, setUrlOrBarcode] = useState(''); // Unified field for URL or barcode
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [success, setSuccess] = useState<string | undefined>(undefined);
@@ -90,6 +91,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setDiscogsUrl('');
       setArtist('');
       setAlbum('');
+      setUrlOrBarcode('');
       setError(undefined);
       setSuccess(undefined);
       setRecord(undefined);
@@ -169,6 +171,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleScan = async (scannedBarcode: string) => {
     setBarcode(scannedBarcode);
+    setUrlOrBarcode(scannedBarcode); // Also populate unified field
     setLoading(true);
     setError(undefined);
     setSuccess(undefined);
@@ -299,6 +302,142 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         return;
       }
       setError("Couldn't find record");
+      setRecord(undefined);
+    } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = undefined;
+      }
+      setLoading(false);
+    }
+  };
+
+  // Unified search handler that detects input type and routes accordingly
+  const handleUnifiedSearch = async () => {
+    // Priority 1: URL or Barcode field
+    if (urlOrBarcode.trim()) {
+      const input = urlOrBarcode.trim();
+      
+      // Detect Discogs URL
+      if (input.includes('discogs.com')) {
+        if (!input.includes('discogs.com/release/') && !input.includes('discogs.com/master/')) {
+          setError('Invalid Discogs URL. Please use a release or master URL');
+          return;
+        }
+        setDiscogsUrl(input);
+        await handleDiscogsLookupDirect(input);
+        return;
+      }
+      
+      // Detect Spotify URL
+      if (input.includes('spotify.com')) {
+        setSpotifyUrl(input);
+        await handleSpotifyUrlLookupDirect(input);
+        return;
+      }
+      
+      // Detect Barcode (sequence of numbers)
+      if (/^\d+$/.test(input)) {
+        setBarcode(input);
+        await handleBarcodeLookupDirect(input);
+        return;
+      }
+      
+      setError('Invalid input. Please enter a Discogs URL, Spotify URL, or numeric barcode');
+      return;
+    }
+    
+    // Priority 2: Artist + Album (both required)
+    if (artist.trim() && album.trim()) {
+      await handleArtistAlbumLookup();
+      return;
+    }
+    
+    // No valid input
+    setError('Please enter either a URL/barcode OR both artist and album name');
+  };
+
+  // Direct lookup handlers (without state dependencies)
+  const handleBarcodeLookupDirect = async (barcodeValue: string) => {
+    setLoading(true);
+    setError(undefined);
+    setSuccess(undefined);
+    
+    abortControllerRef.current = new AbortController();
+    
+    try {
+      const response = await lookup.byBarcode(barcodeValue, abortControllerRef.current.signal);
+      if (response.success && response.data) {
+        setRecord(getRecordWithDefaults(response.data));
+        setError(undefined);
+      } else {
+        setError(response.error || 'Failed to find record');
+        setRecord(undefined);
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      setError('Failed to lookup barcode');
+      setRecord(undefined);
+    } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = undefined;
+      }
+      setLoading(false);
+    }
+  };
+
+  const handleDiscogsLookupDirect = async (url: string) => {
+    setLoading(true);
+    setError(undefined);
+    setSuccess(undefined);
+    
+    abortControllerRef.current = new AbortController();
+    
+    try {
+      const response = await lookup.byDiscogsUrl(url, abortControllerRef.current.signal);
+      if (response.success && response.data) {
+        setRecord(getRecordWithDefaults(response.data));
+        setError(undefined);
+      } else {
+        setError(response.error || 'Failed to find record');
+        setRecord(undefined);
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      setError('Failed to lookup Discogs release');
+      setRecord(undefined);
+    } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = undefined;
+      }
+      setLoading(false);
+    }
+  };
+
+  const handleSpotifyUrlLookupDirect = async (url: string) => {
+    setLoading(true);
+    setError(undefined);
+    setSuccess(undefined);
+    
+    abortControllerRef.current = new AbortController();
+    
+    try {
+      const response = await spotify.getAlbumFromUrlPublic(url, abortControllerRef.current.signal);
+      if (response.success && response.data) {
+        setRecord(getRecordWithDefaults(response.data));
+        setError(undefined);
+      } else {
+        setError(response.error || 'Failed to find album');
+        setRecord(undefined);
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      setError('Failed to lookup Spotify album');
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
@@ -895,36 +1034,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
           <Paper withBorder shadow="md" p="md" radius="md">
             <Stack>
               <Tabs 
-                defaultValue="barcode" 
+                defaultValue="add" 
                 onChange={handleSpotifyTabChange}
               >
                 <Tabs.List style={{ flexWrap: 'nowrap' }}>
                   <Tabs.Tab 
-                    value="barcode" 
+                    value="add" 
                     style={{ 
                       minWidth: 0,
                       padding: '8px 12px'
                     }}
                   >
-                    Scan
-                  </Tabs.Tab>
-                  <Tabs.Tab 
-                    value="discogs" 
-                    style={{ 
-                      minWidth: 0,
-                      padding: '8px 12px'
-                    }}
-                  >
-                    URL
-                  </Tabs.Tab>
-                  <Tabs.Tab 
-                    value="search" 
-                    style={{ 
-                      minWidth: 0,
-                      padding: '8px 12px'
-                    }}
-                  >
-                    Manual
+                    Add Record
                   </Tabs.Tab>
                   <Tabs.Tab 
                     value="spotify" 
@@ -933,11 +1054,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       padding: '8px 12px'
                     }}
                   >
-                    Spotify
+                    Spotify Playlists
                   </Tabs.Tab>
                 </Tabs.List>
 
-                <Tabs.Panel value="barcode" pt="xs">
+                <Tabs.Panel value="add" pt="xs">
                   {isScanning ? (
                     <>
                       <BarcodeScanner 
@@ -946,10 +1067,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         isScanning={isScanning} 
                         isLoading={loading}
                       />
-                      {barcode && (
+                      {urlOrBarcode && (
                         <>
                           <Text ta="center" size="sm" fw={500} mt="xs">
-                            Captured barcode: {barcode}
+                            Captured barcode: {urlOrBarcode}
                           </Text>
                           {loading && (
                             <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
@@ -968,6 +1089,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                           setError(undefined);
                           setSuccess(undefined);
                         }}
+                        fullWidth
                       >
                         Stop Scanning
                       </Button>
@@ -975,21 +1097,34 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                   ) : (
                     <Stack>
                       <TextInput
-                        label="Barcode"
-                        placeholder="Enter or scan barcode"
-                        value={barcode}
-                        onChange={(e) => setBarcode(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleManualLookup()}
+                        label="URL or Barcode"
+                        placeholder="Discogs URL, Spotify URL, or numeric barcode"
+                        description={urlOrBarcode.trim() && artist.trim() && album.trim() ? "⚠️ URL/Barcode will be used (has priority over artist/album)" : undefined}
+                        value={urlOrBarcode}
+                        onChange={(e) => setUrlOrBarcode(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
                         disabled={loading}
                       />
+                      
+                      <Divider label="OR" labelPosition="center" />
+                      
+                      <TextInput
+                        label="Artist"
+                        placeholder="Enter artist name"
+                        value={artist}
+                        onChange={(e) => setArtist(e.target.value)}
+                        disabled={loading}
+                      />
+                      <TextInput
+                        label="Album"
+                        placeholder="Enter album name"
+                        value={album}
+                        onChange={(e) => setAlbum(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
+                        disabled={loading}
+                      />
+                      
                       <Group grow>
-                        <Button 
-                          onClick={handleManualLookup} 
-                          loading={loading}
-                          disabled={!barcode.trim()}
-                        >
-                          Look up Record
-                        </Button>
                         <Button 
                           onClick={() => {
                             setIsScanning(true);
@@ -1001,72 +1136,16 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         >
                           Start Camera
                         </Button>
+                        <Button 
+                          onClick={handleUnifiedSearch} 
+                          loading={loading}
+                          disabled={!urlOrBarcode.trim() && (!artist.trim() || !album.trim())}
+                        >
+                          Search
+                        </Button>
                       </Group>
                     </Stack>
                   )}
-                </Tabs.Panel>
-
-                <Tabs.Panel value="discogs" pt="xs">
-                  <Stack>
-                    <TextInput
-                      label="Discogs Release URL"
-                      placeholder="https://www.discogs.com/release/123456"
-                      value={discogsUrl}
-                      onChange={(e) => setDiscogsUrl(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleDiscogsLookup()}
-                      disabled={loading}
-                    />
-                    <Button 
-                      onClick={handleDiscogsLookup}
-                      loading={loading}
-                      disabled={!discogsUrl.trim()}
-                    >
-                      Look up Release
-                    </Button>
-                  </Stack>
-                </Tabs.Panel>
-
-                <Tabs.Panel value="search" pt="xs">
-                  <Stack>
-                    <TextInput
-                      label="Artist"
-                      placeholder="Enter artist name"
-                      value={artist}
-                      onChange={(e) => setArtist(e.target.value)}
-                      disabled={loading}
-                    />
-                    <TextInput
-                      label="Album"
-                      placeholder="Enter album name"
-                      value={album}
-                      onChange={(e) => setAlbum(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleArtistAlbumLookup()}
-                      disabled={loading}
-                    />
-                    <Group>
-                      <Button 
-                        onClick={handleArtistAlbumLookup}
-                        loading={loading}
-                        disabled={!artist.trim() || !album.trim()}
-                      >
-                        Get Record Info
-                      </Button>
-                      <Button
-                        variant="light"
-                        onClick={handleAddBasicInfo}
-                        disabled={!artist.trim() || !album.trim() || loading}
-                      >
-                        Add Info Manually
-                      </Button>
-                      <Button
-                        onClick={handleManualSubmit}
-                        loading={loading}
-                        disabled={!artist.trim() || !album.trim()}
-                      >
-                        Add to Collection
-                      </Button>
-                    </Group>
-                  </Stack>
                 </Tabs.Panel>
 
                 <Tabs.Panel value="spotify" pt="xs">
