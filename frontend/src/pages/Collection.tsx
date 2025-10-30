@@ -284,10 +284,9 @@ function EditableStandardCell({
           <div style={{ width: '100%' }}>
             <Text 
               size="sm" 
-              lineClamp={noTruncate ? undefined : 1} 
+              {...(noTruncate ? {} : { lineClamp: 1 })}
               style={{ 
-                maxWidth: '90vw',
-                ...(noTruncate ? { wordBreak: 'break-word', whiteSpace: 'pre-wrap' } : {})
+                ...(noTruncate ? { wordBreak: 'break-word', whiteSpace: 'pre-wrap' } : { maxWidth: '90vw' })
               }}
             >
               {renderDisplayValue()}
@@ -346,6 +345,7 @@ interface EditableCustomCellProps {
   allRecords: VinylRecord[];
   getAllRecords: () => VinylRecord[];
   onUpdate: (recordId: string, columnId: string, newValue: string) => void;
+  noTruncate?: boolean; // If true, shows full content without truncation
 }
 
 function EditableCustomCell({ 
@@ -353,7 +353,8 @@ function EditableCustomCell({
   recordId, 
   column,
   getAllRecords,
-  onUpdate 
+  onUpdate,
+  noTruncate = false
 }: EditableCustomCellProps) {
   const [localValue, setLocalValue] = useState(value);
   const [opened, setOpened] = useState(false);
@@ -973,11 +974,10 @@ function EditableCustomCell({
               ) : (
                 <Box style={{ 
                   position: 'relative',
-                  height: '48px',
-                  overflow: 'hidden'
+                  ...(noTruncate ? {} : { height: '48px', overflow: 'hidden' })
                 }}>
-                  <Group gap={4} wrap="nowrap" style={{ 
-                    height: '100%',
+                  <Group gap={4} wrap={noTruncate ? "wrap" : "nowrap"} style={{ 
+                    ...(noTruncate ? {} : { height: '100%' }),
                     alignItems: 'center',
                     padding: '4px'
                   }}>
@@ -1777,7 +1777,13 @@ function EditableCustomCell({
       <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={(o) => { setOpened(o); if (!o) setTempValue(localValue); }} withinPortal>
         <Popover.Target>
           <div style={{ width: '100%' }}>
-            <Text size="sm" lineClamp={1} style={{ maxWidth: '90vw' }}>
+            <Text 
+              size="sm" 
+              {...(noTruncate ? {} : { lineClamp: 1 })}
+              style={{ 
+                ...(noTruncate ? { wordBreak: 'break-word', whiteSpace: 'pre-wrap' } : { maxWidth: '90vw' })
+              }}
+            >
               {localValue || '-'}
             </Text>
           </div>
@@ -2421,64 +2427,64 @@ function Collection() {
       labels: { confirm: 'Delete', cancel: 'Cancel' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
-        console.log('Starting delete process for record ID:', record.id);
-        setLoading(true);
-        try {
-          // First load fresh data to ensure we have the latest state
-          const currentData = await records.getAll();
-          console.log('Current data from server:', currentData);
-          
-          if (currentData.success && currentData.data) {
-            setUserRecords(currentData.data);
-          }
+    console.log('Starting delete process for record ID:', record.id);
+    setLoading(true);
+    try {
+      // First load fresh data to ensure we have the latest state
+      const currentData = await records.getAll();
+      console.log('Current data from server:', currentData);
+      
+      if (currentData.success && currentData.data) {
+        setUserRecords(currentData.data);
+      }
 
-          console.log('Calling delete API...');
+      console.log('Calling delete API...');
           const response = await records.delete(record.id!);
-          console.log('Delete API response:', response);
-          
-          if (response.success) {
-            console.log('Delete successful, reloading data...');
-            // Reload the full data after successful deletion
-            const refreshedData = await records.getAll();
-            console.log('Refreshed data:', refreshedData);
-            
-            if (refreshedData.success && refreshedData.data) {
-              setUserRecords(refreshedData.data);
-              notifications.show({
-                title: 'Success',
-                message: 'Record deleted successfully',
-                color: 'green'
-              });
-            } else {
-              console.error('Failed to reload data after deletion');
-              notifications.show({
-                title: 'Warning',
-                message: 'Record may have been deleted but failed to refresh data',
-                color: 'yellow'
-              });
-            }
-          } else {
-            console.error('Delete failed:', response.error);
-            setError(response.error || 'Failed to delete record');
-            notifications.show({
-              title: 'Error',
-              message: response.error || 'Failed to delete record',
-              color: 'red'
-            });
-          }
-        } catch (err) {
-          console.error('Error during delete:', err);
-          const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
-          setError(errorMessage);
+      console.log('Delete API response:', response);
+      
+      if (response.success) {
+        console.log('Delete successful, reloading data...');
+        // Reload the full data after successful deletion
+        const refreshedData = await records.getAll();
+        console.log('Refreshed data:', refreshedData);
+        
+        if (refreshedData.success && refreshedData.data) {
+          setUserRecords(refreshedData.data);
           notifications.show({
-            title: 'Error',
-            message: errorMessage,
-            color: 'red'
+            title: 'Success',
+            message: 'Record deleted successfully',
+            color: 'green'
           });
-        } finally {
-          setLoading(false);
-          console.log('Delete process completed');
+        } else {
+          console.error('Failed to reload data after deletion');
+          notifications.show({
+            title: 'Warning',
+            message: 'Record may have been deleted but failed to refresh data',
+            color: 'yellow'
+          });
         }
+      } else {
+        console.error('Delete failed:', response.error);
+        setError(response.error || 'Failed to delete record');
+        notifications.show({
+          title: 'Error',
+          message: response.error || 'Failed to delete record',
+          color: 'red'
+        });
+      }
+    } catch (err) {
+      console.error('Error during delete:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete record';
+      setError(errorMessage);
+      notifications.show({
+        title: 'Error',
+        message: errorMessage,
+        color: 'red'
+      });
+    } finally {
+      setLoading(false);
+      console.log('Delete process completed');
+    }
       }
     });
   };
@@ -2957,52 +2963,52 @@ function Collection() {
             allRecords={userRecords}
             getAllRecords={() => userRecordsRef.current}
             onUpdate={async (recordId, columnId, newValue) => {
-              try {
-                console.log('Updating custom value:', {
+            try {
+              console.log('Updating custom value:', {
                   columnId,
-                  newValue,
+                newValue,
                   recordId
-                });
-                
-                const valueToSend = {
+              });
+              
+              const valueToSend = {
                   [columnId]: newValue
-                };
+              };
 
                 const response = await customValuesService.update(recordId, valueToSend);
-                
-                if (response.success) {
-                  setUserRecords(prevRecords =>
-                    prevRecords.map(r =>
+              
+              if (response.success) {
+                setUserRecords(prevRecords =>
+                  prevRecords.map(r =>
                       r.id === recordId
-                        ? {
-                            ...r,
-                            custom_values_cache: {
-                              ...r.custom_values_cache,
+                      ? {
+                          ...r,
+                          custom_values_cache: {
+                            ...r.custom_values_cache,
                               [columnId]: newValue
-                            }
                           }
-                        : r
-                    )
-                  );
-                  console.log('Successfully updated custom value');
-                } else {
-                  console.error('Failed to update custom value');
-                  notifications.show({
-                    title: 'Error',
-                    message: 'Failed to update value',
-                    color: 'red'
-                  });
-                }
-              } catch (err) {
-                console.error('Error updating custom value:', err);
+                        }
+                      : r
+                  )
+                );
+                console.log('Successfully updated custom value');
+              } else {
+                console.error('Failed to update custom value');
                 notifications.show({
                   title: 'Error',
                   message: 'Failed to update value',
                   color: 'red'
                 });
               }
-            }}
-          />
+            } catch (err) {
+              console.error('Error updating custom value:', err);
+              notifications.show({
+                title: 'Error',
+                message: 'Failed to update value',
+                color: 'red'
+              });
+                    }
+                  }}
+                />
         )
       });
     });
@@ -3133,28 +3139,28 @@ function Collection() {
         `}} />
         <Box className="search-controls-wrapper">
           <Box className="search-input-wrapper">
-            <TextInput
-              placeholder="Search records..."
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-              leftSection={<IconSearch size={14} />}
-            />
+        <TextInput
+          placeholder="Search records..."
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.currentTarget.value)}
+          leftSection={<IconSearch size={14} />}
+        />
           </Box>
           <Box className="buttons-wrapper">
-            <Button
-              variant="default"
-              onClick={() => setAddRecordsModalOpened(true)}
-              leftSection={<IconPlus size={14} />}
-            >
-              Add Records
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => setCustomColumnManagerOpened(true)}
-              leftSection={<IconColumns size={14} />}
-            >
+          <Button
+            variant="default"
+            onClick={() => setAddRecordsModalOpened(true)}
+            leftSection={<IconPlus size={14} />}
+          >
+            Add Records
+          </Button>
+          <Button
+            variant="default"
+            onClick={() => setCustomColumnManagerOpened(true)}
+            leftSection={<IconColumns size={14} />}
+          >
               Add Column
-            </Button>
+          </Button>
             <Tooltip label="Settings">
               <ActionIcon
                 variant="default"
@@ -3455,6 +3461,7 @@ function Collection() {
                       value={value}
                       allRecords={userRecords}
                       getAllRecords={() => userRecordsRef.current}
+                      noTruncate={true}
                       onUpdate={(recordId, columnId, newValue) => {
                         setUserRecords(prevRecords =>
                           prevRecords.map(r => {
