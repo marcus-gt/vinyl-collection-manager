@@ -1774,15 +1774,19 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                             setDragOverColumn(null);
                           }}
                           onTouchStart={(e) => {
-                            // Only start drag if not touching resize handle or filter button
+                            // Only start drag if not touching resize handle, filter button, or popover
                             const target = e.target as HTMLElement;
-                            if (target.classList.contains('resizer') || target.closest('.resizer') || target.closest('[data-filter-button]')) {
+                            if (target.classList.contains('resizer') || target.closest('.resizer') || 
+                                target.closest('[data-filter-button]') || target.closest('[role="button"]') ||
+                                target.closest('.mantine-ActionIcon-root') || target.closest('.mantine-Popover-target')) {
                               return;
                             }
                             setDraggedColumn(header.column.id);
                           }}
                           onTouchMove={(e) => {
                             if (!draggedColumn) return;
+                            // Only prevent default when actively dragging
+                            e.preventDefault();
                             const touch = e.touches[0];
                             const element = document.elementFromPoint(touch.clientX, touch.clientY);
                             const headerCell = element?.closest('[data-column-id]');
@@ -1816,8 +1820,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                             position: 'relative',
                             width: '100%',
                             height: '32px',
-                            maxHeight: '32px',
-                            touchAction: 'none'
+                            maxHeight: '32px'
                           }}
                           onClick={header.column.getToggleSortingHandler()}
                         >
@@ -1845,6 +1848,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           </div>
                           {header.column.getCanFilter() && (
                             <Box
+                              data-filter-button="true"
                               onClick={(e) => {
                                 e.stopPropagation();
                               }}
@@ -1855,12 +1859,13 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                                 flexShrink: 0
                               }}
                             >
-                              <Popover width="min(280px, 90vw)" position="bottom" shadow="md" withinPortal>
+                              <Popover width="min(280px, 90vw)" position="bottom" shadow="md" withinPortal closeOnClickOutside>
                                 <Popover.Target>
                                   <ActionIcon
                                     size="xs"
                                     variant="subtle"
                                     color={table.getState().columnFilters.find(f => f.id === header.column.id) ? 'blue' : 'gray'}
+                                    data-filter-button="true"
                                   >
                                     <IconFilter size={14} />
                                   </ActionIcon>
