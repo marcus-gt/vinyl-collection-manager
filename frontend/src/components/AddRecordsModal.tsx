@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect } from '@mantine/core';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon } from '@mantine/core';
 import { IconX, IconBrandSpotify } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
@@ -1121,6 +1121,19 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         onChange={(e) => setUrlOrBarcode(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
                         disabled={loading}
+                        rightSection={
+                          urlOrBarcode ? (
+                            <ActionIcon
+                              onClick={() => setUrlOrBarcode('')}
+                              variant="subtle"
+                              color="gray"
+                              size="sm"
+                              disabled={loading}
+                            >
+                              <IconX size={16} />
+                            </ActionIcon>
+                          ) : null
+                        }
                       />
                       
                       <Divider label="OR" labelPosition="center" />
