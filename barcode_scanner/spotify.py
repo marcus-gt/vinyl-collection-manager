@@ -515,6 +515,104 @@ def get_playlist_tracks(playlist_id):
             'error': 'Failed to get playlist tracks'
         }
 
+def get_client_credentials_token():
+    """Get Spotify access token using client credentials flow (no user auth required)"""
+    print("\n=== Getting Client Credentials Token ===")
+    
+    client_id = os.getenv('SPOTIFY_CLIENT_ID')
+    client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+    
+    if not client_id or not client_secret:
+        print("ERROR: Spotify credentials not configured")
+        return None
+    
+    # Encode credentials
+    auth_string = f"{client_id}:{client_secret}"
+    auth_bytes = auth_string.encode('utf-8')
+    auth_base64 = base64.b64encode(auth_bytes).decode('utf-8')
+    
+    headers = {
+        'Authorization': f'Basic {auth_base64}',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    data = {
+        'grant_type': 'client_credentials'
+    }
+    
+    try:
+        response = requests.post(SPOTIFY_TOKEN_URL, headers=headers, data=data)
+        response.raise_for_status()
+        token_data = response.json()
+        print(f"Successfully obtained client credentials token")
+        return token_data.get('access_token')
+    except Exception as e:
+        print(f"Error getting client credentials token: {e}")
+        return None
+
+def get_album_from_url_public(url):
+    """Get album information from a Spotify URL using public API (no user auth required)"""
+    print("\n=== Getting Album from Spotify URL (Public API) ===")
+    
+    # Get client credentials token
+    access_token = get_client_credentials_token()
+    if not access_token:
+        return {
+            'success': False,
+            'error': 'Failed to authenticate with Spotify API'
+        }
+    
+    # Extract album or track ID from URL
+    if 'spotify.com/track/' in url:
+        track_id = url.split('track/')[1].split('?')[0].split('/')[0]
+        endpoint = f"{SPOTIFY_API_BASE_URL}/tracks/{track_id}"
+    elif 'spotify.com/album/' in url:
+        album_id = url.split('album/')[1].split('?')[0].split('/')[0]
+        endpoint = f"{SPOTIFY_API_BASE_URL}/albums/{album_id}"
+    else:
+        return {
+            'success': False,
+            'error': 'Invalid Spotify URL. Must be a track or album URL.'
+        }
+
+    headers = {
+        'Authorization': f"Bearer {access_token}"
+    }
+
+    try:
+        response = requests.get(endpoint, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # For tracks, we need to get the album information
+        if 'spotify.com/track/' in url:
+            album_id = data['album']['id']
+            album_response = requests.get(
+                f"{SPOTIFY_API_BASE_URL}/albums/{album_id}",
+                headers=headers
+            )
+            album_response.raise_for_status()
+            data = album_response.json()
+
+        # Extract the relevant information
+        album_info = {
+            'album': data['name'],  # Map 'name' to 'album' for VinylRecord interface
+            'artist': data['artists'][0]['name'],  # Using first artist
+            'year': data['release_date'][:4] if data.get('release_date') else None,  # Extract year from release_date
+            'added_from': 'spotify'  # Add the source
+        }
+
+        return {
+            'success': True,
+            'data': album_info
+        }
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching from Spotify: {e}")
+        return {
+            'success': False,
+            'error': f'Failed to fetch album from Spotify: {str(e)}'
+        }
+
 def get_album_from_url(url):
     """Get album information from a Spotify URL"""
     print("\n=== Getting Album from Spotify URL ===")

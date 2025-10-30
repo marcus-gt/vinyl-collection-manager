@@ -39,6 +39,7 @@ from .spotify import (
     require_spotify_auth,
     refresh_spotify_token,
     get_album_from_url,
+    get_album_from_url_public,
     subscribe_to_playlist,
     unsubscribe_from_playlist,
     get_subscribed_playlist,
@@ -1274,6 +1275,25 @@ def spotify_album_from_url():
         })
         
     result = get_album_from_url(url)
+    if result.get('success') and result.get('data'):
+        # Ensure current_release fields are null for Spotify URL lookup
+        result['data']['current_release_url'] = None
+        result['data']['current_release_year'] = None
+    return jsonify(result)
+
+@app.route('/api/spotify/album-from-url-public')
+def spotify_album_from_url_public():
+    """Get album information from a Spotify URL using public API (no auth required)"""
+    print("\n=== Getting Album from Spotify URL (Public API) ===")
+    
+    url = request.args.get('url')
+    if not url:
+        return jsonify({
+            'success': False,
+            'error': 'No URL provided'
+        })
+        
+    result = get_album_from_url_public(url)
     if result.get('success') and result.get('data'):
         # Ensure current_release fields are null for Spotify URL lookup
         result['data']['current_release_url'] = None
