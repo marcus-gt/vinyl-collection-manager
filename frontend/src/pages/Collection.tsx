@@ -3404,7 +3404,48 @@ function Collection() {
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Source</Text>
               <Box style={{ flex: 1, paddingTop: '8px', minWidth: 0 }}>
-                <Text size="sm" style={{ wordBreak: 'break-word' }}>{previewRecord.added_from || '-'}</Text>
+                {previewRecord.added_from ? (
+                  (() => {
+                    const valueMap: Record<string, string> = {
+                      'manual': 'Manual',
+                      'spotify': 'Spotify URL',
+                      'spotify_list': 'Spotify List Manual',
+                      'spotify_list_sub': 'Spotify List Auto',
+                      'barcode': 'Barcode',
+                      'discogs_url': 'Discogs',
+                      'csv_import': 'CSV Import'
+                    };
+                    const optionColors: Record<string, string> = {
+                      'Manual': 'gray',
+                      'Spotify URL': 'green',
+                      'Spotify List Manual': 'green',
+                      'Spotify List Auto': 'green',
+                      'Barcode': 'blue',
+                      'Discogs': 'orange',
+                      'CSV Import': 'violet'
+                    };
+                    const displayValue = valueMap[previewRecord.added_from] || previewRecord.added_from;
+                    const colorName = optionColors[displayValue] || 'gray';
+                    return (
+                      <Badge
+                        size="sm"
+                        radius="md"
+                        style={getColorStyles(colorName)}
+                        styles={{
+                          root: {
+                            textTransform: 'none',
+                            padding: '2px 5px',
+                            fontSize: '10.5px'
+                          }
+                        }}
+                      >
+                        {displayValue}
+                      </Badge>
+                    );
+                  })()
+                ) : (
+                  <Text size="sm">-</Text>
+                )}
               </Box>
             </Box>
 
