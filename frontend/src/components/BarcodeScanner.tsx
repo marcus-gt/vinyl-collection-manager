@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
-import { Box, Button, Text, Select, Stack } from '@mantine/core';
+import { Box, Button, Text } from '@mantine/core';
 import type { IDetectedBarcode } from '@yudiel/react-qr-scanner';
 
 interface BarcodeScannerProps {
@@ -12,7 +12,6 @@ interface BarcodeScannerProps {
 export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-  const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
 
   const handleScan = (detectedCodes: IDetectedBarcode[]) => {
     if (detectedCodes && detectedCodes.length > 0 && !isPaused && !isLoading) {
@@ -104,7 +103,6 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           'itf',
         ]}
         components={{
-          audio: false,
           onOff: false,
           torch: true,  // Enable torch/flashlight button
           zoom: true,   // Enable zoom control
