@@ -12,6 +12,7 @@ interface BarcodeScannerProps {
 export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  const videoRef = useState<HTMLVideoElement | null>(null)[0];
 
   const handleScan = (detectedCodes: IDetectedBarcode[]) => {
     if (detectedCodes && detectedCodes.length > 0 && !isPaused && !isLoading) {
@@ -42,6 +43,38 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
   const handleNextScan = () => {
     setIsPaused(false);
     setError(null);
+  };
+
+  const handleTapToFocus = async (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    // Find the video element
+    const videoElement = document.querySelector('video');
+    if (!videoElement) return;
+
+    const stream = videoElement.srcObject as MediaStream;
+    if (!stream) return;
+
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+
+    try {
+      const capabilities = track.getCapabilities() as any;
+      
+      // Check if focus mode is supported
+      if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+        await track.applyConstraints({
+          advanced: [{ focusMode: 'continuous' } as any]
+        });
+      }
+
+      // Trigger manual focus if supported
+      if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
+        await track.applyConstraints({
+          advanced: [{ focusMode: 'single-shot' } as any]
+        });
+      }
+    } catch (err) {
+      console.log('Focus not supported or failed:', err);
+    }
   };
 
   if (error) {
@@ -78,13 +111,16 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
 
   return (
     <Box 
+      onClick={handleTapToFocus}
+      onTouchEnd={handleTapToFocus}
       style={{ 
         width: '100%', 
         minHeight: '300px',
         backgroundColor: '#000',
         borderRadius: '8px',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        cursor: 'pointer'
       }}
     >
       <Scanner
@@ -116,7 +152,11 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         }}
         constraints={{
           facingMode: 'environment',
-        }}
+          advanced: [
+            { focusMode: 'continuous' },
+            { focusDistance: 0.25 }  // Optimized for barcodes at ~20-30cm distance
+          ]
+        } as any}
         scanDelay={500}
         allowMultiple={false}
       />
