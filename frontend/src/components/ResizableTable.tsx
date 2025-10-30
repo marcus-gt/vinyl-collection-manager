@@ -1852,11 +1852,21 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                               onClick={(e) => {
                                 e.stopPropagation();
                               }}
+                              onTouchStart={(e) => {
+                                e.stopPropagation();
+                              }}
+                              onTouchMove={(e) => {
+                                e.stopPropagation();
+                              }}
+                              onTouchEnd={(e) => {
+                                e.stopPropagation();
+                              }}
                               style={{ 
                                 display: 'flex',
                                 alignItems: 'center',
                                 marginLeft: '8px',
-                                flexShrink: 0
+                                flexShrink: 0,
+                                touchAction: 'auto'
                               }}
                             >
                               <Popover width="min(280px, 90vw)" position="bottom" shadow="md" withinPortal closeOnClickOutside>
@@ -1866,6 +1876,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                                     variant="subtle"
                                     color={table.getState().columnFilters.find(f => f.id === header.column.id) ? 'blue' : 'gray'}
                                     data-filter-button="true"
+                                    onTouchStart={(e) => {
+                                      e.stopPropagation();
+                                    }}
                                   >
                                     <IconFilter size={14} />
                                   </ActionIcon>
