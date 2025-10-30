@@ -25,8 +25,6 @@ interface ManualRecordForm {
 }
 
 export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
-  const [barcode, setBarcode] = useState('');
-  const [discogsUrl, setDiscogsUrl] = useState('');
   const [artist, setArtist] = useState('');
   const [album, setAlbum] = useState('');
   const [urlOrBarcode, setUrlOrBarcode] = useState(''); // Unified field for URL or barcode
@@ -87,8 +85,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   useEffect(() => {
     if (opened) {
       console.log('Modal opened, resetting states');
-      setBarcode('');
-      setDiscogsUrl('');
       setArtist('');
       setAlbum('');
       setUrlOrBarcode('');
@@ -170,8 +166,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleScan = async (scannedBarcode: string) => {
-    setBarcode(scannedBarcode);
-    setUrlOrBarcode(scannedBarcode); // Also populate unified field
+    setUrlOrBarcode(scannedBarcode); // Populate unified field
     setLoading(true);
     setError(undefined);
     setSuccess(undefined);
@@ -246,11 +241,10 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (input.includes('discogs.com')) {
         if (!input.includes('discogs.com/release/') && !input.includes('discogs.com/master/')) {
           setError('Invalid Discogs URL. Please use a release or master URL');
-          return;
-        }
-        setDiscogsUrl(input);
-        await handleDiscogsLookupDirect(input);
         return;
+      }
+      await handleDiscogsLookupDirect(input);
+      return;
       }
       
       // Detect Spotify URL
@@ -262,7 +256,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       
       // Detect Barcode (sequence of numbers)
       if (/^\d+$/.test(input)) {
-        setBarcode(input);
         await handleBarcodeLookupDirect(input);
         return;
       }
@@ -438,7 +431,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setSuccess('Added to collection!');
         setRecordsChanged(true);
         setRecord(undefined);
-        setBarcode('');
         setScannerKey(prev => prev + 1);
         setTimeout(() => setSuccess(undefined), 3000);
       } else {
@@ -454,7 +446,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
   const handleClear = () => {
     setRecord(undefined);
-    setBarcode('');
     setError(undefined);
     setSuccess(undefined);
     setScannerKey(prev => prev + 1);
