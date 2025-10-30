@@ -4,7 +4,7 @@ import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
   ? 'https://vinyl-collection-manager.onrender.com'
-  : 'http://localhost:3000';
+  : ''; // Empty string = use relative URLs, Vite proxy will handle it
 
 const api = axios.create({
   baseURL: API_URL,
