@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon } from '@mantine/core';
-import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink } from '@tabler/icons-react';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon, Collapse } from '@mantine/core';
+import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -34,6 +34,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [record, setRecord] = useState<VinylRecord | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
+  const [musiciansExpanded, setMusiciansExpanded] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
     artist: '',
@@ -1297,16 +1298,74 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                 <Paper withBorder p="md">
                   <Stack>
                     <div>
-                      <Text fw={500} size="lg">{record.artist} - {record.album}</Text>
-                      {record.genres && <Text size="sm">Genres: {record.genres.join(', ')}</Text>}
-                      {record.styles && <Text size="sm">Styles: {record.styles.join(', ')}</Text>}
-                      {record.musicians && <Text size="sm">Musicians: {record.musicians.join(', ')}</Text>}
-                      {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
-                      {record.master_format && <Text size="sm">Original Format: {record.master_format}</Text>}
-                      {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
-                      {record.current_release_format && <Text size="sm">Current Release Format: {record.current_release_format}</Text>}
-                      {record.label && <Text size="sm">Label: {record.label}</Text>}
-                      {record.country && <Text size="sm">Country: {record.country}</Text>}
+                      <Text fw={500} size="lg" mb="sm">{record.artist} - {record.album}</Text>
+                      {record.genres && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Genres: </Text>
+                          {record.genres.join(', ')}
+                        </Text>
+                      )}
+                      {record.styles && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Styles: </Text>
+                          {record.styles.join(', ')}
+                        </Text>
+                      )}
+                      {record.musicians && record.musicians.length > 0 && (
+                        <Box mb={4}>
+                          <Group 
+                            gap={4}
+                            style={{ cursor: 'pointer' }} 
+                            onClick={() => setMusiciansExpanded(!musiciansExpanded)}
+                          >
+                            <Text size="sm" fw={500} c="dimmed">
+                              Musicians ({record.musicians.length}):
+                            </Text>
+                            {musiciansExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                          </Group>
+                          <Collapse in={musiciansExpanded}>
+                            <Text size="sm" mt={4}>
+                              {record.musicians.join(', ')}
+                            </Text>
+                          </Collapse>
+                        </Box>
+                      )}
+                      {record.year && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Original Release Year: </Text>
+                          {record.year}
+                        </Text>
+                      )}
+                      {record.master_format && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Original Format: </Text>
+                          {record.master_format}
+                        </Text>
+                      )}
+                      {record.current_release_year && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Current Release Year: </Text>
+                          {record.current_release_year}
+                        </Text>
+                      )}
+                      {record.current_release_format && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Current Release Format: </Text>
+                          {record.current_release_format}
+                        </Text>
+                      )}
+                      {record.label && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Label: </Text>
+                          {record.label}
+                        </Text>
+                      )}
+                      {record.country && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Country: </Text>
+                          {record.country}
+                        </Text>
+                      )}
                       
                       {/* Add custom column preview */}
                       {customColumns.length > 0 && record.custom_values_cache && (
