@@ -3,6 +3,18 @@ export interface User {
   email: string;
 }
 
+export interface Identifier {
+  type: string;
+  value: string;
+  description?: string;
+}
+
+export interface Track {
+  position: string;
+  title: string;
+  duration: string;
+}
+
 // Single type for all vinyl records
 export interface VinylRecord {
   // Required fields
@@ -14,16 +26,35 @@ export interface VinylRecord {
   added_from: string;
   custom_values_cache: Record<string, string>;  // Required, but can be empty object
 
-  // Optional fields
-  year?: number;
-  barcode?: string;
+  // Master release fields
+  master_id?: number;
   master_url?: string;
-  master_format?: string;
+  tracklist?: Track[];
+
+  // Original/main release fields
+  year?: number;  // Original year (preferred)
+  label?: string;  // Original label (preferred)
+  country?: string;  // Original country (preferred)
+  master_format?: string;  // Original format (legacy name for compatibility)
+  original_release_id?: number;
+  original_release_url?: string;
+  original_catno?: string;
+  original_release_date?: string;
+  original_identifiers?: Identifier[];
+
+  // Current/specific release fields
+  current_release_id?: number;
   current_release_url?: string;
   current_release_year?: number;
   current_release_format?: string;
-  label?: string;
-  country?: string;
+  current_label?: string;
+  current_catno?: string;
+  current_country?: string;
+  current_release_date?: string;
+  current_identifiers?: Identifier[];
+
+  // Legacy fields
+  barcode?: string;
 
   // Database fields (only present on existing records)
   id?: string;
