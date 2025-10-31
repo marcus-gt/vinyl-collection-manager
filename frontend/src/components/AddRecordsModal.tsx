@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon, Collapse } from '@mantine/core';
-import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink } from '@tabler/icons-react';
+import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronRight } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -35,6 +35,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
   const [musiciansExpanded, setMusiciansExpanded] = useState(false);
+  const [moreInfoExpanded, setMoreInfoExpanded] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const recordPreviewRef = useRef<HTMLDivElement>(null);
   const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
@@ -1311,80 +1312,100 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                 <Paper withBorder p="md" ref={recordPreviewRef}>
                   <Stack>
                     <div>
-                      <Text fw={500} size="lg" mb="sm">{record.artist} - {record.album}</Text>
+                      <Text fw={500} size="md" mb="sm">{record.artist} - {record.album}</Text>
+                      
                       {record.genres && (
                         <Text size="sm" mb={4}>
                           <Text component="span" fw={500} c="dimmed">Genres: </Text>
                           {record.genres.join(', ')}
                         </Text>
                       )}
+                      
                       {record.styles && (
                         <Text size="sm" mb={4}>
                           <Text component="span" fw={500} c="dimmed">Styles: </Text>
                           {record.styles.join(', ')}
                         </Text>
                       )}
-                      {record.musicians && record.musicians.length > 0 && (
-                        <Box mb={4}>
-                          <Text size="sm">
-                            <Text component="span" fw={500} c="dimmed">Musicians: </Text>
-                            {record.musicians.slice(0, 3).join(', ')}
-                            {record.musicians.length > 3 && !musiciansExpanded && '...'}
-                          </Text>
-                          {record.musicians.length > 3 && (
-                            <>
-                              <Collapse in={musiciansExpanded}>
-                                <Text size="sm" mt={4}>
-                                  {record.musicians.slice(3).join(', ')}
-                                </Text>
-                              </Collapse>
-                              <Text 
-                                size="xs" 
-                                c="blue" 
-                                style={{ cursor: 'pointer', marginTop: '4px' }}
-                                onClick={() => setMusiciansExpanded(!musiciansExpanded)}
-                              >
-                                {musiciansExpanded ? 'Show less' : `Show ${record.musicians.length - 3} more`}
-                              </Text>
-                            </>
-                          )}
-                        </Box>
-                      )}
+                      
                       {record.year && (
                         <Text size="sm" mb={4}>
                           <Text component="span" fw={500} c="dimmed">Original Release Year: </Text>
                           {record.year}
                         </Text>
                       )}
-                      {record.master_format && (
-                        <Text size="sm" mb={4}>
-                          <Text component="span" fw={500} c="dimmed">Original Format: </Text>
-                          {record.master_format}
-                        </Text>
-                      )}
-                      {record.current_release_year && (
-                        <Text size="sm" mb={4}>
-                          <Text component="span" fw={500} c="dimmed">Current Release Year: </Text>
-                          {record.current_release_year}
-                        </Text>
-                      )}
-                      {record.current_release_format && (
-                        <Text size="sm" mb={4}>
-                          <Text component="span" fw={500} c="dimmed">Current Release Format: </Text>
-                          {record.current_release_format}
-                        </Text>
-                      )}
+                      
                       {record.label && (
                         <Text size="sm" mb={4}>
                           <Text component="span" fw={500} c="dimmed">Label: </Text>
                           {record.label}
                         </Text>
                       )}
+
                       {record.country && (
                         <Text size="sm" mb={4}>
                           <Text component="span" fw={500} c="dimmed">Country: </Text>
                           {record.country}
                         </Text>
+                      )}
+
+                      {/* More Info - Collapsible */}
+                      {(record.master_format || record.current_release_format || record.current_release_year) && (
+                        <Box mb={4}>
+                          <Group 
+                            gap={4}
+                            style={{ cursor: 'pointer' }} 
+                            onClick={() => setMoreInfoExpanded(!moreInfoExpanded)}
+                          >
+                            <Text size="sm" fw={500} c="dimmed">
+                              More info
+                            </Text>
+                            {moreInfoExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                          </Group>
+                          <Collapse in={moreInfoExpanded}>
+                            <Box mt={4} pl="md">
+                              {record.master_format && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Original Format: </Text>
+                                  {record.master_format}
+                                </Text>
+                              )}
+                              {record.current_release_format && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Current Release Format: </Text>
+                                  {record.current_release_format}
+                                </Text>
+                              )}
+                              {record.current_release_year && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Current Release Year: </Text>
+                                  {record.current_release_year}
+                                </Text>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </Box>
+                      )}
+
+                      {/* Musicians - Collapsible */}
+                      {record.musicians && record.musicians.length > 0 && (
+                        <Box mb={4}>
+                          <Group 
+                            gap={4}
+                            style={{ cursor: 'pointer' }} 
+                            onClick={() => setMusiciansExpanded(!musiciansExpanded)}
+                          >
+                            <Text size="sm" fw={500} c="dimmed">
+                              Musicians ({record.musicians.length})
+                            </Text>
+                            {musiciansExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                          </Group>
+                          <Collapse in={musiciansExpanded}>
+                            <Text size="sm" mt={4}>
+                              {record.musicians.join(', ')}
+                            </Text>
+                          </Collapse>
+                        </Box>
                       )}
                       
                       {/* Add custom column preview */}
