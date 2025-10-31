@@ -927,12 +927,38 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                   <div>
                     {isScanning ? (
                       <>
-                      <BarcodeScanner 
-                        key={scannerKey}
-                        onScan={handleScan} 
-                        isScanning={isScanning} 
-                        isLoading={loading}
-                      />
+                      <Box style={{ position: 'relative' }}>
+                        <BarcodeScanner 
+                          key={scannerKey}
+                          onScan={handleScan} 
+                          isScanning={isScanning} 
+                          isLoading={loading}
+                        />
+                        <ActionIcon
+                          onClick={() => {
+                            // Cancel ongoing search if loading
+                            if (loading) {
+                              handleCancel();
+                            }
+                            setIsScanning(false);
+                            setError(undefined);
+                            setSuccess(undefined);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            zIndex: 100,
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            backdropFilter: 'blur(4px)'
+                          }}
+                          variant="filled"
+                          color="dark"
+                          size="lg"
+                        >
+                          <IconX size={20} color="white" />
+                        </ActionIcon>
+                      </Box>
                       <Box style={{ 
                         display: 'flex', 
                         flexDirection: 'column', 
@@ -956,22 +982,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                           </>
                         )}
                       </Box>
-                      <Button 
-                        variant="light"
-                        color="red" 
-                        onClick={() => {
-                          // Cancel ongoing search if loading
-                          if (loading) {
-                            handleCancel();
-                          }
-                          setIsScanning(false);
-                          setError(undefined);
-                          setSuccess(undefined);
-                        }}
-                        fullWidth
-                      >
-                        Close Scanner
-                      </Button>
                     </>
                   ) : (
                     <Stack>
@@ -1003,6 +1013,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                           <Button 
                             onClick={() => {
                               setIsScanning(true);
+                              setUrlOrBarcode(''); // Clear URL field when starting scanner
                               setError(undefined);
                               setSuccess(undefined);
                             }} 
@@ -1319,7 +1330,24 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
               )}
 
               {record && (
-                <Paper withBorder p="md" ref={recordPreviewRef}>
+                <Paper withBorder p="md" ref={recordPreviewRef} style={{ position: 'relative' }}>
+                  <ActionIcon
+                    onClick={() => {
+                      setRecord(undefined);
+                      setError(undefined);
+                      setSuccess(undefined);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      zIndex: 10
+                    }}
+                    variant="subtle"
+                    color="gray"
+                  >
+                    <IconX size={18} />
+                  </ActionIcon>
                   <Stack>
                     <div>
                       <Text fw={500} size="md" mb="sm">{record.artist} - {record.album}</Text>
