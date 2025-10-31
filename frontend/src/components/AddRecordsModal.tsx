@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon, Collapse } from '@mantine/core';
-import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
+import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
