@@ -1582,23 +1582,35 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       )}
                     </div>
 
-                    <Group grow>
+                    {isScanning ? (
+                      <Group grow>
+                        <Button 
+                          onClick={handleAddToCollection} 
+                          loading={loading}
+                          color="green"
+                          variant="light"
+                        >
+                          Add
+                        </Button>
+                        <Button 
+                          variant="light" 
+                          onClick={handleClear}
+                          disabled={loading}
+                        >
+                          New Scan
+                        </Button>
+                      </Group>
+                    ) : (
                       <Button 
                         onClick={handleAddToCollection} 
                         loading={loading}
                         color="green"
                         variant="light"
+                        fullWidth
                       >
                         Add
                       </Button>
-                      <Button 
-                        variant="light" 
-                        onClick={handleClear}
-                        disabled={loading}
-                      >
-                        {isScanning ? 'New Scan' : 'Clear'}
-                      </Button>
-                    </Group>
+                    )}
                   </Stack>
                 </Paper>
               )}
