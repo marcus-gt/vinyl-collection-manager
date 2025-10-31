@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon } from '@mantine/core';
-import { IconX, IconBrandSpotify, IconBarcode } from '@tabler/icons-react';
+import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -909,31 +909,44 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         isScanning={isScanning} 
                         isLoading={loading}
                       />
-                      {urlOrBarcode && (
-                        <>
-                          <Text ta="center" size="sm" fw={500} mt="xs">
-                            Captured barcode: {urlOrBarcode}
-                          </Text>
-                          {loading && (
-                            <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                              <Loader size="sm" color="blue" />
-                              <Text size="sm" c="dimmed">
-                                Looking up record in Discogs...
-                              </Text>
-                            </Box>
-                          )}
-                        </>
-                      )}
+                      <Box style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        padding: '3px 0'
+                      }}>
+                        {urlOrBarcode && (
+                          <>
+                            <Text ta="center" size="sm" fw={500}>
+                              Captured barcode: {urlOrBarcode}
+                            </Text>
+                            {loading && (
+                              <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                                <Loader size="sm" color="blue" />
+                                <Text size="sm" c="dimmed">
+                                  Looking up record in Discogs...
+                                </Text>
+                              </Box>
+                            )}
+                          </>
+                        )}
+                      </Box>
                       <Button 
+                        variant="light"
                         color="red" 
                         onClick={() => {
+                          // Cancel ongoing search if loading
+                          if (loading) {
+                            handleCancel();
+                          }
                           setIsScanning(false);
                           setError(undefined);
                           setSuccess(undefined);
                         }}
                         fullWidth
                       >
-                        Stop Scanning
+                        Close Scanner
                       </Button>
                     </>
                   ) : (
@@ -1199,18 +1212,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                 </Tabs.Panel>
               </Tabs>
 
-              {loading && (
-                <Button 
-                  variant="light" 
-                  color="red" 
-                  onClick={handleCancel}
-                  leftSection={<IconX size={16} />}
-                  fullWidth
-                >
-                  Cancel Search
-                </Button>
-              )}
-
               {error && (
                 <Alert color="red" title="Error" variant="light">
                   {error}
@@ -1443,32 +1444,33 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         </>
                       )}
 
-                      {record.current_release_url && (
-                        <Group gap="xs" mt="xs">
-                          <Button 
-                            component="a" 
-                            href={record.current_release_url} 
-                            target="_blank" 
-                            variant="light" 
-                            size="xs"
-                          >
-                            View Release
-                          </Button>
+                      {(record.master_url || record.current_release_url) && (
+                        <Group grow mt="xs">
+                          {record.master_url && (
+                            <Button 
+                              component="a" 
+                              href={record.master_url} 
+                              target="_blank" 
+                              variant="light"
+                              rightSection={<IconExternalLink size={16} />}
+                            >
+                              Master
+                            </Button>
+                          )}
+                          {record.current_release_url && (
+                            <Button 
+                              component="a" 
+                              href={record.current_release_url} 
+                              target="_blank" 
+                              variant="light"
+                              rightSection={<IconExternalLink size={16} />}
+                            >
+                              Release
+                            </Button>
+                          )}
                         </Group>
                       )}
                     </div>
-
-                    {record.master_url && (
-                      <Button 
-                        component="a" 
-                        href={record.master_url} 
-                        target="_blank" 
-                        variant="light"
-                        fullWidth
-                      >
-                        View on Discogs
-                      </Button>
-                    )}
 
                     <Group grow>
                       <Button 
