@@ -1568,32 +1568,49 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         </>
                       )}
 
-                      {(record.master_url || record.current_release_url) && (
-                        <Group grow mt="xs">
-                          {record.master_url && (
-                            <Button 
-                              component="a" 
-                              href={record.master_url} 
-                              target="_blank" 
-                              variant="light"
-                              rightSection={<IconExternalLink size={16} />}
-                            >
-                              Master
-                            </Button>
-                          )}
-                          {record.current_release_url && (
-                            <Button 
-                              component="a" 
-                              href={record.current_release_url} 
-                              target="_blank" 
-                              variant="light"
-                              rightSection={<IconExternalLink size={16} />}
-                            >
-                              Release
-                            </Button>
-                          )}
-                        </Group>
-                      )}
+                      {(record.master_url || record.original_release_url || record.current_release_url) && (() => {
+                        // Only show "Current" if it's different from "Original"
+                        const showCurrent = record.current_release_url && 
+                                          record.current_release_url !== record.original_release_url;
+                        
+                        return (
+                          <Group grow mt="xs">
+                            {record.master_url && (
+                              <Button 
+                                component="a" 
+                                href={record.master_url} 
+                                target="_blank" 
+                                variant="light"
+                                rightSection={<IconExternalLink size={16} />}
+                              >
+                                Master
+                              </Button>
+                            )}
+                            {record.original_release_url && (
+                              <Button 
+                                component="a" 
+                                href={record.original_release_url} 
+                                target="_blank" 
+                                variant="light"
+                                rightSection={<IconExternalLink size={16} />}
+                              >
+                                Original
+                              </Button>
+                            )}
+                            {showCurrent && (
+                              <Button 
+                                component="a" 
+                                href={record.current_release_url} 
+                                target="_blank" 
+                                variant="light"
+                                rightSection={<IconExternalLink size={16} />}
+                              >
+                                Current
+                              </Button>
+                            )}
+                          </Group>
+                        );
+                      })()}
                     </div>
 
                     {isScanning ? (
