@@ -1313,21 +1313,28 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       )}
                       {record.musicians && record.musicians.length > 0 && (
                         <Box mb={4}>
-                          <Group 
-                            gap={4}
-                            style={{ cursor: 'pointer' }} 
-                            onClick={() => setMusiciansExpanded(!musiciansExpanded)}
-                          >
-                            <Text size="sm" fw={500} c="dimmed">
-                              Musicians ({record.musicians.length}):
-                            </Text>
-                            {musiciansExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
-                          </Group>
-                          <Collapse in={musiciansExpanded}>
-                            <Text size="sm" mt={4}>
-                              {record.musicians.join(', ')}
-                            </Text>
-                          </Collapse>
+                          <Text size="sm">
+                            <Text component="span" fw={500} c="dimmed">Musicians: </Text>
+                            {record.musicians.slice(0, 3).join(', ')}
+                            {record.musicians.length > 3 && !musiciansExpanded && '...'}
+                          </Text>
+                          {record.musicians.length > 3 && (
+                            <>
+                              <Collapse in={musiciansExpanded}>
+                                <Text size="sm" mt={4}>
+                                  {record.musicians.slice(3).join(', ')}
+                                </Text>
+                              </Collapse>
+                              <Text 
+                                size="xs" 
+                                c="blue" 
+                                style={{ cursor: 'pointer', marginTop: '4px' }}
+                                onClick={() => setMusiciansExpanded(!musiciansExpanded)}
+                              >
+                                {musiciansExpanded ? 'Show less' : `Show ${record.musicians.length - 3} more`}
+                              </Text>
+                            </>
+                          )}
                         </Box>
                       )}
                       {record.year && (
