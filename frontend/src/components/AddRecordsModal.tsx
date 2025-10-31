@@ -419,28 +419,14 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setSuccess(undefined);
     
     try {
-      // Create a record with custom values
+      // Create a record with ALL fields from the lookup response
       const recordData: VinylRecord = {
-        artist: record.artist,
-        album: record.album,
-        year: record.year,
-        current_release_year: record.current_release_year,
-        barcode: record.barcode,
-        genres: record.genres || [],
-        styles: record.styles || [],
-        musicians: record.musicians || [],
-        master_url: record.master_url || undefined,
-        master_format: record.master_format,
-        current_release_url: record.current_release_url || undefined,
-        current_release_format: record.current_release_format,
-        label: record.label,
-        country: record.country,
+        ...record,  // Spread all fields from the record
         added_from: record.added_from || 'manual',
-        // Use the custom values from the record, not empty object
-        custom_values_cache: record.custom_values_cache
+        custom_values_cache: record.custom_values_cache || {}
       };
 
-      console.log('Adding record with custom values:', recordData);
+      console.log('Adding record with all fields:', recordData);
       const response = await records.add(recordData);
 
       if (response.success) {
