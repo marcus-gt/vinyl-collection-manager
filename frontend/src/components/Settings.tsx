@@ -55,9 +55,9 @@ export function Settings({
     { id: 'tracklist', name: 'Tracklist' },
     { id: 'musicians', name: 'Musicians' },
     { id: 'links', name: 'Discogs Links' },
-    { id: 'added_from', name: 'Source' },
     { id: 'created_at', name: 'Added' },
     // Hidden by default (advanced fields)
+    { id: 'added_from', name: 'Source' },
     { id: 'original_catno', name: 'Original Catno' },
     { id: 'current_catno', name: 'Release Catno' },
     { id: 'master_id', name: 'Master ID' },

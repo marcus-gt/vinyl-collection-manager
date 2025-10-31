@@ -2167,7 +2167,8 @@ function Collection() {
       'current_release_date',
       'current_identifiers',
       'original_catno',
-      'current_catno'
+      'current_catno',
+      'added_from'
     ];
 
     // Only set defaults if these columns don't have visibility settings yet
@@ -2393,9 +2394,9 @@ function Collection() {
     'tracklist',
     'musicians',
     'links', // Discogs Links column
-    'added_from',
     'created_at',
     // Hidden by default (advanced fields)
+    'added_from',
     'original_catno',
     'current_catno',
     'master_id',
@@ -3058,9 +3059,14 @@ function Collection() {
                   'CSV Import': 'violet'
                 }
               },
-              filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string) => {
-                const cellValue = row.getValue(columnId);
-                // Use hardcoded map for filter values
+              filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string | string[]) => {
+                // Handle multi-select filtering (filter UI allows multiple selections)
+                if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
+                
+                const cellValue = row.getValue(columnId) as string;
+                const filterArray = Array.isArray(filterValue) ? filterValue : [filterValue];
+                
+                // Map display labels back to internal database values
                 const labelMap: Record<string, string> = {
                   'Manual': 'manual',
                   'Spotify URL': 'spotify',
@@ -3070,17 +3076,58 @@ function Collection() {
                   'Discogs': 'discogs_url',
                   'CSV Import': 'csv_import'
                 };
-                const internalValue = labelMap[filterValue];
-                console.log('Filter comparison:', { cellValue, filterValue, internalValue, labelMap });
-                return cellValue === internalValue;
+                
+                // Convert filter values (display labels) to internal values and check if cell matches any
+                return filterArray.some(filterVal => {
+                  const internalValue = labelMap[filterVal] || filterVal.toLowerCase();
+                  return cellValue?.toLowerCase() === internalValue;
+                });
               },
               enableColumnFilter: true,
-              cell: ({ row }: { row: Row<VinylRecord> }) => createEditableStandardCell(
-                row.original,
-                'added_from',
-                'Source',
-                'text'
-              )
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const valueMap: Record<string, string> = {
+                  'manual': 'Manual',
+                  'spotify': 'Spotify URL',
+                  'spotify_list': 'Spotify List Manual',
+                  'spotify_list_sub': 'Spotify List Auto',
+                  'barcode': 'Barcode',
+                  'discogs_url': 'Discogs',
+                  'csv_import': 'CSV Import'
+                };
+                const optionColors: Record<string, string> = {
+                  'Manual': 'gray',
+                  'Spotify URL': 'green',
+                  'Spotify List Manual': 'green',
+                  'Spotify List Auto': 'green',
+                  'Barcode': 'blue',
+                  'Discogs': 'orange',
+                  'CSV Import': 'violet'
+                };
+                // Normalize to lowercase to handle database inconsistencies
+                const rawValue = (row.original.added_from || '').toLowerCase();
+                const displayValue = valueMap[rawValue] || row.original.added_from || '-';
+                const color = optionColors[displayValue] || 'gray';
+                const colorStyles = getColorStyles(color);
+                
+                return displayValue && displayValue !== '-' ? (
+                  <Badge
+                    size="sm"
+                    radius="md"
+                    style={colorStyles}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                        padding: '2px 5px',
+                        fontSize: '10.5px'
+                      }
+                    }}
+                  >
+                    {displayValue}
+                  </Badge>
+                ) : (
+                  <Text size="sm" c="dimmed">-</Text>
+                );
+              }
             },
             {
               id: 'links',
