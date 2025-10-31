@@ -3,25 +3,65 @@ export interface User {
   email: string;
 }
 
+export interface Identifier {
+  type: string;
+  value: string;
+  description?: string;
+}
+
+export interface Track {
+  position: string;
+  title: string;
+  duration: string;
+}
+
 export interface VinylRecord {
+  // Core fields
   id: string;
+  user_id: string;
   artist: string;
   album: string;
-  year: string;
-  barcode?: string;
-  label?: string;
-  genres?: string;
-  styles?: string;
-  notes?: string;
-  musicians?: string;
-  master_url?: string;
-  master_format?: string;
-  release_url?: string;
-  release_year?: string;
-  current_release_format?: string;
   added_at: string;
   updated_at?: string;
-  user_id: string;
+  added_from: string;
+  
+  // Master release fields
+  master_id?: number;
+  master_url?: string;
+  tracklist?: Track[];
+  
+  // Original/main release fields
+  year?: string;  // Original year (preferred)
+  label?: string;  // Original label (preferred)
+  country?: string;  // Original country (preferred)
+  master_format?: string;  // Original format (legacy name for compatibility)
+  original_release_id?: number;
+  original_release_url?: string;
+  original_catno?: string;
+  original_release_date?: string;
+  original_identifiers?: Identifier[];
+  
+  // Current/specific release fields
+  current_release_id?: number;
+  current_release_url?: string;
+  current_release_year?: string;
+  current_release_format?: string;
+  current_label?: string;
+  current_catno?: string;
+  current_country?: string;
+  current_release_date?: string;
+  current_identifiers?: Identifier[];
+  
+  // Shared fields (with priority logic applied)
+  genres?: string;
+  styles?: string;
+  musicians?: string;
+  
+  // Legacy fields
+  barcode?: string;
+  notes?: string;  // Deprecated, use custom columns instead
+  release_url?: string;  // Deprecated, use current_release_url
+  release_year?: string;  // Deprecated, use current_release_year
 }
 
 export interface AuthResponse {

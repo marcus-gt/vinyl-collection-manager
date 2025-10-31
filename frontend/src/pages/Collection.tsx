@@ -2650,7 +2650,7 @@ function Collection() {
             { 
               id: 'label', 
               accessorKey: 'label', 
-              header: 'Label', 
+              header: 'Original Label', 
               enableSorting: true,
               size: 150,
               enableResizing: true,
@@ -2660,7 +2660,7 @@ function Collection() {
                 <EditableStandardCell
                   value={row.original.label || ''}
                   fieldName="label"
-                  fieldLabel="Label"
+                  fieldLabel="Original Label"
                   recordId={row.original.id!}
                   inputType="textarea"
                   onUpdate={(recordId, fieldName, newValue) => {
@@ -2672,11 +2672,83 @@ function Collection() {
               )
             },
             { 
+              id: 'original_catno', 
+              accessorKey: 'original_catno', 
+              header: 'Original Catno', 
+              enableSorting: true,
+              size: 120,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.original_catno || ''}
+                  fieldName="original_catno"
+                  fieldLabel="Original Catno"
+                  recordId={row.original.id!}
+                  inputType="text"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            { 
+              id: 'current_label', 
+              accessorKey: 'current_label', 
+              header: 'Release Label', 
+              enableSorting: true,
+              size: 150,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.current_label || ''}
+                  fieldName="current_label"
+                  fieldLabel="Release Label"
+                  recordId={row.original.id!}
+                  inputType="textarea"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            { 
+              id: 'current_catno', 
+              accessorKey: 'current_catno', 
+              header: 'Release Catno', 
+              enableSorting: true,
+              size: 120,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.current_catno || ''}
+                  fieldName="current_catno"
+                  fieldLabel="Release Catno"
+                  recordId={row.original.id!}
+                  inputType="text"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            { 
               id: 'country', 
               accessorKey: 'country', 
-              header: 'Country', 
+              header: 'Original Country', 
               enableSorting: true,
-              size: 100,
+              size: 120,
               enableResizing: true,
               minSize: 80,
               maxSize: 200,
@@ -2684,9 +2756,33 @@ function Collection() {
                 <EditableStandardCell
                   value={row.original.country || ''}
                   fieldName="country"
-                  fieldLabel="Country"
+                  fieldLabel="Original Country"
                   recordId={row.original.id!}
-                  inputType="textarea"
+                  inputType="text"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            { 
+              id: 'current_country', 
+              accessorKey: 'current_country', 
+              header: 'Release Country', 
+              enableSorting: true,
+              size: 120,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.current_country || ''}
+                  fieldName="current_country"
+                  fieldLabel="Release Country"
+                  recordId={row.original.id!}
+                  inputType="text"
                   onUpdate={(recordId, fieldName, newValue) => {
                     setUserRecords(prevRecords =>
                       prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
@@ -3344,16 +3440,44 @@ function Collection() {
             </Box>
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
-              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Label</Text>
-              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
-                {createEditableStandardCell(previewRecord, 'label', 'Label', 'textarea', { noTruncate: true })}
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Original Label</Text>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                {createEditableStandardCell(previewRecord, 'label', 'Original Label', 'textarea', { noTruncate: true })}
               </Box>
             </Box>
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
-              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Country</Text>
-              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
-                {createEditableStandardCell(previewRecord, 'country', 'Country', 'textarea', { noTruncate: true })}
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Original Catno</Text>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                {createEditableStandardCell(previewRecord, 'original_catno', 'Original Catno', 'text', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Original Country</Text>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                {createEditableStandardCell(previewRecord, 'country', 'Original Country', 'text', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Release Label</Text>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                {createEditableStandardCell(previewRecord, 'current_label', 'Release Label', 'textarea', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Release Catno</Text>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                {createEditableStandardCell(previewRecord, 'current_catno', 'Release Catno', 'text', { noTruncate: true })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Release Country</Text>
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                {createEditableStandardCell(previewRecord, 'current_country', 'Release Country', 'text', { noTruncate: true })}
               </Box>
             </Box>
 
@@ -3458,34 +3582,57 @@ function Collection() {
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Discogs Links</Text>
-              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
-                <EditableDiscogsLinks
-                  recordId={previewRecord.id!}
-                  masterUrl={previewRecord.master_url || ''}
-                  currentReleaseUrl={previewRecord.current_release_url || ''}
-                  onUpdate={(recordId, updates) => {
-                    setUserRecords(prevRecords =>
-                      prevRecords.map(r => {
-                        if (r.id === recordId) {
-                          return {
-                            ...r,
-                            master_url: updates.master_url ?? r.master_url,
-                            current_release_url: updates.current_release_url ?? r.current_release_url
-                          };
-                        }
-                        return r;
-                      })
-                    );
-                    setPreviewRecord(prev => {
-                      if (!prev) return null;
-                      return {
-                        ...prev,
-                        master_url: updates.master_url ?? prev.master_url,
-                        current_release_url: updates.current_release_url ?? prev.current_release_url
-                      };
-                    });
-                  }}
-                />
+              <Box style={{ flex: 1, minWidth: 0 }}>
+                <Stack gap="xs">
+                  {previewRecord.master_url && (
+                    <Group gap="xs">
+                      <Text size="sm" c="dimmed">Master:</Text>
+                      <Button
+                        component="a"
+                        href={previewRecord.master_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="light"
+                        size="xs"
+                      >
+                        View Master
+                      </Button>
+                    </Group>
+                  )}
+                  {previewRecord.original_release_url && (
+                    <Group gap="xs">
+                      <Text size="sm" c="dimmed">Original:</Text>
+                      <Button
+                        component="a"
+                        href={previewRecord.original_release_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="light"
+                        size="xs"
+                      >
+                        View Original
+                      </Button>
+                    </Group>
+                  )}
+                  {previewRecord.current_release_url && (
+                    <Group gap="xs">
+                      <Text size="sm" c="dimmed">Current:</Text>
+                      <Button
+                        component="a"
+                        href={previewRecord.current_release_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="light"
+                        size="xs"
+                      >
+                        View Current
+                      </Button>
+                    </Group>
+                  )}
+                  {!previewRecord.master_url && !previewRecord.original_release_url && !previewRecord.current_release_url && (
+                    <Text size="sm">-</Text>
+                  )}
+                </Stack>
               </Box>
             </Box>
 

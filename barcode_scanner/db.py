@@ -184,24 +184,48 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
         
         # Map fields from API response to database schema
         record_to_insert = {
+            # Core fields
             'user_id': user_id,
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat(),
             'artist': record_data.get('artist'),
             'album': record_data.get('album'),
+            'added_from': record_data.get('added_from', ''),
+            
+            # Master release fields
+            'master_id': record_data.get('master_id'),
+            'master_url': record_data.get('master_url'),
+            'tracklist': json.dumps(record_data.get('tracklist', [])) if record_data.get('tracklist') else None,
+            
+            # Original/main release fields
             'year': record_data.get('year'),
             'label': record_data.get('label'),
-            'genres': record_data.get('genres', []),
-            'styles': record_data.get('styles', []),
-            'musicians': record_data.get('musicians', []),
-            'master_url': record_data.get('master_url'),
+            'country': record_data.get('country'),
             'master_format': record_data.get('master_format'),
+            'original_release_id': record_data.get('original_release_id'),
+            'original_release_url': record_data.get('original_release_url'),
+            'original_catno': record_data.get('original_catno'),
+            'original_release_date': record_data.get('original_release_date'),
+            'original_identifiers': json.dumps(record_data.get('original_identifiers', [])) if record_data.get('original_identifiers') else None,
+            
+            # Current/specific release fields
+            'current_release_id': record_data.get('current_release_id'),
             'current_release_url': record_data.get('current_release_url'),
             'current_release_year': record_data.get('current_release_year'),
             'current_release_format': record_data.get('current_release_format'),
-            'barcode': record_data.get('barcode'),
-            'country': record_data.get('country'),
-            'added_from': record_data.get('added_from', '')
+            'current_label': record_data.get('current_label'),
+            'current_catno': record_data.get('current_catno'),
+            'current_country': record_data.get('current_country'),
+            'current_release_date': record_data.get('current_release_date'),
+            'current_identifiers': json.dumps(record_data.get('current_identifiers', [])) if record_data.get('current_identifiers') else None,
+            
+            # Shared fields
+            'genres': record_data.get('genres', []),
+            'styles': record_data.get('styles', []),
+            'musicians': record_data.get('musicians', []),
+            
+            # Legacy fields
+            'barcode': record_data.get('barcode')
         }
         
         print("\nPrepared record data:")

@@ -75,67 +75,185 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         print("\n=== Formatting Release Data ===")
         print(f"Input added_from value: {added_from}")
         
-        # Get artist name(s)
+        # Get artist name(s) from current release
         artists = [artist.name for artist in release.artists]
         artist_name = ' & '.join(artists) if artists else 'Unknown Artist'
 
-        # Get musicians from both release credits and track credits
+        # Initialize collections
         musicians = set()
         
-        # Get format from current release
+        # === CURRENT RELEASE DATA ===
+        print("\n--- Extracting Current Release Data ---")
+        
+        # Current release ID
+        current_release_id = release.id
+        print(f"Current release ID: {current_release_id}")
+        
+        # Current format
         current_format = None
         if hasattr(release, 'formats') and release.formats:
-            # Discogs formats is a list of format objects, e.g., [{'name': 'Vinyl', 'qty': '1', 'descriptions': ['LP', 'Album']}]
             format_names = [fmt.get('name') for fmt in release.formats if fmt.get('name')]
             if format_names:
                 current_format = ', '.join(format_names)
-                print(f"Found current release format: {current_format}")
+                print(f"Current release format: {current_format}")
         
-        # Try to get the master release for year and additional info
+        # Current label and catalog number
+        current_label = None
+        current_catno = None
+        if hasattr(release, 'labels') and release.labels:
+            current_label = release.labels[0].name
+            current_catno = release.labels[0].catno if hasattr(release.labels[0], 'catno') else None
+            print(f"Current label: {current_label}, catno: {current_catno}")
+        
+        # Current country
+        current_country = getattr(release, 'country', None)
+        print(f"Current country: {current_country}")
+        
+        # Current release date
+        current_release_date = None
+        current_release_year = getattr(release, 'year', None)
+        if hasattr(release, 'released') and release.released:
+            current_release_date = release.released
+            print(f"Current release date: {current_release_date}")
+        
+        # Current identifiers (barcodes, matrix codes, etc.)
+        current_identifiers = []
+        if hasattr(release, 'identifiers') and release.identifiers:
+            for identifier in release.identifiers:
+                current_identifiers.append({
+                    'type': identifier.get('type', ''),
+                    'value': identifier.get('value', ''),
+                    'description': identifier.get('description', '')
+                })
+            print(f"Current identifiers: {len(current_identifiers)} found")
+        
+        # Current genres/styles (will be overridden by master/main if available)
+        current_genres = getattr(release, 'genres', [])
+        current_styles = getattr(release, 'styles', [])
+        
+        # === MASTER RELEASE DATA ===
+        print("\n--- Extracting Master Release Data ---")
         master = None
-        original_year = None
-        main_release = None
-        master_format = None
+        master_id = None
+        tracklist = []
+        master_genres = []
+        master_styles = []
+        
         try:
             if hasattr(release, 'master') and release.master:
                 print("Found master release, fetching full master data...")
-                master = d.master(release.master.id)  # Fetch full master data
-                original_year = master.year
-                print(f"Found master release year: {original_year}")
+                master = d.master(release.master.id)
+                master_id = master.id
+                print(f"Master ID: {master_id}")
                 
-                # Get the main release data
-                if hasattr(master, 'main_release'):
-                    print(f"Found main release ID: {master.main_release.id}")
-                    main_release = d.release(master.main_release.id)
-                    print("Fetched main release data")
+                # Get tracklist from master
+                if hasattr(master, 'tracklist') and master.tracklist:
+                    for track in master.tracklist:
+                        track_data = {
+                            'position': getattr(track, 'position', ''),
+                            'title': getattr(track, 'title', ''),
+                            'duration': getattr(track, 'duration', '')
+                        }
+                        tracklist.append(track_data)
+                    print(f"Master tracklist: {len(tracklist)} tracks")
+                
+                # Get genres/styles from master (priority 1)
+                if hasattr(master, 'genres') and master.genres:
+                    master_genres = master.genres
+                    print(f"Master genres: {master_genres}")
+                if hasattr(master, 'styles') and master.styles:
+                    master_styles = master.styles
+                    print(f"Master styles: {master_styles}")
                     
-                    # Get format from main release
-                    if hasattr(main_release, 'formats') and main_release.formats:
-                        format_names = [fmt.get('name') for fmt in main_release.formats if fmt.get('name')]
-                        if format_names:
-                            master_format = ', '.join(format_names)
-                            print(f"Found master format: {master_format}")
-                    
-                    # Get musicians from main release credits
-                    if hasattr(main_release, 'credits'):
-                        print("Found main release credits:", [f"{c.name} ({c.role})" for c in main_release.credits])
-                        musicians.update(get_musicians(main_release.credits))
-                    else:
-                        print("No credits found on main release")
-                    
-                    # Get musicians from main release tracklist
-                    if hasattr(main_release, 'tracklist'):
-                        for track in main_release.tracklist:
-                            if hasattr(track, 'credits'):
-                                print(f"Found track credits for {track.title}:", 
-                                      [f"{c.name} ({c.role})" for c in track.credits])
-                                musicians.update(get_musicians(track.credits))
-                            else:
-                                print(f"No credits found on track: {track.title}")
         except Exception as e:
-            print(f"Error getting master/main release info: {e}")
+            print(f"Error getting master release info: {e}")
+        
+        # === MAIN/ORIGINAL RELEASE DATA ===
+        print("\n--- Extracting Main/Original Release Data ---")
+        main_release = None
+        original_release_id = None
+        original_label = None
+        original_catno = None
+        original_country = None
+        original_release_date = None
+        original_year = None
+        original_format = None
+        original_identifiers = []
+        main_genres = []
+        main_styles = []
+        
+        try:
+            if master and hasattr(master, 'main_release'):
+                print(f"Found main release ID: {master.main_release.id}")
+                main_release = d.release(master.main_release.id)
+                original_release_id = main_release.id
+                print("Fetched main release data")
+                
+                # Original format
+                if hasattr(main_release, 'formats') and main_release.formats:
+                    format_names = [fmt.get('name') for fmt in main_release.formats if fmt.get('name')]
+                    if format_names:
+                        original_format = ', '.join(format_names)
+                        print(f"Original format: {original_format}")
+                
+                # Original label and catalog number
+                if hasattr(main_release, 'labels') and main_release.labels:
+                    original_label = main_release.labels[0].name
+                    original_catno = main_release.labels[0].catno if hasattr(main_release.labels[0], 'catno') else None
+                    print(f"Original label: {original_label}, catno: {original_catno}")
+                
+                # Original country
+                if hasattr(main_release, 'country'):
+                    original_country = main_release.country
+                    print(f"Original country: {original_country}")
+                
+                # Original year and date
+                original_year = master.year if master else None
+                if hasattr(main_release, 'released') and main_release.released:
+                    original_release_date = main_release.released
+                    print(f"Original release date: {original_release_date}")
+                elif original_year:
+                    print(f"Original year (from master): {original_year}")
+                
+                # Original identifiers
+                if hasattr(main_release, 'identifiers') and main_release.identifiers:
+                    for identifier in main_release.identifiers:
+                        original_identifiers.append({
+                            'type': identifier.get('type', ''),
+                            'value': identifier.get('value', ''),
+                            'description': identifier.get('description', '')
+                        })
+                    print(f"Original identifiers: {len(original_identifiers)} found")
+                
+                # Get genres/styles from main release (priority 2)
+                if hasattr(main_release, 'genres') and main_release.genres:
+                    main_genres = main_release.genres
+                    print(f"Main release genres: {main_genres}")
+                if hasattr(main_release, 'styles') and main_release.styles:
+                    main_styles = main_release.styles
+                    print(f"Main release styles: {main_styles}")
+                
+                # Get musicians from main release (priority 1)
+                if hasattr(main_release, 'credits'):
+                    print("Found main release credits:", [f"{c.name} ({c.role})" for c in main_release.credits])
+                    musicians.update(get_musicians(main_release.credits))
+                else:
+                    print("No credits found on main release")
+                
+                # Get musicians from main release tracklist
+                if hasattr(main_release, 'tracklist'):
+                    for track in main_release.tracklist:
+                        if hasattr(track, 'credits'):
+                            print(f"Found track credits for {track.title}:", 
+                                  [f"{c.name} ({c.role})" for c in track.credits])
+                            musicians.update(get_musicians(track.credits))
+                        else:
+                            print(f"No credits found on track: {track.title}")
+                            
+        except Exception as e:
+            print(f"Error getting main release info: {e}")
 
-        # Fall back to current release credits if no musicians found
+        # Fall back to current release for musicians if none found in main release
         if not musicians:
             print("\nNo musicians found in main release, checking current release...")
             if hasattr(release, 'credits'):
@@ -154,34 +272,63 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                     else:
                         print(f"No credits found on track: {track.title}")
         
-        # Get country from main release if available, otherwise from current release
-        country = None
-        if main_release and hasattr(main_release, 'country'):
-            country = main_release.country
-        elif hasattr(release, 'country'):
-            country = release.country
+        # === PRIORITY LOGIC FOR GENRES/STYLES ===
+        # Priority: master → main_release → current release
+        final_genres = master_genres or main_genres or current_genres
+        final_styles = master_styles or main_styles or current_styles
+        print(f"\nFinal genres (priority: master→main→current): {final_genres}")
+        print(f"Final styles (priority: master→main→current): {final_styles}")
+        
+        # === PRIORITY LOGIC FOR COUNTRY ===
+        # Priority: main_release (original) → current release
+        final_country = original_country or current_country
+        print(f"Final country (priority: original→current): {final_country}")
 
-        # Format the data
+        # Format the complete data dictionary
         data = {
+            # Core fields (from current release)
             'artist': artist_name,
             'album': release.title,
-            'year': original_year or getattr(release, 'year', None),
-            'label': release.labels[0].name if release.labels else None,
-            'genres': getattr(release, 'genres', []),
-            'styles': getattr(release, 'styles', []),
-            'musicians': sorted(list(musicians)),
-            'master_url': f'https://www.discogs.com/master/{master.id}' if master else None,
-            'master_format': master_format,
-            'current_release_url': f'https://www.discogs.com/release/{release.id}',
-            'current_release_year': getattr(release, 'year', None),
+            
+            # Master release fields
+            'master_id': master_id,
+            'master_url': f'https://www.discogs.com/master/{master_id}' if master_id else None,
+            'tracklist': tracklist,
+            
+            # Original/main release fields
+            'year': original_year or current_release_year,  # Original year preferred
+            'label': original_label or current_label,  # Original label preferred
+            'country': final_country,  # Original country preferred
+            'master_format': original_format,  # Using "master_format" for compatibility (it's actually original format)
+            'original_release_id': original_release_id,
+            'original_release_url': f'https://www.discogs.com/release/{original_release_id}' if original_release_id else None,
+            'original_catno': original_catno,
+            'original_release_date': original_release_date,
+            'original_identifiers': original_identifiers,
+            
+            # Current/specific release fields
+            'current_release_id': current_release_id,
+            'current_release_url': f'https://www.discogs.com/release/{current_release_id}',
+            'current_release_year': current_release_year,
             'current_release_format': current_format,
-            'barcode': None,
-            'country': country,
+            'current_label': current_label,
+            'current_catno': current_catno,
+            'current_country': current_country,
+            'current_release_date': current_release_date,
+            'current_identifiers': current_identifiers,
+            
+            # Shared fields (with priority logic applied)
+            'genres': final_genres,
+            'styles': final_styles,
+            'musicians': sorted(list(musicians)),
+            
+            # Legacy/metadata fields
+            'barcode': None,  # Will be populated by barcode search
             'added_from': added_from
         }
 
-        print(f"Formatted data added_from value: {data['added_from']}")
-        print(f"Formatted release data: {data}")  # Debug logging
+        print(f"\nFormatted data added_from value: {data['added_from']}")
+        print(f"Total fields populated: {len([k for k, v in data.items() if v is not None])}/{len(data)}")
         return data
 
     except Exception as e:
