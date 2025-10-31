@@ -38,6 +38,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [moreInfoExpanded, setMoreInfoExpanded] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const recordPreviewRef = useRef<HTMLDivElement>(null);
+  const scannerSectionRef = useRef<HTMLDivElement>(null);
   const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
     artist: '',
     album: '',
@@ -460,10 +461,16 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleClear = () => {
-    setRecord(undefined);
-    setError(undefined);
-    setSuccess(undefined);
+    // Increment scanner key to trigger a "next scan" (unpause the scanner)
     setScannerKey(prev => prev + 1);
+    
+    // Scroll back to scanner at top - same logic as scrolling to record preview
+    setTimeout(() => {
+      scannerSectionRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 100);
   };
 
   const handleSpotifyAuth = async () => {
@@ -888,8 +895,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         }}
       >
         <Stack>
-          <Paper withBorder shadow="md" p="md" radius="md">
-            <Stack>
+          <Box ref={scannerSectionRef}>
+            <Paper withBorder shadow="md" p="md" radius="md">
+              <Stack>
               <Tabs 
                 defaultValue="add" 
                 onChange={handleSpotifyTabChange}
@@ -916,8 +924,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                 </Tabs.List>
 
                 <Tabs.Panel value="add" pt="xs">
-                  {isScanning ? (
-                    <>
+                  <div>
+                    {isScanning ? (
+                      <>
                       <BarcodeScanner 
                         key={scannerKey}
                         onScan={handleScan} 
@@ -1040,6 +1049,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       </Button>
                     </Stack>
                   )}
+                  </div>
                 </Tabs.Panel>
 
                 <Tabs.Panel value="spotify" pt="xs">
@@ -1582,7 +1592,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         Add
                       </Button>
                       <Button 
-                        color="red"
                         variant="light" 
                         onClick={handleClear}
                         disabled={loading}
@@ -1595,6 +1604,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
               )}
             </Stack>
           </Paper>
+          </Box>
         </Stack>
       </Modal>
 

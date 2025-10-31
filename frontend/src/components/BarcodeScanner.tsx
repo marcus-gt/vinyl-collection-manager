@@ -179,7 +179,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
               backgroundColor: 'rgba(16, 51, 82, 0.88)' // Less transparent blue
             }}
           >
-            Next Scan
+            New Scan
           </Button>
         </Box>
       )}
