@@ -164,7 +164,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         <Box
           style={{
             position: 'absolute',
-            bottom: 20,
+            bottom: '1.5%',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 10,
@@ -172,11 +172,14 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         >
           <Button 
             onClick={handleNextScan}
-            variant="filled"
+            variant="light"
             color="blue"
-            size="lg"
+            size="md"
+            style={{
+              backgroundColor: 'rgba(16, 51, 82, 0.88)' // Less transparent blue
+            }}
           >
-            Next Scan
+            New Scan
           </Button>
         </Box>
       )}
@@ -185,7 +188,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         <Text 
           style={{ 
             position: 'absolute',
-            bottom: 10,
+            bottom: '2.2%',
             left: '50%',
             transform: 'translateX(-50%)',
             color: 'white',

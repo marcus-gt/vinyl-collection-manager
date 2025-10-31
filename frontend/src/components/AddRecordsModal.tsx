@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon } from '@mantine/core';
-import { IconX, IconBrandSpotify, IconBarcode } from '@tabler/icons-react';
+import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon, Collapse } from '@mantine/core';
+import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronRight } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
@@ -34,7 +34,11 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [record, setRecord] = useState<VinylRecord | undefined>(undefined);
   const [isScanning, setIsScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
+  const [musiciansExpanded, setMusiciansExpanded] = useState(false);
+  const [moreInfoExpanded, setMoreInfoExpanded] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
+  const recordPreviewRef = useRef<HTMLDivElement>(null);
+  const scannerSectionRef = useRef<HTMLDivElement>(null);
   const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
     artist: '',
     album: '',
@@ -147,6 +151,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     };
     loadCustomColumns();
   }, []);
+
+  // Scroll to record preview when record is loaded
+  useEffect(() => {
+    if (record && recordPreviewRef.current) {
+      setTimeout(() => {
+        recordPreviewRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [record]);
 
   // Helper function to get default values
   const getRecordWithDefaults = (recordData: VinylRecord) => {
@@ -445,10 +461,16 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleClear = () => {
-    setRecord(undefined);
-    setError(undefined);
-    setSuccess(undefined);
+    // Increment scanner key to trigger a "next scan" (unpause the scanner)
     setScannerKey(prev => prev + 1);
+    
+    // Scroll back to scanner at top - same logic as scrolling to record preview
+    setTimeout(() => {
+      scannerSectionRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 100);
   };
 
   const handleSpotifyAuth = async () => {
@@ -873,8 +895,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         }}
       >
         <Stack>
-          <Paper withBorder shadow="md" p="md" radius="md">
-            <Stack>
+          <Box ref={scannerSectionRef}>
+            <Paper withBorder shadow="md" p="md" radius="md">
+              <Stack>
               <Tabs 
                 defaultValue="add" 
                 onChange={handleSpotifyTabChange}
@@ -901,40 +924,64 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                 </Tabs.List>
 
                 <Tabs.Panel value="add" pt="xs">
-                  {isScanning ? (
-                    <>
-                      <BarcodeScanner 
-                        key={scannerKey}
-                        onScan={handleScan} 
-                        isScanning={isScanning} 
-                        isLoading={loading}
-                      />
-                      {urlOrBarcode && (
-                        <>
-                          <Text ta="center" size="sm" fw={500} mt="xs">
-                            Captured barcode: {urlOrBarcode}
-                          </Text>
-                          {loading && (
-                            <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                              <Loader size="sm" color="blue" />
-                              <Text size="sm" c="dimmed">
-                                Looking up record in Discogs...
-                              </Text>
-                            </Box>
-                          )}
-                        </>
-                      )}
-                      <Button 
-                        color="red" 
-                        onClick={() => {
-                          setIsScanning(false);
-                          setError(undefined);
-                          setSuccess(undefined);
-                        }}
-                        fullWidth
-                      >
-                        Stop Scanning
-                      </Button>
+                  <div>
+                    {isScanning ? (
+                      <>
+                      <Box style={{ position: 'relative' }}>
+                        <BarcodeScanner 
+                          key={scannerKey}
+                          onScan={handleScan} 
+                          isScanning={isScanning} 
+                          isLoading={loading}
+                        />
+                        <ActionIcon
+                          onClick={() => {
+                            // Cancel ongoing search if loading
+                            if (loading) {
+                              handleCancel();
+                            }
+                            setIsScanning(false);
+                            setError(undefined);
+                            setSuccess(undefined);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            zIndex: 100,
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            backdropFilter: 'blur(4px)'
+                          }}
+                          variant="filled"
+                          color="dark"
+                          size="lg"
+                        >
+                          <IconX size={20} color="white" />
+                        </ActionIcon>
+                      </Box>
+                      <Box style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        padding: '3px 0'
+                      }}>
+                        {urlOrBarcode && (
+                          <>
+                            <Text ta="center" size="sm" fw={500}>
+                              Captured barcode: {urlOrBarcode}
+                            </Text>
+                            {loading && (
+                              <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                                <Loader size="sm" color="blue" />
+                                <Text size="sm" c="dimmed">
+                                  Looking up record in Discogs...
+                                </Text>
+                              </Box>
+                            )}
+                          </>
+                        )}
+                      </Box>
                     </>
                   ) : (
                     <Stack>
@@ -966,6 +1013,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                           <Button 
                             onClick={() => {
                               setIsScanning(true);
+                              setUrlOrBarcode(''); // Clear URL field when starting scanner
                               setError(undefined);
                               setSuccess(undefined);
                             }} 
@@ -1012,6 +1060,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       </Button>
                     </Stack>
                   )}
+                  </div>
                 </Tabs.Panel>
 
                 <Tabs.Panel value="spotify" pt="xs">
@@ -1199,18 +1248,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                 </Tabs.Panel>
               </Tabs>
 
-              {loading && (
-                <Button 
-                  variant="light" 
-                  color="red" 
-                  onClick={handleCancel}
-                  leftSection={<IconX size={16} />}
-                  fullWidth
-                >
-                  Cancel Search
-                </Button>
-              )}
-
               {error && (
                 <Alert color="red" title="Error" variant="light">
                   {error}
@@ -1293,19 +1330,121 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
               )}
 
               {record && (
-                <Paper withBorder p="md">
+                <Paper withBorder p="md" ref={recordPreviewRef} style={{ position: 'relative' }}>
+                  <ActionIcon
+                    onClick={() => {
+                      setRecord(undefined);
+                      setError(undefined);
+                      setSuccess(undefined);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      zIndex: 10
+                    }}
+                    variant="subtle"
+                    color="gray"
+                  >
+                    <IconX size={18} />
+                  </ActionIcon>
                   <Stack>
                     <div>
-                      <Text fw={500} size="lg">{record.artist} - {record.album}</Text>
-                      {record.genres && <Text size="sm">Genres: {record.genres.join(', ')}</Text>}
-                      {record.styles && <Text size="sm">Styles: {record.styles.join(', ')}</Text>}
-                      {record.musicians && <Text size="sm">Musicians: {record.musicians.join(', ')}</Text>}
-                      {record.year && <Text size="sm">Original Release Year: {record.year}</Text>}
-                      {record.master_format && <Text size="sm">Original Format: {record.master_format}</Text>}
-                      {record.current_release_year && <Text size="sm">Current Release Year: {record.current_release_year}</Text>}
-                      {record.current_release_format && <Text size="sm">Current Release Format: {record.current_release_format}</Text>}
-                      {record.label && <Text size="sm">Label: {record.label}</Text>}
-                      {record.country && <Text size="sm">Country: {record.country}</Text>}
+                      <Text fw={500} size="md" mb="sm">{record.artist} - {record.album}</Text>
+                      
+                      {record.genres && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Genres: </Text>
+                          {record.genres.join(', ')}
+                        </Text>
+                      )}
+                      
+                      {record.styles && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Styles: </Text>
+                          {record.styles.join(', ')}
+                        </Text>
+                      )}
+                      
+                      {record.year && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Original Release Year: </Text>
+                          {record.year}
+                        </Text>
+                      )}
+                      
+                      {record.label && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Label: </Text>
+                          {record.label}
+                        </Text>
+                      )}
+
+                      {record.country && (
+                        <Text size="sm" mb={4}>
+                          <Text component="span" fw={500} c="dimmed">Country: </Text>
+                          {record.country}
+                        </Text>
+                      )}
+
+                      {/* More Info - Collapsible */}
+                      {(record.master_format || record.current_release_format || record.current_release_year) && (
+                        <Box mb={4}>
+                          <Group 
+                            gap={4}
+                            style={{ cursor: 'pointer' }} 
+                            onClick={() => setMoreInfoExpanded(!moreInfoExpanded)}
+                          >
+                            <Text size="sm" fw={500} c="dimmed">
+                              More info
+                            </Text>
+                            {moreInfoExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                          </Group>
+                          <Collapse in={moreInfoExpanded}>
+                            <Box mt={4} pl="md">
+                              {record.master_format && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Original Format: </Text>
+                                  {record.master_format}
+                                </Text>
+                              )}
+                              {record.current_release_format && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Current Release Format: </Text>
+                                  {record.current_release_format}
+                                </Text>
+                              )}
+                              {record.current_release_year && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Current Release Year: </Text>
+                                  {record.current_release_year}
+                                </Text>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </Box>
+                      )}
+
+                      {/* Musicians - Collapsible */}
+                      {record.musicians && record.musicians.length > 0 && (
+                        <Box mb={4}>
+                          <Group 
+                            gap={4}
+                            style={{ cursor: 'pointer' }} 
+                            onClick={() => setMusiciansExpanded(!musiciansExpanded)}
+                          >
+                            <Text size="sm" fw={500} c="dimmed">
+                              Musicians ({record.musicians.length})
+                            </Text>
+                            {musiciansExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                          </Group>
+                          <Collapse in={musiciansExpanded}>
+                            <Text size="sm" mt={4}>
+                              {record.musicians.join(', ')}
+                            </Text>
+                          </Collapse>
+                        </Box>
+                      )}
                       
                       {/* Add custom column preview */}
                       {customColumns.length > 0 && record.custom_values_cache && (
@@ -1443,56 +1582,69 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         </>
                       )}
 
-                      {record.current_release_url && (
-                        <Group gap="xs" mt="xs">
-                          <Button 
-                            component="a" 
-                            href={record.current_release_url} 
-                            target="_blank" 
-                            variant="light" 
-                            size="xs"
-                          >
-                            View Release
-                          </Button>
+                      {(record.master_url || record.current_release_url) && (
+                        <Group grow mt="xs">
+                          {record.master_url && (
+                            <Button 
+                              component="a" 
+                              href={record.master_url} 
+                              target="_blank" 
+                              variant="light"
+                              rightSection={<IconExternalLink size={16} />}
+                            >
+                              Master
+                            </Button>
+                          )}
+                          {record.current_release_url && (
+                            <Button 
+                              component="a" 
+                              href={record.current_release_url} 
+                              target="_blank" 
+                              variant="light"
+                              rightSection={<IconExternalLink size={16} />}
+                            >
+                              Release
+                            </Button>
+                          )}
                         </Group>
                       )}
                     </div>
 
-                    {record.master_url && (
-                      <Button 
-                        component="a" 
-                        href={record.master_url} 
-                        target="_blank" 
-                        variant="light"
-                        fullWidth
-                      >
-                        View on Discogs
-                      </Button>
-                    )}
-
-                    <Group grow>
+                    {isScanning ? (
+                      <Group grow>
+                        <Button 
+                          onClick={handleAddToCollection} 
+                          loading={loading}
+                          color="green"
+                          variant="light"
+                        >
+                          Add
+                        </Button>
+                        <Button 
+                          variant="light" 
+                          onClick={handleClear}
+                          disabled={loading}
+                        >
+                          New Scan
+                        </Button>
+                      </Group>
+                    ) : (
                       <Button 
                         onClick={handleAddToCollection} 
                         loading={loading}
                         color="green"
                         variant="light"
+                        fullWidth
                       >
                         Add
                       </Button>
-                      <Button 
-                        color="red"
-                        variant="light" 
-                        onClick={handleClear}
-                        disabled={loading}
-                      >
-                        {isScanning ? 'New Scan' : 'Clear'}
-                      </Button>
-                    </Group>
+                    )}
                   </Stack>
                 </Paper>
               )}
             </Stack>
           </Paper>
+          </Box>
         </Stack>
       </Modal>
 
