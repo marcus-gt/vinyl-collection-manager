@@ -1036,7 +1036,12 @@ def update_record(record_id):
         allowed_fields = {
             'artist', 'album', 'year', 'current_release_year', 'label', 'country',
             'master_format', 'current_release_format', 'genres', 'styles', 'musicians',
-            'master_url', 'current_release_url'
+            'master_url', 'current_release_url',
+            # New extended Discogs fields
+            'master_id', 'tracklist', 'original_release_id', 'original_catno',
+            'original_release_date', 'original_identifiers', 'current_release_id',
+            'current_label', 'current_catno', 'current_country', 'current_release_date',
+            'current_identifiers', 'original_release_url'
         }
         
         # Filter to only allowed fields
@@ -1044,6 +1049,14 @@ def update_record(record_id):
         
         if not filtered_updates:
             return jsonify({'success': False, 'error': 'No valid fields to update'}), 400
+        
+        # Special handling for JSONB fields - convert to JSON string
+        jsonb_fields = ['tracklist', 'original_identifiers', 'current_identifiers']
+        for field in jsonb_fields:
+            if field in filtered_updates and filtered_updates[field] is not None:
+                if isinstance(filtered_updates[field], (list, dict)):
+                    import json
+                    filtered_updates[field] = json.dumps(filtered_updates[field])
         
         # Add updated_at timestamp
         filtered_updates['updated_at'] = datetime.utcnow().isoformat()

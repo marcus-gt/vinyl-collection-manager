@@ -1857,27 +1857,32 @@ function EditableCustomCell({
 // Reusable component for editing Discogs links
 interface EditableDiscogsLinksProps {
   masterUrl: string | null;
+  originalReleaseUrl: string | null;
   currentReleaseUrl: string | null;
   recordId: string;
-  onUpdate: (recordId: string, updates: { master_url?: string | null; current_release_url?: string | null }) => void;
+  onUpdate: (recordId: string, updates: { master_url?: string | null; original_release_url?: string | null; current_release_url?: string | null }) => void;
 }
 
 function EditableDiscogsLinks({ 
   masterUrl, 
+  originalReleaseUrl,
   currentReleaseUrl, 
   recordId, 
   onUpdate 
 }: EditableDiscogsLinksProps) {
   const [opened, setOpened] = useState(false);
   const [localMasterUrl, setLocalMasterUrl] = useState(masterUrl || '');
+  const [localOriginalUrl, setLocalOriginalUrl] = useState(originalReleaseUrl || '');
   const [localCurrentUrl, setLocalCurrentUrl] = useState(currentReleaseUrl || '');
   const [masterError, setMasterError] = useState('');
+  const [originalError, setOriginalError] = useState('');
   const [currentError, setCurrentError] = useState('');
   
   useEffect(() => {
     setLocalMasterUrl(masterUrl || '');
+    setLocalOriginalUrl(originalReleaseUrl || '');
     setLocalCurrentUrl(currentReleaseUrl || '');
-  }, [masterUrl, currentReleaseUrl]);
+  }, [masterUrl, originalReleaseUrl, currentReleaseUrl]);
   
   const validateDiscogsUrl = (url: string, type: 'master' | 'release'): boolean => {
     if (!url) return true; // Empty is valid
@@ -1892,7 +1897,9 @@ function EditableDiscogsLinks({
     }
   };
   
-  const hasChanges = localMasterUrl !== (masterUrl || '') || localCurrentUrl !== (currentReleaseUrl || '');
+  const hasChanges = localMasterUrl !== (masterUrl || '') || 
+                     localOriginalUrl !== (originalReleaseUrl || '') || 
+                     localCurrentUrl !== (currentReleaseUrl || '');
   
   const handleSave = async () => {
     // Validate URLs
@@ -1905,6 +1912,13 @@ function EditableDiscogsLinks({
       setMasterError('');
     }
     
+    if (localOriginalUrl && !validateDiscogsUrl(localOriginalUrl, 'release')) {
+      setOriginalError('Must be a valid Discogs release URL (e.g., https://www.discogs.com/release/123456)');
+      hasErrors = true;
+    } else {
+      setOriginalError('');
+    }
+    
     if (localCurrentUrl && !validateDiscogsUrl(localCurrentUrl, 'release')) {
       setCurrentError('Must be a valid Discogs release URL (e.g., https://www.discogs.com/release/123456)');
       hasErrors = true;
@@ -1914,10 +1928,14 @@ function EditableDiscogsLinks({
     
     if (hasErrors || !hasChanges) return;
     
-    const updates: { master_url?: string | null; current_release_url?: string | null } = {};
+    const updates: { master_url?: string | null; original_release_url?: string | null; current_release_url?: string | null } = {};
     
     if (localMasterUrl !== (masterUrl || '')) {
       updates.master_url = localMasterUrl || null;
+    }
+    
+    if (localOriginalUrl !== (originalReleaseUrl || '')) {
+      updates.original_release_url = localOriginalUrl || null;
     }
     
     if (localCurrentUrl !== (currentReleaseUrl || '')) {
@@ -1930,8 +1948,10 @@ function EditableDiscogsLinks({
   
   const handleCancel = () => {
     setLocalMasterUrl(masterUrl || '');
+    setLocalOriginalUrl(originalReleaseUrl || '');
     setLocalCurrentUrl(currentReleaseUrl || '');
     setMasterError('');
+    setOriginalError('');
     setCurrentError('');
     setOpened(false);
   };
@@ -1939,7 +1959,7 @@ function EditableDiscogsLinks({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (hasChanges && !masterError && !currentError) {
+      if (hasChanges && !masterError && !originalError && !currentError) {
         handleSave();
       } else if (!hasChanges) {
         setOpened(false);
@@ -1973,6 +1993,21 @@ function EditableDiscogsLinks({
                   target="_blank"
                   variant="light"
                   size="compact-xs"
+                  color="blue"
+                  style={{ fontSize: '11px', padding: '2px 8px' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Master
+                </Button>
+              )}
+              {originalReleaseUrl && (
+                <Button
+                  component="a"
+                  href={originalReleaseUrl}
+                  target="_blank"
+                  variant="light"
+                  size="compact-xs"
+                  color="blue"
                   style={{ fontSize: '11px', padding: '2px 8px' }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -1993,7 +2028,7 @@ function EditableDiscogsLinks({
                   Current
                 </Button>
               )}
-              {!masterUrl && !currentReleaseUrl && (
+              {!masterUrl && !originalReleaseUrl && !currentReleaseUrl && (
                 <Text size="sm" c="dimmed">-</Text>
               )}
             </Group>
@@ -2004,7 +2039,7 @@ function EditableDiscogsLinks({
             <Group justify="space-between" align="center">
               <Text size="sm" fw={500}>Edit Discogs Links</Text>
               <Group gap="xs">
-                {hasChanges && !masterError && !currentError && (
+                {hasChanges && !masterError && !originalError && !currentError && (
                   <ActionIcon size="sm" variant="subtle" color="green" onClick={(e) => { e.stopPropagation(); handleSave(); }}>
                     <IconCheck size={16} />
                   </ActionIcon>
@@ -2015,10 +2050,10 @@ function EditableDiscogsLinks({
               </Group>
             </Group>
             
-            {/* Original/Master URL */}
+            {/* Master URL */}
             <Box>
               <Group gap="xs" align="flex-start">
-                <Text size="sm" fw={500} style={{ minWidth: '60px', marginTop: '6px' }}>Original</Text>
+                <Text size="sm" fw={500} style={{ minWidth: '60px', marginTop: '6px' }}>Master</Text>
                 <Box style={{ flex: 1 }}>
                   <TextInput
                     size="sm"
@@ -2029,6 +2064,31 @@ function EditableDiscogsLinks({
                     }}
                     placeholder="https://www.discogs.com/master/123456"
                     error={masterError}
+                    styles={{
+                      input: {
+                        fontSize: '12px'
+                      }
+                    }}
+                    onKeyDown={handleKeyDown}
+                  />
+                </Box>
+              </Group>
+            </Box>
+            
+            {/* Original Release URL */}
+            <Box>
+              <Group gap="xs" align="flex-start">
+                <Text size="sm" fw={500} style={{ minWidth: '60px', marginTop: '6px' }}>Original</Text>
+                <Box style={{ flex: 1 }}>
+                  <TextInput
+                    size="sm"
+                    value={localOriginalUrl}
+                    onChange={(e) => {
+                      setLocalOriginalUrl(e.target.value);
+                      if (originalError) setOriginalError('');
+                    }}
+                    placeholder="https://www.discogs.com/release/123456"
+                    error={originalError}
                     styles={{
                       input: {
                         fontSize: '12px'
@@ -2095,6 +2155,35 @@ function Collection() {
   useEffect(() => {
     userRecordsRef.current = userRecords;
   }, [userRecords]);
+
+  // Set default visibility for new hidden columns (only on first load)
+  useEffect(() => {
+    const hiddenByDefaultColumns = [
+      'master_id',
+      'original_release_id',
+      'original_release_date',
+      'original_identifiers',
+      'current_release_id',
+      'current_release_date',
+      'current_identifiers',
+      'original_catno',
+      'current_catno'
+    ];
+
+    // Only set defaults if these columns don't have visibility settings yet
+    const needsDefaults = hiddenByDefaultColumns.some(col => columnVisibility[col] === undefined);
+    if (needsDefaults) {
+      setColumnVisibility(prev => {
+        const updated = { ...prev };
+        hiddenByDefaultColumns.forEach(col => {
+          if (updated[col] === undefined) {
+            updated[col] = false; // false = hidden
+          }
+        });
+        return updated;
+      });
+    }
+  }, []); // Run only once on mount
 
   useEffect(() => {
     loadRecords();
@@ -2294,15 +2383,28 @@ function Collection() {
     'year',
     'current_release_year',
     'label',
+    'current_label',
     'country',
+    'current_country',
     'genres',
     'styles',
     'current_release_format',
     'master_format',
+    'tracklist',
     'musicians',
     'links', // Discogs Links column
     'added_from',
-    'created_at'
+    'created_at',
+    // Hidden by default (advanced fields)
+    'original_catno',
+    'current_catno',
+    'master_id',
+    'original_release_id',
+    'original_release_date',
+    'original_identifiers',
+    'current_release_id',
+    'current_release_date',
+    'current_identifiers'
   ];
 
   const loadCustomColumns = async () => {
@@ -2984,14 +3086,15 @@ function Collection() {
               id: 'links',
               accessorKey: 'links',
               header: 'Discogs Links',
-              size: 142,
-              minSize: 142,
-              maxSize: 142,
-              enableResizing: false,
+              size: 200,
+              minSize: 200,
+              maxSize: 300,
+              enableResizing: true,
               enableColumnFilter: false,
               cell: ({ row }: { row: Row<VinylRecord> }) => (
                 <EditableDiscogsLinks
                   masterUrl={row.original.master_url || null}
+                  originalReleaseUrl={row.original.original_release_url || null}
                   currentReleaseUrl={row.original.current_release_url || null}
                   recordId={row.original.id!}
                   onUpdate={async (recordId, updates) => {
@@ -3002,6 +3105,7 @@ function Collection() {
                           prevRecords.map(r => r.id === recordId ? { 
                             ...r, 
                             master_url: updates.master_url !== undefined ? updates.master_url || undefined : r.master_url,
+                            original_release_url: updates.original_release_url !== undefined ? updates.original_release_url || undefined : r.original_release_url,
                             current_release_url: updates.current_release_url !== undefined ? updates.current_release_url || undefined : r.current_release_url
                           } : r)
                         );
@@ -3017,6 +3121,234 @@ function Collection() {
                   }}
                 />
               ),
+            },
+            // Hidden by default columns (advanced fields)
+            {
+              id: 'master_id',
+              accessorKey: 'master_id',
+              header: 'Master ID',
+              enableSorting: true,
+              size: 100,
+              enableResizing: true,
+              minSize: 80,
+              maxSize: 150,
+              meta: {
+                type: 'number'
+              },
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.master_id || ''}
+                  fieldName="master_id"
+                  fieldLabel="Master ID"
+                  recordId={row.original.id!}
+                  inputType="number"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            {
+              id: 'tracklist',
+              accessorKey: 'tracklist',
+              header: 'Tracklist',
+              enableSorting: false,
+              size: 300,
+              enableResizing: true,
+              minSize: 200,
+              maxSize: 600,
+              filterFn: 'textMultiTermContains' as any,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const tracklist = row.original.tracklist;
+                // Format tracklist as array of strings for display
+                const trackStrings = tracklist?.map(t => 
+                  `${t.position}. ${t.title}${t.duration ? ` (${t.duration})` : ''}`
+                ) || [];
+                
+                // Display formatted, but editing will work with the string array
+                return (
+                  <EditableStandardCell
+                    value={trackStrings}
+                    fieldName="tracklist"
+                    fieldLabel="Tracklist"
+                    recordId={row.original.id!}
+                    inputType="array"
+                    onUpdate={async (recordId, fieldName, newValue) => {
+                      // When saved, convert string array back to structured format
+                      const structuredTracklist = (newValue as string[]).map((track, idx) => {
+                        // Try to parse format "A1. Title (duration)"
+                        const match = track.match(/^([A-Z]?\d+)\.\s*(.+?)(?:\s*\(([^)]+)\))?$/);
+                        if (match) {
+                          return {
+                            position: match[1],
+                            title: match[2].trim(),
+                            duration: match[3] || ''
+                          };
+                        }
+                        // Fallback: treat whole string as title
+                        return {
+                          position: `${idx + 1}`,
+                          title: track.trim(),
+                          duration: ''
+                        };
+                      });
+                      
+                      // Update backend with structured tracklist
+                      try {
+                        await recordFieldsService.update(recordId, { [fieldName]: structuredTracklist });
+                      } catch (error) {
+                        console.error('Error updating tracklist:', error);
+                      }
+                      
+                      // Update local state
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === recordId ? { 
+                          ...r, 
+                          tracklist: structuredTracklist 
+                        } : r)
+                      );
+                    }}
+                  />
+                );
+              }
+            },
+            {
+              id: 'original_release_id',
+              accessorKey: 'original_release_id',
+              header: 'Original Release ID',
+              enableSorting: true,
+              size: 130,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 200,
+              meta: {
+                type: 'number'
+              },
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.original_release_id || ''}
+                  fieldName="original_release_id"
+                  fieldLabel="Original Release ID"
+                  recordId={row.original.id!}
+                  inputType="number"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            {
+              id: 'original_release_date',
+              accessorKey: 'original_release_date',
+              header: 'Original Release Date',
+              enableSorting: true,
+              size: 150,
+              enableResizing: true,
+              minSize: 120,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.original_release_date || ''}
+                  fieldName="original_release_date"
+                  fieldLabel="Original Release Date"
+                  recordId={row.original.id!}
+                  inputType="text"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            {
+              id: 'original_identifiers',
+              accessorKey: 'original_identifiers',
+              header: 'Original Identifiers',
+              enableSorting: false,
+              size: 250,
+              enableResizing: true,
+              minSize: 200,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const identifiers = row.original.original_identifiers;
+                if (!identifiers || identifiers.length === 0) return <Text size="sm" c="dimmed">-</Text>;
+                const preview = identifiers.slice(0, 2).map(i => `${i.type}: ${i.value}`).join(', ');
+                const remaining = identifiers.length > 2 ? ` +${identifiers.length - 2} more` : '';
+                return <Text size="sm">{preview}{remaining}</Text>;
+              }
+            },
+            {
+              id: 'current_release_id',
+              accessorKey: 'current_release_id',
+              header: 'Current Release ID',
+              enableSorting: true,
+              size: 130,
+              enableResizing: true,
+              minSize: 100,
+              maxSize: 200,
+              meta: {
+                type: 'number'
+              },
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.current_release_id || ''}
+                  fieldName="current_release_id"
+                  fieldLabel="Current Release ID"
+                  recordId={row.original.id!}
+                  inputType="number"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            {
+              id: 'current_release_date',
+              accessorKey: 'current_release_date',
+              header: 'Current Release Date',
+              enableSorting: true,
+              size: 150,
+              enableResizing: true,
+              minSize: 120,
+              maxSize: 200,
+              cell: ({ row }: { row: Row<VinylRecord> }) => (
+                <EditableStandardCell
+                  value={row.original.current_release_date || ''}
+                  fieldName="current_release_date"
+                  fieldLabel="Current Release Date"
+                  recordId={row.original.id!}
+                  inputType="text"
+                  onUpdate={(recordId, fieldName, newValue) => {
+                    setUserRecords(prevRecords =>
+                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                    );
+                  }}
+                />
+              )
+            },
+            {
+              id: 'current_identifiers',
+              accessorKey: 'current_identifiers',
+              header: 'Current Identifiers',
+              enableSorting: false,
+              size: 250,
+              enableResizing: true,
+              minSize: 200,
+              maxSize: 500,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const identifiers = row.original.current_identifiers;
+                if (!identifiers || identifiers.length === 0) return <Text size="sm" c="dimmed">-</Text>;
+                const preview = identifiers.slice(0, 2).map(i => `${i.type}: ${i.value}`).join(', ');
+                const remaining = identifiers.length > 2 ? ` +${identifiers.length - 2} more` : '';
+                return <Text size="sm">{preview}{remaining}</Text>;
+              }
             },
     ];
 

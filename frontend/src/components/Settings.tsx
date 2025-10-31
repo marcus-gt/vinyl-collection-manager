@@ -43,17 +43,30 @@ export function Settings({
     { id: 'artist', name: 'Artist' },
     { id: 'album', name: 'Album' },
     { id: 'year', name: 'Original Year' },
-    { id: 'label', name: 'Label' },
-    { id: 'country', name: 'Country' },
+    { id: 'current_release_year', name: 'Release Year' },
+    { id: 'label', name: 'Original Label' },
+    { id: 'current_label', name: 'Release Label' },
+    { id: 'country', name: 'Original Country' },
+    { id: 'current_country', name: 'Release Country' },
     { id: 'genres', name: 'Genres' },
     { id: 'styles', name: 'Styles' },
-    { id: 'musicians', name: 'Musicians' },
-    { id: 'added_from', name: 'Source' },
-    { id: 'created_at', name: 'Added' },
-    { id: 'current_release_year', name: 'Release Year' },
     { id: 'current_release_format', name: 'Format' },
     { id: 'master_format', name: 'Master Format' },
-    { id: 'links', name: 'Discogs Links' }
+    { id: 'tracklist', name: 'Tracklist' },
+    { id: 'musicians', name: 'Musicians' },
+    { id: 'links', name: 'Discogs Links' },
+    { id: 'added_from', name: 'Source' },
+    { id: 'created_at', name: 'Added' },
+    // Hidden by default (advanced fields)
+    { id: 'original_catno', name: 'Original Catno' },
+    { id: 'current_catno', name: 'Release Catno' },
+    { id: 'master_id', name: 'Master ID' },
+    { id: 'original_release_id', name: 'Original Release ID' },
+    { id: 'original_release_date', name: 'Original Release Date' },
+    { id: 'original_identifiers', name: 'Original Identifiers' },
+    { id: 'current_release_id', name: 'Current Release ID' },
+    { id: 'current_release_date', name: 'Current Release Date' },
+    { id: 'current_identifiers', name: 'Current Identifiers' }
   ];
 
   // Build ordered column list
