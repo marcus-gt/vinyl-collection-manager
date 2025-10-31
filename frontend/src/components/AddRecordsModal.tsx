@@ -36,6 +36,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [scannerKey, setScannerKey] = useState(0);
   const [musiciansExpanded, setMusiciansExpanded] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
+  const recordPreviewRef = useRef<HTMLDivElement>(null);
   const [manualRecord, setManualRecord] = useState<ManualRecordForm>({
     artist: '',
     album: '',
@@ -148,6 +149,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     };
     loadCustomColumns();
   }, []);
+
+  // Scroll to record preview when record is loaded
+  useEffect(() => {
+    if (record && recordPreviewRef.current) {
+      setTimeout(() => {
+        recordPreviewRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  }, [record]);
 
   // Helper function to get default values
   const getRecordWithDefaults = (recordData: VinylRecord) => {
@@ -1295,7 +1308,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
               )}
 
               {record && (
-                <Paper withBorder p="md">
+                <Paper withBorder p="md" ref={recordPreviewRef}>
                   <Stack>
                     <div>
                       <Text fw={500} size="lg" mb="sm">{record.artist} - {record.album}</Text>
