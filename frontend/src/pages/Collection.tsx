@@ -35,6 +35,37 @@ const getColorStyles = (colorName: string) => {
   };
 };
 
+// Helper function to format musicians field (supports both old array and new categorized format)
+const formatMusicians = (musicians: any): string => {
+  if (!musicians) return '-';
+  
+  // If it's an array (legacy format), join with commas
+  if (Array.isArray(musicians)) {
+    return musicians.join(', ') || '-';
+  }
+  
+  // If it's an object (new categorized format), flatten all credits
+  if (typeof musicians === 'object') {
+    const allCredits: string[] = [];
+    
+    for (const heading in musicians) {
+      if (heading === '_role_index') continue; // Skip the index
+      
+      const subheadings = musicians[heading];
+      for (const subheading in subheadings) {
+        const credits = subheadings[subheading];
+        if (Array.isArray(credits)) {
+          allCredits.push(...credits);
+        }
+      }
+    }
+    
+    return allCredits.length > 0 ? allCredits.join(', ') : '-';
+  }
+  
+  return '-';
+};
+
 // Create a service for custom values
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
@@ -2275,7 +2306,7 @@ function Collection() {
           record.country || '',
           (record.genres || []).join('; '),
           (record.styles || []).join('; '),
-          (record.musicians || []).join('; '),
+          formatMusicians(record.musicians),
           record.created_at ? new Date(record.created_at).toLocaleString() : '',
           record.current_release_year?.toString() || '',
           record.current_release_format || '',
@@ -2993,7 +3024,7 @@ function Collection() {
                 'musicians',
                 'Musicians (comma-separated)',
                 'array',
-                { displayValue: row.original.musicians?.join(', ') || '-' }
+                { displayValue: formatMusicians(row.original.musicians) }
               )
             },
             { 
@@ -3898,7 +3929,7 @@ function Collection() {
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Musicians</Text>
               <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
                 {createEditableStandardCell(previewRecord, 'musicians', 'Musicians (comma-separated)', 'array', {
-                  displayValue: previewRecord.musicians?.join(', ') || '-',
+                  displayValue: formatMusicians(previewRecord.musicians),
                   noTruncate: true
                 })}
               </Box>

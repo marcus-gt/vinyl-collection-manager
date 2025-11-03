@@ -222,7 +222,7 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             # Shared fields
             'genres': record_data.get('genres', []),
             'styles': record_data.get('styles', []),
-            'musicians': record_data.get('musicians', []),
+            'musicians': json.dumps(record_data.get('musicians', {})) if isinstance(record_data.get('musicians'), dict) else record_data.get('musicians', []),
             
             # Legacy fields
             'barcode': record_data.get('barcode')

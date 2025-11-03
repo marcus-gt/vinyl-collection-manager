@@ -23,3 +23,15 @@ dist/
 # Build files
 frontend/dist/
 static/dist/
+
+*.csv
+*.log
+
+# Helper/analysis scripts (not needed for production)
+analyze_roles.py
+check_env.py
+test_kjopt_query.py
+console_output_*.txt
+discogs_roles_analysis.json
+ROLE_CLASSIFICATION_SYSTEM.md
+CREDITS_CATEGORIZATION_COMPLETE.md
