@@ -18,30 +18,30 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       const barcode = detectedCodes[0].rawValue;
       console.log("Barcode detected:", barcode);
       onScan(barcode);
-      setIsPaused(true);
-    }
+              setIsPaused(true);
+            }
   };
 
   const handleError = (error: unknown) => {
     console.error("Scanner error:", error);
     if (error instanceof Error) {
       if (error.message.includes("NotAllowedError") || error.message.includes("Permission denied")) {
-        setError("Camera access was denied. Please allow camera access in your browser settings.");
+              setError("Camera access was denied. Please allow camera access in your browser settings.");
       } else if (error.message.includes("NotFoundError")) {
         setError("No camera found. Please make sure your device has a camera.");
       } else if (error.message.includes("NotReadableError")) {
         setError("Camera is in use by another application.");
-      } else {
-        setError("Failed to initialize scanner. Please try again.");
-      }
+            } else {
+              setError("Failed to initialize scanner. Please try again.");
+            }
     } else {
       setError("An unknown error occurred with the camera.");
     }
   };
 
   const handleNextScan = () => {
-    setIsPaused(false);
-    setError(null);
+            setIsPaused(false);
+            setError(null);
   };
 
   const handleTapToFocus = async () => {
@@ -95,7 +95,7 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         <Button 
           onClick={() => {
             setError(null);
-            setIsPaused(false);
+                  setIsPaused(false);
           }}
         >
           Try Again
@@ -161,8 +161,8 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       />
       
       {isPaused && !isLoading && (
-        <Box
-          style={{
+        <Box 
+          style={{ 
             position: 'absolute',
             bottom: '1.5%',
             left: '50%',
@@ -181,8 +181,8 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
           >
             New Scan
           </Button>
-        </Box>
-      )}
+          </Box>
+        )}
 
       {!isPaused && !isLoading && (
         <Text 
@@ -206,4 +206,4 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
       )}
     </Box>
   );
-}
+} 

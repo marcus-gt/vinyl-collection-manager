@@ -15,6 +15,19 @@ export interface Track {
   duration: string;
 }
 
+export interface Contributor {
+  name: string;
+  roles: string[];
+  instruments: string[];
+  notes?: any;
+}
+
+export interface ContributorsByCategory {
+  [category: string]: {
+    [subcategory: string]: Contributor[];
+  };
+}
+
 // Single type for all vinyl records
 export interface VinylRecord {
   // Required fields
@@ -25,6 +38,7 @@ export interface VinylRecord {
   musicians: string[];
   added_from: string;
   custom_values_cache: Record<string, string>;  // Required, but can be empty object
+  contributors?: ContributorsByCategory;  // New relational format
 
   // Master release fields
   master_id?: number;

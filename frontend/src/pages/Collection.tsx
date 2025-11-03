@@ -3161,7 +3161,7 @@ function Collection() {
               maxSize: 600,
               filterFn: 'textMultiTermContains' as any,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
-                const contributors = row.original.contributors;
+                const contributors = row.original.contributors || {};
                 const [opened, setOpened] = useState(false);
                 
                 // Helper function to remove disambiguation numbers like "(3)" from names
@@ -3222,8 +3222,8 @@ function Collection() {
                     structuredDisplay = <Stack gap="xs">{categoryElements}</Stack>;
                     // For table cell preview, show first few contributors
                     const allContribs = Object.values(contributors).flatMap(subCats => 
-                      Object.values(subCats as any).flatMap((contribList: any[]) => 
-                        contribList.map(c => cleanName(c.name))
+                      Object.values(subCats as any).flatMap((contribList: unknown) => 
+                        Array.isArray(contribList) ? contribList.map(c => cleanName(c.name)) : []
                       )
                     );
                     const uniqueContribs = [...new Set(allContribs)];
@@ -3244,14 +3244,14 @@ function Collection() {
                     onClick={() => setOpened(true)}
                   >
                     <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened} withinPortal>
-                      <Popover.Target>
+                    <Popover.Target>
                         <div style={{ width: '100%' }}>
                           <Text size="sm" lineClamp={2} style={{ maxWidth: '90vw' }}>
                             {displayValue}
-                          </Text>
+                      </Text>
                         </div>
-                      </Popover.Target>
-                      <Popover.Dropdown>
+                    </Popover.Target>
+                    <Popover.Dropdown>
                         <Stack gap="xs">
                           <Group justify="space-between" align="center">
                             <Text size="sm" fw={500}>Contributors</Text>
@@ -3263,8 +3263,8 @@ function Collection() {
                             {structuredDisplay || <Text size="sm">{displayValue}</Text>}
                           </Box>
                         </Stack>
-                      </Popover.Dropdown>
-                    </Popover>
+                    </Popover.Dropdown>
+                  </Popover>
                   </Box>
                 );
               }
@@ -4130,7 +4130,7 @@ function Collection() {
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Contributors</Text>
               <Box style={{ flex: 1, minWidth: 0, maxHeight: '400px', overflowY: 'auto' }}>
-                {previewRecord.contributors && Object.keys(previewRecord.contributors).length > 0 ? (
+                {previewRecord.contributors && typeof previewRecord.contributors === 'object' && Object.keys(previewRecord.contributors).length > 0 ? (
                   <Stack gap="md">
                     {Object.entries(previewRecord.contributors).map(([mainCategory, subCategories]) => (
                       <Box key={mainCategory}>

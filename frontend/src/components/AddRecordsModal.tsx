@@ -261,15 +261,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       }
       await handleDiscogsLookupDirect(input);
       return;
-      }
-      
+    }
+
       // Detect Spotify URL
       if (input.includes('spotify.com')) {
         setSpotifyUrl(input);
         await handleSpotifyUrlLookupDirect(input);
-        return;
-      }
-      
+      return;
+    }
+    
       // Detect Barcode (sequence of numbers)
       if (/^\d+$/.test(input)) {
         await handleBarcodeLookupDirect(input);
@@ -364,9 +364,9 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       if (!spotifyResponse.success || !spotifyResponse.data) {
         setError(spotifyResponse.error || 'Failed to find album on Spotify');
         setRecord(undefined);
-        return;
-      }
-      
+      return;
+    }
+    
       // Extract artist and album from Spotify data
       const { artist: spotifyArtist, album: spotifyAlbum } = spotifyResponse.data;
       
@@ -882,8 +882,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       >
         <Stack>
           <Box ref={scannerSectionRef}>
-            <Paper withBorder shadow="md" p="md" radius="md">
-              <Stack>
+          <Paper withBorder shadow="md" p="md" radius="md">
+            <Stack>
               <Tabs 
                 defaultValue="add" 
                 onChange={handleSpotifyTabChange}
@@ -911,15 +911,15 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
 
                 <Tabs.Panel value="add" pt="xs">
                   <div>
-                    {isScanning ? (
-                      <>
+                  {isScanning ? (
+                    <>
                       <Box style={{ position: 'relative' }}>
-                        <BarcodeScanner 
-                          key={scannerKey}
-                          onScan={handleScan} 
-                          isScanning={isScanning} 
-                          isLoading={loading}
-                        />
+                      <BarcodeScanner 
+                        key={scannerKey}
+                        onScan={handleScan} 
+                        isScanning={isScanning} 
+                        isLoading={loading}
+                      />
                         <ActionIcon
                           onClick={() => {
                             // Cancel ongoing search if loading
@@ -953,20 +953,20 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         padding: '3px 0'
                       }}>
                         {urlOrBarcode && (
-                          <>
+                        <>
                             <Text ta="center" size="sm" fw={500}>
                               Captured barcode: {urlOrBarcode}
-                            </Text>
-                            {loading && (
-                              <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                          </Text>
+                          {loading && (
+                            <Box mt="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                                 <Loader size="sm" color="blue" />
-                                <Text size="sm" c="dimmed">
-                                  Looking up record in Discogs...
-                                </Text>
-                              </Box>
-                            )}
-                          </>
-                        )}
+                              <Text size="sm" c="dimmed">
+                                Looking up record in Discogs...
+                              </Text>
+                            </Box>
+                          )}
+                        </>
+                      )}
                       </Box>
                     </>
                   ) : (
@@ -975,12 +975,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         <Text size="sm" fw={500} mb={4}>URL or Barcode</Text>
                         <Group gap="xs" align="flex-end" wrap="nowrap">
                           <Box style={{ flex: '0 0 80%' }}>
-                            <TextInput
+                      <TextInput
                               placeholder="Discogs URL, Spotify URL, or numeric barcode"
                               value={urlOrBarcode}
                               onChange={(e) => setUrlOrBarcode(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
-                              disabled={loading}
+                        disabled={loading}
                               rightSection={
                                 urlOrBarcode ? (
                                   <ActionIcon
@@ -989,27 +989,27 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                     color="gray"
                                     size="sm"
                                     disabled={loading}
-                                  >
+                        >
                                     <IconX size={16} />
                                   </ActionIcon>
                                 ) : null
                               }
                             />
                           </Box>
-                          <Button 
-                            onClick={() => {
-                              setIsScanning(true);
+                        <Button 
+                          onClick={() => {
+                            setIsScanning(true);
                               setUrlOrBarcode(''); // Clear URL field when starting scanner
-                              setError(undefined);
-                              setSuccess(undefined);
-                            }} 
-                            variant="light"
-                            disabled={loading}
+                            setError(undefined);
+                            setSuccess(undefined);
+                          }} 
+                          variant="light"
+                          disabled={loading}
                             style={{ flex: '0 0 20%' }}
-                          >
+                        >
                             <IconBarcode size={20} />
-                          </Button>
-                        </Group>
+                        </Button>
+                      </Group>
                         {urlOrBarcode.trim() && artist.trim() && album.trim() && (
                           <Text size="xs" c="dimmed" mt={4}>
                             ⚠️ URL/Barcode will be used (has priority over artist/album)
@@ -1019,21 +1019,21 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       
                       <Divider label="OR" labelPosition="center" />
                       
-                      <TextInput
-                        label="Artist"
-                        placeholder="Enter artist name"
-                        value={artist}
-                        onChange={(e) => setArtist(e.target.value)}
-                        disabled={loading}
-                      />
-                      <TextInput
-                        label="Album"
-                        placeholder="Enter album name"
-                        value={album}
-                        onChange={(e) => setAlbum(e.target.value)}
+                    <TextInput
+                      label="Artist"
+                      placeholder="Enter artist name"
+                      value={artist}
+                      onChange={(e) => setArtist(e.target.value)}
+                      disabled={loading}
+                    />
+                    <TextInput
+                      label="Album"
+                      placeholder="Enter album name"
+                      value={album}
+                      onChange={(e) => setAlbum(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
-                        disabled={loading}
-                      />
+                      disabled={loading}
+                    />
                       
                       <Button 
                         onClick={handleUnifiedSearch} 
@@ -1044,7 +1044,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       >
                         Search
                       </Button>
-                    </Stack>
+                  </Stack>
                   )}
                   </div>
                 </Tabs.Panel>
@@ -1575,17 +1575,17 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         
                         return (
                           <Group grow mt="xs">
-                            {record.master_url && (
-                              <Button 
-                                component="a" 
-                                href={record.master_url} 
-                                target="_blank" 
-                                variant="light"
+                        {record.master_url && (
+                          <Button 
+                            component="a" 
+                            href={record.master_url} 
+                            target="_blank" 
+                            variant="light" 
                                 rightSection={<IconExternalLink size={16} />}
-                              >
+                          >
                                 Master
-                              </Button>
-                            )}
+                          </Button>
+                        )}
                             {record.original_release_url && (
                               <Button 
                                 component="a" 
@@ -1598,39 +1598,39 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                               </Button>
                             )}
                             {showCurrent && (
-                              <Button 
-                                component="a" 
-                                href={record.current_release_url} 
-                                target="_blank" 
-                                variant="light"
+                          <Button 
+                            component="a" 
+                            href={record.current_release_url} 
+                            target="_blank" 
+                            variant="light" 
                                 rightSection={<IconExternalLink size={16} />}
-                              >
+                          >
                                 Current
-                              </Button>
-                            )}
-                          </Group>
+                          </Button>
+                        )}
+                      </Group>
                         );
                       })()}
                     </div>
 
                     {isScanning ? (
                       <Group grow>
-                        <Button 
-                          onClick={handleAddToCollection} 
-                          loading={loading}
+                      <Button 
+                        onClick={handleAddToCollection} 
+                        loading={loading}
                           color="green"
                           variant="light"
-                        >
+                      >
                           Add
-                        </Button>
-                        <Button 
-                          variant="light" 
-                          onClick={handleClear}
-                          disabled={loading}
-                        >
+                      </Button>
+                      <Button 
+                        variant="light" 
+                        onClick={handleClear}
+                        disabled={loading}
+                      >
                           New Scan
-                        </Button>
-                      </Group>
+                      </Button>
+                    </Group>
                     ) : (
                       <Button 
                         onClick={handleAddToCollection} 
