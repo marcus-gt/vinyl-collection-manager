@@ -3051,7 +3051,8 @@ function Collection() {
               minSize: 80,
               maxSize: 150,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
-                // Fallback to current_release_format if master_format is empty
+                // For existing records without master_format, fallback to current_release_format
+                // New records will have master_format from the main release
                 const formatToUse = row.original.master_format || row.original.current_release_format || '';
                 return (
                   <EditableStandardCell

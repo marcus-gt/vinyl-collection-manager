@@ -293,6 +293,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         original_catno = None
         original_release_date = None
         original_identifiers = []
+        original_format = None
         original_year = None
         
         all_credits_categorized = {}
@@ -333,6 +334,21 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                         }
                         for id_item in main_release.identifiers
                     ]
+                
+                # Get original release format
+                if hasattr(main_release, 'formats') and main_release.formats:
+                    format_parts = []
+                    for fmt in main_release.formats:
+                        parts = []
+                        if fmt.get('name'):
+                            parts.append(fmt.get('name'))
+                        if fmt.get('descriptions'):
+                            parts.extend(fmt.get('descriptions'))
+                        if fmt.get('text'):
+                            parts.append(fmt.get('text'))
+                        format_parts.append(', '.join(filter(None, parts)))
+                    original_format = ' ('.join(format_parts) + ')' * (len(format_parts) - 1) if format_parts else None
+                    print(f"Original release format: {original_format}")
                 
                 # Get all credits from main release (priority 1)
                 all_credits = []
@@ -436,6 +452,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             'country': original_country,  # Original country
             'master_id': master_id,
             'master_url': master_url,
+            'master_format': original_format,  # Store original release format in master_format field
             'tracklist': tracklist,  # From master
             'original_release_id': original_release_id,
             'original_release_url': original_release_url,
