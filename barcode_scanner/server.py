@@ -551,13 +551,23 @@ def get_records():
     try:
         # Get authenticated client
         client = get_supabase_client()
+        user_id = session['user_id']
         
         # Simplified query that includes the cache
         response = client.table('vinyl_records').select('*').eq(
-            'user_id', session['user_id']
+            'user_id', user_id
         ).execute()
         
         if response.data:
+            # Fetch contributors for all records
+            from barcode_scanner.db import get_contributors_for_records
+            record_ids = [record['id'] for record in response.data]
+            contributors_by_record = get_contributors_for_records(user_id, record_ids)
+            
+            # Attach contributors to each record
+            for record in response.data:
+                record['contributors'] = contributors_by_record.get(record['id'], {})
+            
             return jsonify({
                 'success': True,
                 'data': response.data
@@ -568,6 +578,8 @@ def get_records():
         })
     except Exception as e:
         print(f"Error fetching records: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': 'Failed to fetch records'
@@ -579,37 +591,18 @@ def add_record():
     try:
         data = request.get_json()
         user_id = session.get('user_id')
-        client = get_supabase_client()
 
-        # Get custom columns to check for default values
-        custom_columns = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
+        # Use the centralized add_record_to_collection function which handles relational inserts
+        result = add_record_to_collection(user_id, data)
         
-        # Start with provided custom_values_cache or empty dict
-        custom_values = data.get('custom_values_cache', {})
-        
-        # Only apply defaults if value not already set
-        if custom_columns.data:
-            for column in custom_columns.data:
-                if column.get('defaultValue') and column['id'] not in custom_values:
-                    custom_values[column['id']] = column['defaultValue']
-        
-        # Update data with final custom values
-        data['custom_values_cache'] = custom_values
-        
-        # Create the record
-        response = client.table('vinyl_records').insert({
-            **data,
-            'user_id': user_id
-        }).execute()
-
-        if response.data:
+        if result['success']:
             return jsonify({
                 'success': True,
-                'data': response.data[0]
+                'data': result['record']
             }), 201
         return jsonify({
             'success': False,
-            'error': 'Failed to add record'
+            'error': result.get('error', 'Failed to add record')
         }), 400
     except Exception as e:
         print(f"Error adding record: {str(e)}")

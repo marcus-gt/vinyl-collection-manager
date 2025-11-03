@@ -36,11 +36,13 @@ except Exception as e:
 def get_all_credits(credits) -> dict:
     """
     Categorize all credits using the official Discogs credits list.
+    Splits composite role strings so each role/instrument gets its own category.
+    Groups credits by artist name and combines their roles to avoid duplicates.
     
     Returns a nested dictionary structure:
     {
         "Heading": {
-            "Subheading": ["Name (Role)", ...],
+            "Subheading": ["Name (Combined Roles)", ...],
             ...
         },
         ...
@@ -48,81 +50,88 @@ def get_all_credits(credits) -> dict:
     
     For roles not found in the official list, they go to "Other" / "General".
     """
-    # Initialize categorized structure
-    categorized = {}
+    # First pass: collect all credits by artist name and category
+    # Structure: {heading: {subheading: {artist_name: [role1, role2, ...]}}}
+    artist_roles = {}
     
     for credit in credits:
         role = credit.role
-        formatted_name = f"{credit.name} ({credit.role})"
+        artist_name = credit.name
         
         # Strip anything in brackets [...] before lookup (e.g., "Photography By [Front Cover]" -> "Photography By")
         role_for_lookup = re.sub(r'\s*\[.*?\]', '', role).strip()
         
-        # Look up the role in the official Discogs index (case-insensitive)
-        role_lower = role_for_lookup.lower()
-        role_info = ROLE_INDEX.get(role_lower)
+        # Split the role by comma to handle composite roles like "Composed By, Performer, Drums"
+        role_parts = [part.strip() for part in role_for_lookup.split(',')]
         
-        if role_info:
-            heading = role_info['heading']
-            subheading = role_info['subheading']
-            
-            # Initialize heading if not exists
-            if heading not in categorized:
-                categorized[heading] = {}
-            
-            # Initialize subheading if not exists
-            if subheading not in categorized[heading]:
-                categorized[heading][subheading] = set()
-            
-            categorized[heading][subheading].add(formatted_name)
-        else:
-            # Role not found - try splitting by comma and matching parts
-            # Prioritize Instruments category
-            parts = [part.strip() for part in role_for_lookup.split(',')]
-            matched = False
-            matched_heading = None
-            matched_subheading = None
-            
-            # Try to match each part
-            for part in parts:
-                part_lower = part.lower()
-                part_info = ROLE_INDEX.get(part_lower)
+        # Process each role part separately so they can go to different categories
+        for role_part in role_parts:
+            if not role_part:
+                continue
                 
-                if part_info:
-                    # Prioritize "Instruments" heading
-                    if part_info['heading'] == 'Instruments':
-                        matched_heading = part_info['heading']
-                        matched_subheading = part_info['subheading']
-                        matched = True
-                        break
-                    elif not matched:
-                        matched_heading = part_info['heading']
-                        matched_subheading = part_info['subheading']
-                        matched = True
+            # Look up the role part in the official Discogs index (case-insensitive)
+            role_lower = role_part.lower()
+            role_info = ROLE_INDEX.get(role_lower)
             
-            if matched:
-                # Initialize heading if not exists
-                if matched_heading not in categorized:
-                    categorized[matched_heading] = {}
-                
-                # Initialize subheading if not exists
-                if matched_subheading not in categorized[matched_heading]:
-                    categorized[matched_heading][matched_subheading] = set()
-                
-                categorized[matched_heading][matched_subheading].add(formatted_name)
+            if role_info:
+                heading = role_info['heading']
+                subheading = role_info['subheading']
             else:
-                # No match found - add to "Other"
-                if 'Other' not in categorized:
-                    categorized['Other'] = {}
-                if 'General' not in categorized['Other']:
-                    categorized['Other']['General'] = set()
-                
-                categorized['Other']['General'].add(formatted_name)
+                # Role not found - add to "Other"
+                heading = 'Other'
+                subheading = 'General'
+            
+            # Initialize nested structure
+            if heading not in artist_roles:
+                artist_roles[heading] = {}
+            if subheading not in artist_roles[heading]:
+                artist_roles[heading][subheading] = {}
+            if artist_name not in artist_roles[heading][subheading]:
+                artist_roles[heading][subheading][artist_name] = []
+            
+            # Add the individual role part (preserve brackets from original if present)
+            # Find the original part with brackets if it exists
+            original_role_with_brackets = role
+            for orig_part in role.split(','):
+                if role_part in orig_part:
+                    artist_roles[heading][subheading][artist_name].append(orig_part.strip())
+                    break
+            else:
+                # If not found in original, just use the role_part
+                artist_roles[heading][subheading][artist_name].append(role_part)
     
-    # Convert sets to sorted lists for JSON serialization
-    for heading in categorized:
-        for subheading in categorized[heading]:
-            categorized[heading][subheading] = sorted(list(categorized[heading][subheading]))
+    # Second pass: combine roles per artist and format
+    categorized = {}
+    
+    for heading in artist_roles:
+        categorized[heading] = {}
+        
+        for subheading in artist_roles[heading]:
+            formatted_credits = []
+            
+            for artist_name, roles in artist_roles[heading][subheading].items():
+                # Parse all roles and extract individual role parts
+                all_role_parts = []
+                for role in roles:
+                    # Split by comma and collect all parts
+                    parts = [p.strip() for p in role.split(',')]
+                    all_role_parts.extend(parts)
+                
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_parts = []
+                for part in all_role_parts:
+                    part_lower = part.lower()
+                    if part_lower not in seen:
+                        seen.add(part_lower)
+                        unique_parts.append(part)
+                
+                # Combine into a single formatted string
+                combined_role = ', '.join(unique_parts)
+                formatted_credit = f"{artist_name} ({combined_role})"
+                formatted_credits.append(formatted_credit)
+            
+            categorized[heading][subheading] = sorted(formatted_credits)
     
     return categorized
 
@@ -189,7 +198,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         # Get artist name(s)
         artists = [artist.name for artist in release.artists]
         artist_name = ' & '.join(artists) if artists else 'Unknown Artist'
-        
+
         # Get current release format
         current_release_format = None
         if hasattr(release, 'formats') and release.formats:
@@ -313,7 +322,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                     print(f"Original release date: {original_release_date}")
                 elif original_year:
                     print(f"Original release year: {original_year}")
-                
+                    
                 # Get original identifiers
                 if hasattr(main_release, 'identifiers'):
                     original_identifiers = [
@@ -363,7 +372,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                 # Categorize all credits using official Discogs list
                 if all_credits:
                     all_credits_categorized = get_all_credits(all_credits)
-                
+
                 # Fallback: get genres and styles from main release if not in master
                 if not main_genres and hasattr(main_release, 'genres'):
                     main_genres = main_release.genres
@@ -415,7 +424,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         print(f"\nFinal genres (priority: master→main→current): {main_genres}")
         print(f"Final styles (priority: master→main→current): {main_styles}")
         print(f"Final country (priority: original→current): {original_country or current_country}")
-        
+
         # Format the data
         data = {
             'artist': artist_name,
@@ -446,7 +455,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             'barcode': None,  # Will be set by caller if applicable
             'added_from': added_from
         }
-        
+
         print(f"\nFormatted data added_from value: {data['added_from']}")
         
         # Count populated fields
@@ -741,7 +750,7 @@ def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> O
             'error': f'Error looking up release: {str(e)}'
         }
 
-
+    
 def get_price_suggestions(release_id: str) -> Optional[Dict[str, Any]]:
     """Get price suggestions for a release"""
     try:

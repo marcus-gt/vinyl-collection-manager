@@ -15,6 +15,19 @@ export interface Track {
   duration: string;
 }
 
+export interface Contributor {
+  name: string;
+  roles: string[];
+  instruments: string[];
+  notes?: any;
+}
+
+export interface ContributorsByCategory {
+  [category: string]: {
+    [subcategory: string]: Contributor[];
+  };
+}
+
 export interface VinylRecord {
   // Core fields
   id: string;
@@ -55,13 +68,18 @@ export interface VinylRecord {
   // Shared fields (with priority logic applied)
   genres?: string;
   styles?: string;
-  musicians?: string;
+  musicians?: string | string[] | any;  // Legacy JSONB format (can be string, array, or object)
+  contributors?: ContributorsByCategory;  // New relational format
+  
+  // Custom columns
+  custom_values_cache?: Record<string, any>;
   
   // Legacy fields
   barcode?: string;
   notes?: string;  // Deprecated, use custom columns instead
   release_url?: string;  // Deprecated, use current_release_url
   release_year?: string;  // Deprecated, use current_release_year
+  created_at?: string;
 }
 
 export interface AuthResponse {

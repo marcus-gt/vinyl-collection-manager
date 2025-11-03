@@ -172,6 +172,129 @@ def get_user_collection(user_id: str) -> Dict[str, Any]:
         traceback.print_exc()
         return {"success": False, "error": str(e)}
 
+def parse_credit_string(credit_str: str) -> tuple[str, list[str]]:
+    """
+    Parse a credit string like "Makaya McCraven (Drums, Producer, Mixed By)"
+    or "Joel Ross (3) (Performer, Vibraphone)"
+    Returns: (name, [roles/instruments])
+    
+    Handles names with disambiguation numbers like "Joel Ross (3)"
+    by extracting everything before the LAST set of parentheses as the name.
+    """
+    import re
+    # Match: everything up to the last '(' as name, content of last '()' as roles
+    match = re.match(r'^(.+)\s*\(([^)]+)\)$', credit_str.strip())
+    if match:
+        name = match.group(1).strip()
+        roles_str = match.group(2).strip()
+        roles = [r.strip() for r in roles_str.split(',')]
+        return name, roles
+    else:
+        # Fallback: just the name
+        return credit_str.strip(), []
+
+
+def categorize_roles(roles: list[str]) -> tuple[list[str], list[str]]:
+    """
+    Separate roles into two categories:
+    - Pure roles (Producer, Composed By, etc.)
+    - Instruments (Drums, Guitar, etc.)
+    """
+    role_keywords = {'by', 'producer', 'engineer', 'mastered', 'mixed', 'recorded', 
+                     'written', 'composed', 'arranged', 'featuring', 'performer', 
+                     'conductor', 'leader', 'edited', 'overdubbed'}
+    
+    pure_roles = []
+    instruments = []
+    
+    for role in roles:
+        role_lower = role.lower()
+        # If it contains a role keyword, it's a role
+        if any(keyword in role_lower for keyword in role_keywords):
+            pure_roles.append(role)
+        else:
+            # Otherwise, treat it as an instrument
+            instruments.append(role)
+    
+    return pure_roles, instruments
+
+
+def insert_contributions_relational(client, record_id: str, user_id: str, musicians_data: dict) -> Dict[str, Any]:
+    """
+    Insert credits into the new relational model (contributors + contributions tables).
+    """
+    try:
+        if not musicians_data or not isinstance(musicians_data, dict):
+            return {"success": True, "contributors_added": 0, "contributions_added": 0}
+        
+        # Get category mappings
+        categories_response = client.table('contribution_categories').select('*').execute()
+        category_map = {
+            (cat['main_category'], cat['sub_category']): cat['id']
+            for cat in categories_response.data
+        }
+        
+        stats = {"contributors_added": 0, "contributions_added": 0}
+        
+        # Process each credit
+        for main_category, subcategories in musicians_data.items():
+            if main_category == '_role_index':
+                continue  # Skip the index if present
+            
+            for sub_category, credits in subcategories.items():
+                category_id = category_map.get((main_category, sub_category))
+                
+                if not category_id:
+                    print(f"  ⚠️  Unknown category: {main_category} / {sub_category}")
+                    continue
+                
+                for credit_str in credits:
+                    name, roles = parse_credit_string(credit_str)
+                    pure_roles, instruments = categorize_roles(roles)
+                    
+                    # Insert contributor (or get existing)
+                    try:
+                        contributor_response = client.table('contributors').upsert({
+                            'name': name
+                        }, on_conflict='name').execute()
+                        
+                        contributor_id = contributor_response.data[0]['id']
+                        stats['contributors_added'] += 1
+                    except Exception as e:
+                        # Might already exist, try to get it
+                        contributor_response = client.table('contributors').select('id').eq('name', name).execute()
+                        if contributor_response.data:
+                            contributor_id = contributor_response.data[0]['id']
+                        else:
+                            print(f"  ⚠️  Error with contributor {name}: {e}")
+                            continue
+                    
+                    # Insert contribution
+                    contribution_data = {
+                        'record_id': record_id,
+                        'user_id': user_id,
+                        'contributor_id': contributor_id,
+                        'category_id': category_id,
+                        'roles': pure_roles,
+                        'instruments': instruments
+                    }
+                    
+                    try:
+                        client.table('contributions').upsert(
+                            contribution_data,
+                            on_conflict='record_id,contributor_id,category_id'
+                        ).execute()
+                        stats['contributions_added'] += 1
+                    except Exception as e:
+                        print(f"  ⚠️  Error inserting contribution for {name}: {e}")
+        
+        return {"success": True, **stats}
+        
+    except Exception as e:
+        print(f"Error inserting relational contributions: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[str, Any]:
     """Add a record to user's collection."""
     try:
@@ -242,6 +365,17 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
 
         # Get the newly created record's ID
         new_record_id = response.data[0]['id']
+        
+        # Insert credits into relational model
+        print("\nInserting credits into relational model...")
+        musicians_data = record_data.get('musicians')
+        if musicians_data and isinstance(musicians_data, dict):
+            relational_result = insert_contributions_relational(client, new_record_id, user_id, musicians_data)
+            if relational_result.get('success'):
+                print(f"✓ Added {relational_result.get('contributors_added', 0)} contributors, "
+                      f"{relational_result.get('contributions_added', 0)} contributions")
+            else:
+                print(f"⚠️ Warning: Failed to insert relational contributions: {relational_result.get('error')}")
         
         # Get custom columns and handle custom values
         custom_columns_response = client.table('custom_columns').select('*').eq('user_id', user_id).execute()
@@ -317,4 +451,66 @@ def remove_record_from_collection(user_id: str, record_id: str) -> Dict[str, Any
         print(f"Error removing record: {str(e)}")
         import traceback
         traceback.print_exc()
-        return {"success": False, "error": str(e)} 
+        return {"success": False, "error": str(e)}
+
+def get_contributors_for_records(user_id: str, record_ids: list[str] = None):
+    """
+    Fetch contributors for records from the relational tables.
+    Returns a dict mapping record_id to categorized contributors.
+    """
+    try:
+        client = get_supabase_client()
+        
+        # Build query for contributions with joins
+        query = client.table('contributions') \
+            .select('*, contributors(name), contribution_categories(main_category, sub_category)') \
+            .eq('user_id', user_id)
+        
+        # Filter by specific record_ids if provided
+        if record_ids:
+            query = query.in_('record_id', record_ids)
+        
+        response = query.execute()
+        
+        print(f"Contributors query returned {len(response.data) if response.data else 0} contributions")
+        
+        if not response.data:
+            return {}
+        
+        # Organize contributors by record_id, then by category/subcategory
+        contributors_by_record = {}
+        
+        for contrib in response.data:
+            record_id = contrib['record_id']
+            contributor_name = contrib['contributors']['name']
+            main_cat = contrib['contribution_categories']['main_category']
+            sub_cat = contrib['contribution_categories']['sub_category'] if contrib['contribution_categories']['sub_category'] else 'Other'
+            
+            # Initialize nested structure
+            if record_id not in contributors_by_record:
+                contributors_by_record[record_id] = {}
+            if main_cat not in contributors_by_record[record_id]:
+                contributors_by_record[record_id][main_cat] = {}
+            if sub_cat not in contributors_by_record[record_id][main_cat]:
+                contributors_by_record[record_id][main_cat][sub_cat] = []
+            
+            # Add contributor
+            contributor_data = {
+                'name': contributor_name,
+                'roles': contrib['roles'] or [],
+                'instruments': contrib['instruments'] or [],
+                'notes': contrib['notes']
+            }
+            # Debug logging for Joel Ross
+            if 'Joel Ross' in contributor_name:
+                print(f"DEBUG - Joel Ross contributor: name={contributor_name}, roles={contrib['roles']}, instruments={contrib['instruments']}")
+            contributors_by_record[record_id][main_cat][sub_cat].append(contributor_data)
+        
+        print(f"Organized contributors for {len(contributors_by_record)} records")
+        return contributors_by_record
+    
+    except Exception as e:
+        print(f"Error fetching contributors: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {} 

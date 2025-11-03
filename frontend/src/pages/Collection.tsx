@@ -66,6 +66,112 @@ const formatMusicians = (musicians: any): string => {
   return '-';
 };
 
+// Tracklist Cell Component with Popover (matches Contributors column pattern)
+const TracklistCell = ({ tracklist }: { tracklist: any }) => {
+  const [opened, setOpened] = useState(false);
+  
+  // Parse tracklist if it's a string (JSONB from database)
+  let parsedTracklist = tracklist;
+  if (typeof tracklist === 'string') {
+    try {
+      parsedTracklist = JSON.parse(tracklist);
+    } catch (e) {
+      parsedTracklist = [];
+    }
+  }
+  
+  // Format tracks for inline display: "A1: Title - Duration"
+  const formatTrackInline = (t: any) => {
+    const pos = t.position || '';
+    const title = t.title || '';
+    const duration = t.duration || '';
+    return `${pos}${pos && title ? ': ' : ''}${title}${duration ? ` - ${duration}` : ''}`;
+  };
+  
+  // Filter to only include tracks with positions (exclude section titles without positions)
+  const tracks = Array.isArray(parsedTracklist) 
+    ? parsedTracklist.filter((t: any) => t.position && t.position.trim() && t.title) 
+    : [];
+  const trackStrings = tracks.map(formatTrackInline);
+  
+  // Display value: show all tracks inline, let cell truncate naturally
+  const displayValue = trackStrings.length > 0 
+    ? trackStrings.join(', ')
+    : '-';
+  
+  // Group tracks by side (A, B, C, D, etc.)
+  const groupedBySide = tracks.reduce((acc: any, track: any) => {
+    const position = track.position || '';
+    // Extract the letter from position (e.g., "A1" -> "A")
+    const sideMatch = position.match(/^([A-Z])/);
+    const side = sideMatch ? sideMatch[1] : 'Other';
+    
+    if (!acc[side]) {
+      acc[side] = [];
+    }
+    acc[side].push(track);
+    return acc;
+  }, {});
+  
+  // Sort sides alphabetically
+  const sortedSides = Object.keys(groupedBySide).sort();
+  
+  // Create structured display
+  const structuredDisplay = sortedSides.length > 0 ? (
+    <Stack gap="md">
+      {sortedSides.map((side, sideIdx) => (
+        <Box key={sideIdx}>
+          <Text size="sm" fw={600} mb={6}>{side}-side</Text>
+          <Stack gap={4}>
+            {groupedBySide[side].map((track: any, trackIdx: number) => (
+              <Text key={trackIdx} size="sm" ml="md">
+                {formatTrackInline(track)}
+              </Text>
+            ))}
+          </Stack>
+        </Box>
+      ))}
+    </Stack>
+  ) : null;
+  
+  return (
+    <Box 
+      style={{ 
+        position: 'relative', 
+        width: '100%', 
+        height: '100%', 
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center'
+      }}
+      onClick={() => setOpened(true)}
+    >
+      <Popover width="min(500px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened} withinPortal>
+        <Popover.Target>
+          <div style={{ width: '100%' }}>
+            <Text size="sm" lineClamp={2} style={{ maxWidth: '90vw' }}>
+              {displayValue}
+            </Text>
+          </div>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <Stack gap="xs">
+            <Group justify="space-between" align="center">
+              <Text size="sm" fw={500}>Tracklist</Text>
+              <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                <IconX size={16} />
+              </ActionIcon>
+            </Group>
+            <Box style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              {structuredDisplay || <Text size="sm">{displayValue}</Text>}
+            </Box>
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    </Box>
+  );
+};
+
 // Create a service for custom values
 const customValuesService = {
   getForRecord: async (recordId: string): Promise<{ success: boolean; data?: CustomColumnValue[] }> => {
@@ -3028,6 +3134,125 @@ function Collection() {
               )
             },
             { 
+              id: 'contributors', 
+              accessorKey: 'contributors', 
+              header: 'Contributors', 
+              enableSorting: true,
+              size: 250,
+              enableResizing: true,
+              minSize: 150,
+              maxSize: 600,
+              filterFn: 'textMultiTermContains' as any,
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                const contributors = row.original.contributors;
+                const [opened, setOpened] = useState(false);
+                
+                // Helper function to remove disambiguation numbers like "(3)" from names
+                const cleanName = (name: string) => {
+                  return name.replace(/\s*\(\d+\)\s*$/, '').trim();
+                };
+                
+                // Format contributors by category for display - PRESERVE STRUCTURE
+                let displayValue = '-';
+                let structuredDisplay: React.ReactNode = null;
+                
+                if (contributors && Object.keys(contributors).length > 0) {
+                  const categoryElements: React.ReactNode[] = [];
+                  
+                  Object.entries(contributors).forEach(([mainCategory, subCategories], idx) => {
+                    // Collect all contributors from all subcategories for this main category
+                    const contributorsByName = new Map<string, {name: string, roles: Set<string>, instruments: Set<string>}>();
+                    
+                    Object.entries(subCategories as any).forEach(([_subCategory, contribList]) => {
+                      (contribList as any[]).forEach(contrib => {
+                        if (!contributorsByName.has(contrib.name)) {
+                          contributorsByName.set(contrib.name, {
+                            name: contrib.name,
+                            roles: new Set(),
+                            instruments: new Set()
+                          });
+                        }
+                        const existing = contributorsByName.get(contrib.name)!;
+                        (contrib.roles || []).forEach((r: string) => existing.roles.add(r));
+                        (contrib.instruments || []).forEach((i: string) => existing.instruments.add(i));
+                      });
+                    });
+                    
+                    if (contributorsByName.size > 0) {
+                      categoryElements.push(
+                        <Box key={idx} mb="sm">
+                          <Text size="sm" fw={600} mb={4}>{mainCategory}</Text>
+                          {Array.from(contributorsByName.values()).map((contrib, cIdx) => {
+                            // Combine roles and instruments for display
+                            const allParts = [...Array.from(contrib.roles), ...Array.from(contrib.instruments)];
+                            
+                            // Skip if no parts to show
+                            if (allParts.length === 0) return null;
+                            
+                            return (
+                              <Text key={cIdx} size="sm" ml="md">
+                                <Text component="span" fw={500}>{cleanName(contrib.name)}</Text>
+                                <Text component="span" c="dimmed"> - {allParts.join(', ')}</Text>
+                              </Text>
+                            );
+                          })}
+                        </Box>
+                      );
+                    }
+                  });
+                  
+                  if (categoryElements.length > 0) {
+                    structuredDisplay = <Stack gap="xs">{categoryElements}</Stack>;
+                    // For table cell preview, show first few contributors
+                    const allContribs = Object.values(contributors).flatMap(subCats => 
+                      Object.values(subCats as any).flatMap((contribList: any[]) => 
+                        contribList.map(c => cleanName(c.name))
+                      )
+                    );
+                    const uniqueContribs = [...new Set(allContribs)];
+                    displayValue = uniqueContribs.slice(0, 3).join(', ') + (uniqueContribs.length > 3 ? ` +${uniqueContribs.length - 3} more` : '');
+                  }
+                }
+                
+                return (
+                  <Box 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      height: '100%', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }} 
+                    onClick={() => setOpened(true)}
+                  >
+                    <Popover width="min(400px, 90vw)" position="bottom" withArrow shadow="md" opened={opened} onChange={setOpened} withinPortal>
+                      <Popover.Target>
+                        <div style={{ width: '100%' }}>
+                          <Text size="sm" lineClamp={2} style={{ maxWidth: '90vw' }}>
+                            {displayValue}
+                          </Text>
+                        </div>
+                      </Popover.Target>
+                      <Popover.Dropdown>
+                        <Stack gap="xs">
+                          <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>Contributors</Text>
+                            <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
+                              <IconX size={16} />
+                            </ActionIcon>
+                          </Group>
+                          <Box style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            {structuredDisplay || <Text size="sm">{displayValue}</Text>}
+                          </Box>
+                        </Stack>
+                      </Popover.Dropdown>
+                    </Popover>
+                  </Box>
+                );
+              }
+            },
+            { 
               id: 'created_at', 
               accessorKey: 'created_at', 
               header: 'Added', 
@@ -3141,22 +3366,22 @@ function Collection() {
                 const colorStyles = getColorStyles(color);
                 
                 return displayValue && displayValue !== '-' ? (
-                  <Badge
-                    size="sm"
+                        <Badge
+                          size="sm"
                     radius="md"
                     style={colorStyles}
-                    styles={{
-                      root: {
-                        textTransform: 'none',
+                          styles={{
+                            root: {
+                              textTransform: 'none',
                         padding: '2px 5px',
                         fontSize: '10.5px'
-                      }
-                    }}
-                  >
+                            }
+                          }}
+                        >
                     {displayValue}
-                  </Badge>
-                ) : (
-                  <Text size="sm" c="dimmed">-</Text>
+                        </Badge>
+                      ) : (
+                        <Text size="sm" c="dimmed">-</Text>
                 );
               }
             },
@@ -3232,64 +3457,14 @@ function Collection() {
               id: 'tracklist',
               accessorKey: 'tracklist',
               header: 'Tracklist',
-              enableSorting: false,
+              enableSorting: true,
               size: 300,
               enableResizing: true,
               minSize: 200,
               maxSize: 600,
               filterFn: 'textMultiTermContains' as any,
               cell: ({ row }: { row: Row<VinylRecord> }) => {
-                const tracklist = row.original.tracklist;
-                // Format tracklist as array of strings for display
-                const trackStrings = tracklist?.map(t => 
-                  `${t.position}. ${t.title}${t.duration ? ` (${t.duration})` : ''}`
-                ) || [];
-                
-                // Display formatted, but editing will work with the string array
-                return (
-                  <EditableStandardCell
-                    value={trackStrings}
-                    fieldName="tracklist"
-                    fieldLabel="Tracklist"
-                    recordId={row.original.id!}
-                    inputType="array"
-                    onUpdate={async (recordId, fieldName, newValue) => {
-                      // When saved, convert string array back to structured format
-                      const structuredTracklist = (newValue as string[]).map((track, idx) => {
-                        // Try to parse format "A1. Title (duration)"
-                        const match = track.match(/^([A-Z]?\d+)\.\s*(.+?)(?:\s*\(([^)]+)\))?$/);
-                        if (match) {
-                          return {
-                            position: match[1],
-                            title: match[2].trim(),
-                            duration: match[3] || ''
-                          };
-                        }
-                        // Fallback: treat whole string as title
-                        return {
-                          position: `${idx + 1}`,
-                          title: track.trim(),
-                          duration: ''
-                        };
-                      });
-                      
-                      // Update backend with structured tracklist
-                      try {
-                        await recordFieldsService.update(recordId, { [fieldName]: structuredTracklist });
-                      } catch (error) {
-                        console.error('Error updating tracklist:', error);
-                      }
-                      
-                      // Update local state
-                      setUserRecords(prevRecords =>
-                        prevRecords.map(r => r.id === recordId ? { 
-                          ...r, 
-                          tracklist: structuredTracklist 
-                        } : r)
-                      );
-                    }}
-                  />
-                );
+                return <TracklistCell tracklist={row.original.tracklist} />;
               }
             },
             {
@@ -3825,7 +4000,7 @@ function Collection() {
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Artist</Text>
               <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
                 {createEditableStandardCell(previewRecord, 'artist', 'Artist', 'textarea', { noTruncate: true })}
-              </Box>
+    </Box>
             </Box>
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
@@ -3926,12 +4101,44 @@ function Collection() {
             </Box>
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
-              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Musicians</Text>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Musicians (Legacy)</Text>
               <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
                 {createEditableStandardCell(previewRecord, 'musicians', 'Musicians (comma-separated)', 'array', {
                   displayValue: formatMusicians(previewRecord.musicians),
                   noTruncate: true
                 })}
+              </Box>
+            </Box>
+
+            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
+              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Contributors</Text>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '400px', overflowY: 'auto' }}>
+                {previewRecord.contributors && Object.keys(previewRecord.contributors).length > 0 ? (
+                  <Stack gap="md">
+                    {Object.entries(previewRecord.contributors).map(([mainCategory, subCategories]) => (
+                      <Box key={mainCategory}>
+                        <Text size="sm" fw={600} mb="xs">{mainCategory}</Text>
+                        {Object.entries(subCategories as any).map(([subCategory, contribList]) => (
+                          <Box key={subCategory} ml="md" mb="xs">
+                            <Text size="xs" c="dimmed" mb={4}>{subCategory}</Text>
+                            <Stack gap={4}>
+                              {(contribList as any[]).map((contrib, idx) => {
+                                const allParts = [...(contrib.roles || []), ...(contrib.instruments || [])];
+                                return (
+                                  <Text key={idx} size="sm">
+                                    {contrib.name} {allParts.length > 0 && `(${allParts.join(', ')})`}
+                                  </Text>
+                                );
+                              })}
+                            </Stack>
+                          </Box>
+                        ))}
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text size="sm" c="dimmed">-</Text>
+                )}
               </Box>
             </Box>
 
