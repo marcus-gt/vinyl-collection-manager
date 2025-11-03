@@ -66,6 +66,16 @@ const formatMusicians = (musicians: any): string => {
   return '-';
 };
 
+// Helper function to extract primary format from full format string
+// E.g., "Vinyl, LP, Album, Reissue" -> "Vinyl"
+const extractPrimaryFormat = (formatString: string | null | undefined): string => {
+  if (!formatString) return '-';
+  
+  // Split by comma and get the first part
+  const parts = formatString.split(',').map(p => p.trim());
+  return parts[0] || '-';
+};
+
 // Tracklist Cell Component with Popover (matches Contributors column pattern)
 const TracklistCell = ({ tracklist }: { tracklist: any }) => {
   const [opened, setOpened] = useState(false);
@@ -3040,20 +3050,25 @@ function Collection() {
               enableResizing: true,
               minSize: 80,
               maxSize: 150,
-              cell: ({ row }: { row: Row<VinylRecord> }) => (
-                <EditableStandardCell
-                  value={row.original.master_format || ''}
-                  fieldName="master_format"
-                  fieldLabel="Original Format"
-                  recordId={row.original.id!}
-                  inputType="textarea"
-                  onUpdate={(recordId, fieldName, newValue) => {
-                    setUserRecords(prevRecords =>
-                      prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
-                    );
-                  }}
-                />
-              )
+              cell: ({ row }: { row: Row<VinylRecord> }) => {
+                // Fallback to current_release_format if master_format is empty
+                const formatToUse = row.original.master_format || row.original.current_release_format || '';
+                return (
+                  <EditableStandardCell
+                    value={formatToUse}
+                    fieldName="master_format"
+                    fieldLabel="Original Format"
+                    recordId={row.original.id!}
+                    inputType="textarea"
+                    onUpdate={(recordId, fieldName, newValue) => {
+                      setUserRecords(prevRecords =>
+                        prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
+                      );
+                    }}
+                    displayValue={extractPrimaryFormat(formatToUse)}
+                  />
+                );
+              }
             },
             {
               id: 'current_release_format',
@@ -3076,6 +3091,7 @@ function Collection() {
                       prevRecords.map(r => r.id === recordId ? { ...r, [fieldName]: newValue } : r)
                     );
                   }}
+                  displayValue={extractPrimaryFormat(row.original.current_release_format)}
                 />
               )
             },
