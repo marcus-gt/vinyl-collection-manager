@@ -283,6 +283,9 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         except Exception as e:
             print(f"Error getting master release: {e}")
         
+        # Tracklist priority: master → main → current
+        # (Will check main release after it's fetched below)
+        
         print("\n--- Extracting Main/Original Release Data ---")
         # Get the main/original release data
         main_release = None
@@ -430,6 +433,29 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
             print(f"Error getting main/original release info: {e}")
             import traceback
             traceback.print_exc()
+        
+        # Tracklist fallback: master → main → current
+        if not tracklist and main_release and hasattr(main_release, 'tracklist') and main_release.tracklist:
+            tracklist = [
+                {
+                    'position': track.position,
+                    'title': track.title,
+                    'duration': track.duration
+                }
+                for track in main_release.tracklist
+            ]
+            print(f"Using main/original release tracklist: {len(tracklist)} tracks")
+        
+        if not tracklist and hasattr(release, 'tracklist') and release.tracklist:
+            tracklist = [
+                {
+                    'position': track.position,
+                    'title': track.title,
+                    'duration': track.duration
+                }
+                for track in release.tracklist
+            ]
+            print(f"Using current release tracklist: {len(tracklist)} tracks")
         
         # Final fallback for genres and styles (from current release)
         if not main_genres:

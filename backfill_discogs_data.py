@@ -35,6 +35,7 @@ load_dotenv()
 # Import from existing modules
 from discogs_lookup import format_release_data
 from discogs_client import Client as DiscogsClient
+from barcode_scanner.db import insert_contributions_relational
 
 # The UUID of the "Kjøpt?" custom column
 KJOPT_COLUMN_ID = '28f7485e-a53b-4def-9bfc-10a41ba9a8ec'
@@ -144,15 +145,17 @@ def compare_values(old_val: Any, new_val: Any) -> str:
     return f"CHANGED: {old_val} -> {new_val}"
 
 def dry_run_comparison(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Generate comparison data without updating DB"""
+    """Generate comparison data without updating DB and create two CSVs"""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_file = f'backfill_comparison_{timestamp}.csv'
+    comparison_file = f'backfill_comparison_{timestamp}.csv'
+    full_data_file = f'backfill_full_data_{timestamp}.csv'
     
     print(f"\n{'='*60}")
     print(f"DRY RUN - Fetching fresh data for comparison")
     print(f"{'='*60}\n")
     
     comparison_data = []
+    full_data = []
     
     for i, record in enumerate(records, 1):
         print(f"[{i}/{len(records)}] Fetching: {record['artist']} - {record['album']}")
@@ -164,21 +167,23 @@ def dry_run_comparison(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 record['added_from']
             )
             
-            # Build comparison row
+            # Build comparison row (changes only)
+            import json
+            custom_values_display = json.dumps(record.get('custom_values_cache', {}))
+            
             comparison = {
                 'record_id': record['id'],
                 'artist': record.get('artist', ''),
                 'album': record.get('album', ''),
                 
-                # Compare key fields
+                # Compare key fields (musicians is NOT compared since we're keeping it unchanged)
                 'year_comparison': compare_values(record.get('year'), fresh_data.get('year')),
                 'label_comparison': compare_values(record.get('label'), fresh_data.get('label')),
                 'country_comparison': compare_values(record.get('country'), fresh_data.get('country')),
                 'genres_comparison': compare_values(record.get('genres'), fresh_data.get('genres')),
                 'styles_comparison': compare_values(record.get('styles'), fresh_data.get('styles')),
-                'musicians_comparison': compare_values(record.get('musicians'), fresh_data.get('musicians')),
                 
-                # New fields
+                # New fields being added
                 'original_catno_NEW': fresh_data.get('original_catno', ''),
                 'current_label_NEW': fresh_data.get('current_label', ''),
                 'current_catno_NEW': fresh_data.get('current_catno', ''),
@@ -187,14 +192,55 @@ def dry_run_comparison(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 'master_url_NEW': fresh_data.get('master_url', ''),
                 'original_release_url_NEW': fresh_data.get('original_release_url', ''),
                 
-                # Verify preserved fields
-                'custom_values_preserved': '✓' if record.get('custom_values_cache') else '⚠ EMPTY',
-                'added_from_preserved': '✓' if record.get('added_from') else '✗ MISSING',
-                'barcode_preserved': '✓' if record.get('barcode') else 'N/A',
+                # Contributors will be populated in relational tables
+                'contributors_NEW': 'Will be populated in relational tables',
+                
+                # Verify preserved fields - show actual values so you can verify
+                'custom_values_PRESERVED': custom_values_display,
+                'added_from_PRESERVED': record.get('added_from', ''),
+                'barcode_PRESERVED': record.get('barcode', ''),
+                'musicians_UNCHANGED': '✓ (keeping existing value)',
                 'current_release_url': record.get('current_release_url', ''),
             }
             
             comparison_data.append(comparison)
+            
+            # Build full data row (actual values after update)
+            # Format contributors as full JSON string for display
+            import json
+            contributors_full = json.dumps(fresh_data.get('musicians', {})) if fresh_data.get('musicians') else ''
+            
+            # Format tracklist as full JSON string for display
+            tracklist_full = json.dumps(fresh_data.get('tracklist', [])) if fresh_data.get('tracklist') else ''
+            
+            # Show actual custom values to verify preservation
+            custom_values_full = json.dumps(record.get('custom_values_cache', {}))
+            
+            full_row = {
+                'record_id': record['id'],
+                'artist': fresh_data.get('artist', ''),
+                'album': fresh_data.get('album', ''),
+                'year': fresh_data.get('year', ''),
+                'label': fresh_data.get('label', ''),
+                'country': fresh_data.get('country', ''),
+                'genres': fresh_data.get('genres', ''),
+                'styles': fresh_data.get('styles', ''),
+                'original_catno': fresh_data.get('original_catno', ''),
+                'current_label': fresh_data.get('current_label', ''),
+                'current_catno': fresh_data.get('current_catno', ''),
+                'current_country': fresh_data.get('current_country', ''),
+                'tracklist_full': tracklist_full,
+                'master_url': fresh_data.get('master_url', ''),
+                'original_release_url': fresh_data.get('original_release_url', ''),
+                'current_release_url': record.get('current_release_url', ''),
+                'contributors_full': contributors_full,
+                'musicians_legacy': 'UNCHANGED (preserved)',
+                'added_from': record.get('added_from', ''),
+                'barcode': record.get('barcode', ''),
+                'custom_values_full': custom_values_full,
+            }
+            
+            full_data.append(full_row)
             
             # Rate limiting - Discogs allows 60 req/min
             time.sleep(1)
@@ -207,21 +253,31 @@ def dry_run_comparison(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             print(f"\nStopping dry run. Fix this error before proceeding.\n")
             raise
     
-    # Write to CSV
+    # Write comparison CSV
     print(f"\n{'='*60}")
-    print(f"Writing comparison to CSV...")
+    print(f"Writing comparison CSV...")
     print(f"{'='*60}\n")
     
-    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+    with open(comparison_file, 'w', newline='', encoding='utf-8') as f:
         if comparison_data:
             writer = csv.DictWriter(f, fieldnames=comparison_data[0].keys())
             writer.writeheader()
             writer.writerows(comparison_data)
     
-    print(f"✓ Dry run complete!")
-    print(f"✓ Comparison saved to: {output_file}")
+    # Write full data CSV
+    print(f"Writing full data CSV...")
+    
+    with open(full_data_file, 'w', newline='', encoding='utf-8') as f:
+        if full_data:
+            writer = csv.DictWriter(f, fieldnames=full_data[0].keys())
+            writer.writeheader()
+            writer.writerows(full_data)
+    
+    print(f"\n✓ Dry run complete!")
+    print(f"✓ Comparison saved to: {comparison_file}")
+    print(f"✓ Full data saved to: {full_data_file}")
     print(f"✓ Processed {len(comparison_data)} records")
-    print(f"\nReview the CSV file before running --test or --full\n")
+    print(f"\nReview the CSV files before running --test or --full\n")
     
     return comparison_data
 
@@ -247,13 +303,17 @@ def update_records(records: List[Dict[str, Any]], limit: Optional[int] = None) -
             )
             
             # CRITICAL: Merge with preserved data
+            # Extract musicians data for relational tables, but don't include in vinyl_records update
+            musicians_data = fresh_data.pop('musicians', None)
+            
             updated_data = {
-                **fresh_data,  # All new/updated Discogs fields
+                **fresh_data,  # All new/updated Discogs fields (except musicians)
                 
                 # PRESERVE these fields - DO NOT OVERWRITE
                 'custom_values_cache': record['custom_values_cache'],
                 'added_from': record['added_from'],
                 'created_at': record['created_at'],
+                'musicians': record['musicians'],  # Keep existing musicians field unchanged
             }
             
             # Preserve barcode if it exists
@@ -268,6 +328,24 @@ def update_records(records: List[Dict[str, Any]], limit: Optional[int] = None) -
                 .update(updated_data)\
                 .eq('id', record['id'])\
                 .execute()
+            
+            # Also update the relational contributors tables
+            if musicians_data:
+                print(f"  → Updating contributors in relational tables...")
+                # First, delete old contributions for this record
+                supabase.table('contributions')\
+                    .delete()\
+                    .eq('record_id', record['id'])\
+                    .eq('user_id', record['user_id'])\
+                    .execute()
+                
+                # Then insert fresh contributions
+                insert_contributions_relational(
+                    client=supabase,
+                    record_id=record['id'],
+                    user_id=record['user_id'],
+                    musicians_data=musicians_data
+                )
             
             print(f"  ✓ Updated successfully")
             updated_count += 1
@@ -313,6 +391,9 @@ Examples:
     parser.add_argument('--user-id', type=str, required=True,
                        help='User ID to filter records (required)')
     
+    parser.add_argument('--limit', type=int, metavar='N',
+                       help='Limit to first N records (works with both --dry-run and --test)')
+    
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--dry-run', action='store_true', 
                       help='Generate comparison CSV without updating DB')
@@ -335,6 +416,11 @@ Examples:
         if len(records) == 0:
             print("No records to process. Exiting.")
             return
+        
+        # Apply limit if specified
+        if args.limit:
+            records = records[:args.limit]
+            print(f"Limiting to first {args.limit} records\n")
         
         # Execute based on mode
         if args.dry_run:
