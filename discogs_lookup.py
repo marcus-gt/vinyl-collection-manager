@@ -1,12 +1,30 @@
 import os
 from dotenv import load_dotenv
 import re
+import json
 from typing import Optional, Dict, Any
 from discogs_client import Client
 import time
+import warnings
 
 # Load environment variables
 load_dotenv()
+
+# Load official Discogs credits list
+DISCOGS_CREDITS_PATH = os.path.join(os.path.dirname(__file__), 'discogs_official_credits.json')
+with open(DISCOGS_CREDITS_PATH, 'r', encoding='utf-8') as f:
+    DISCOGS_CREDITS = json.load(f)
+    ROLE_INDEX = DISCOGS_CREDITS.get('_role_index', {})
+
+# Add explicit mappings for legacy/non-linked roles that don't have categories in the official list
+LEGACY_ROLE_MAPPINGS = {
+    'artwork by': {'heading': 'Visual', 'subheading': 'Artwork'},
+    'photography': {'heading': 'Visual', 'subheading': 'Photography'},
+    'executive producer': {'heading': 'Production', 'subheading': 'Executive'},
+    'other': {'heading': 'Other', 'subheading': 'General'},
+}
+# Merge legacy mappings into ROLE_INDEX
+ROLE_INDEX.update(LEGACY_ROLE_MAPPINGS)
 
 # Get token and validate it's not None
 token = os.getenv('DISCOGS_TOKEN')
@@ -25,8 +43,114 @@ except Exception as e:
     print(f"Error initializing Discogs client: {str(e)}")
     raise
 
+def get_all_credits(credits) -> dict:
+    """
+    Categorize all credits using the official Discogs credits list.
+    Splits composite role strings so each role/instrument gets its own category.
+    Groups credits by artist name and combines their roles to avoid duplicates.
+    
+    Returns a nested dictionary structure:
+    {
+        "Heading": {
+            "Subheading": ["Name (Combined Roles)", ...],
+            ...
+        },
+        ...
+    }
+    
+    For roles not found in the official list, they go to "Other" / "General".
+    """
+    # First pass: collect all credits by artist name and category
+    # Structure: {heading: {subheading: {artist_name: [role1, role2, ...]}}}
+    artist_roles = {}
+    
+    for credit in credits:
+        role = credit.role
+        artist_name = credit.name
+        
+        # Strip anything in brackets [...] before lookup (e.g., "Photography By [Front Cover]" -> "Photography By")
+        role_for_lookup = re.sub(r'\s*\[.*?\]', '', role).strip()
+        
+        # Split the role by comma to handle composite roles like "Composed By, Performer, Drums"
+        role_parts = [part.strip() for part in role_for_lookup.split(',')]
+        
+        # Process each role part separately so they can go to different categories
+        for role_part in role_parts:
+            if not role_part:
+                continue
+                
+            # Look up the role part in the official Discogs index (case-insensitive)
+            role_lower = role_part.lower()
+            role_info = ROLE_INDEX.get(role_lower)
+            
+            if role_info:
+                heading = role_info['heading']
+                subheading = role_info['subheading']
+            else:
+                # Role not found - add to "Other"
+                heading = 'Other'
+                subheading = 'General'
+            
+            # Initialize nested structure
+            if heading not in artist_roles:
+                artist_roles[heading] = {}
+            if subheading not in artist_roles[heading]:
+                artist_roles[heading][subheading] = {}
+            if artist_name not in artist_roles[heading][subheading]:
+                artist_roles[heading][subheading][artist_name] = []
+            
+            # Add the individual role part (preserve brackets from original if present)
+            # Find the original part with brackets if it exists
+            original_role_with_brackets = role
+            for orig_part in role.split(','):
+                if role_part in orig_part:
+                    artist_roles[heading][subheading][artist_name].append(orig_part.strip())
+                    break
+            else:
+                # If not found in original, just use the role_part
+                artist_roles[heading][subheading][artist_name].append(role_part)
+    
+    # Second pass: combine roles per artist and format
+    categorized = {}
+    
+    for heading in artist_roles:
+        categorized[heading] = {}
+        
+        for subheading in artist_roles[heading]:
+            formatted_credits = []
+            
+            for artist_name, roles in artist_roles[heading][subheading].items():
+                # Parse all roles and extract individual role parts
+                all_role_parts = []
+                for role in roles:
+                    # Split by comma and collect all parts
+                    parts = [p.strip() for p in role.split(',')]
+                    all_role_parts.extend(parts)
+                
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_parts = []
+                for part in all_role_parts:
+                    part_lower = part.lower()
+                    if part_lower not in seen:
+                        seen.add(part_lower)
+                        unique_parts.append(part)
+                
+                # Combine into a single formatted string
+                combined_role = ', '.join(unique_parts)
+                formatted_credit = f"{artist_name} ({combined_role})"
+                formatted_credits.append(formatted_credit)
+            
+            categorized[heading][subheading] = sorted(formatted_credits)
+    
+    return categorized
+
+
 def get_musicians(credits) -> list[str]:
-    """Filter and format musician credits, excluding non-musical roles"""
+    """
+    LEGACY FUNCTION: Filter and format musician credits, excluding non-musical roles.
+    This is kept for backwards compatibility but is superseded by get_all_credits().
+    """
     musicians = set()
     non_musical_roles = {
         'design', 'photography', 'artwork', 'mastered', 'mixed',
@@ -69,119 +193,328 @@ def get_musicians(credits) -> list[str]:
 
     return sorted(list(musicians))
 
+
 def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
-    """Format a Discogs release object into a standardized format"""
+    """Format a Discogs release object into a standardized format with extended fields"""
     try:
         print("\n=== Formatting Release Data ===")
         print(f"Input added_from value: {added_from}")
+        
+        print("\n--- Extracting Current Release Data ---")
+        # Get current release ID
+        current_release_id = release.id
+        print(f"Current release ID: {current_release_id}")
         
         # Get artist name(s)
         artists = [artist.name for artist in release.artists]
         artist_name = ' & '.join(artists) if artists else 'Unknown Artist'
 
-        # Get musicians from both release credits and track credits
-        musicians = set()
-        
-        # Get format from current release
-        current_format = None
+        # Get current release format
+        current_release_format = None
         if hasattr(release, 'formats') and release.formats:
-            # Discogs formats is a list of format objects, e.g., [{'name': 'Vinyl', 'qty': '1', 'descriptions': ['LP', 'Album']}]
-            format_names = [fmt.get('name') for fmt in release.formats if fmt.get('name')]
-            if format_names:
-                current_format = ', '.join(format_names)
-                print(f"Found current release format: {current_format}")
+            format_parts = []
+            for fmt in release.formats:
+                parts = [fmt.get('name', '')]
+                if fmt.get('descriptions'):
+                    parts.extend(fmt.get('descriptions'))
+                if fmt.get('text'):
+                    parts.append(fmt.get('text'))
+                format_parts.append(', '.join(filter(None, parts)))
+            current_release_format = ' ('.join(format_parts) + ')' * (len(format_parts) - 1) if format_parts else None
+            print(f"Current release format: {current_release_format}")
         
-        # Try to get the master release for year and additional info
+        # Get current release label and catno
+        current_label = None
+        current_catno = None
+        if hasattr(release, 'labels') and release.labels:
+            current_label = release.labels[0].name
+            current_catno = release.labels[0].catno
+            print(f"Current label: {current_label}, catno: {current_catno}")
+        
+        # Get current release country
+        current_country = getattr(release, 'country', None)
+        print(f"Current country: {current_country}")
+        
+        # Get current release year
+        current_release_year = getattr(release, 'year', None)
+        print(f"Current release year: {current_release_year}")
+        
+        # Get current release identifiers (barcodes, matrix numbers, etc.)
+        current_identifiers = []
+        if hasattr(release, 'identifiers'):
+            current_identifiers = [
+                {
+                    'type': id_item.get('type'),
+                    'value': id_item.get('value'),
+                    'description': id_item.get('description')
+                }
+                for id_item in release.identifiers
+            ]
+        
+        print("\n--- Extracting Master Release Data ---")
+        # Try to get the master release for additional info
         master = None
-        original_year = None
-        main_release = None
-        master_format = None
+        master_id = None
+        master_url = None
+        tracklist = []
+        main_genres = []
+        main_styles = []
+        
         try:
             if hasattr(release, 'master') and release.master:
                 print("Found master release, fetching full master data...")
-                master = d.master(release.master.id)  # Fetch full master data
-                original_year = master.year
-                print(f"Found master release year: {original_year}")
+                master = d.master(release.master.id)
+                master_id = master.id
+                master_url = f'https://www.discogs.com/master/{master_id}'
+                print(f"Master ID: {master_id}")
+                print(f"Master URL: {master_url}")
                 
-                # Get the main release data
-                if hasattr(master, 'main_release'):
-                    print(f"Found main release ID: {master.main_release.id}")
-                    main_release = d.release(master.main_release.id)
-                    print("Fetched main release data")
-                    
-                    # Get format from main release
-                    if hasattr(main_release, 'formats') and main_release.formats:
-                        format_names = [fmt.get('name') for fmt in main_release.formats if fmt.get('name')]
-                        if format_names:
-                            master_format = ', '.join(format_names)
-                            print(f"Found master format: {master_format}")
-                    
-                    # Get musicians from main release credits
-                    if hasattr(main_release, 'credits'):
-                        print("Found main release credits:", [f"{c.name} ({c.role})" for c in main_release.credits])
-                        musicians.update(get_musicians(main_release.credits))
-                    else:
-                        print("No credits found on main release")
-                    
-                    # Get musicians from main release tracklist
-                    if hasattr(main_release, 'tracklist'):
-                        for track in main_release.tracklist:
-                            if hasattr(track, 'credits'):
-                                print(f"Found track credits for {track.title}:", 
-                                      [f"{c.name} ({c.role})" for c in track.credits])
-                                musicians.update(get_musicians(track.credits))
-                            else:
-                                print(f"No credits found on track: {track.title}")
-        except Exception as e:
-            print(f"Error getting master/main release info: {e}")
-
-        # Fall back to current release credits if no musicians found
-        if not musicians:
-            print("\nNo musicians found in main release, checking current release...")
-            if hasattr(release, 'credits'):
-                print("Found current release credits:", [f"{c.name} ({c.role})" for c in release.credits])
-                musicians.update(get_musicians(release.credits))
+                # Get tracklist from master
+                if hasattr(master, 'tracklist') and master.tracklist:
+                    tracklist = [
+                        {
+                            'position': track.position,
+                            'title': track.title,
+                            'duration': track.duration
+                        }
+                        for track in master.tracklist
+                    ]
+                    print(f"Found {len(tracklist)} tracks in master tracklist")
+                
+                # Get genres and styles from master (highest priority)
+                if hasattr(master, 'genres'):
+                    main_genres = master.genres
+                    print(f"Master genres: {main_genres}")
+                if hasattr(master, 'styles'):
+                    main_styles = master.styles
+                    print(f"Master styles: {main_styles}")
             else:
-                print("No credits found on current release")
-                
-            # Get musicians from current release tracklist
-            if hasattr(release, 'tracklist'):
-                for track in release.tracklist:
-                    if hasattr(track, 'credits'):
-                        print(f"Found track credits for {track.title}:", 
-                              [f"{c.name} ({c.role})" for c in track.credits])
-                        musicians.update(get_musicians(track.credits))
-                    else:
-                        print(f"No credits found on track: {track.title}")
+                print("No master release found for current release.")
+        except Exception as e:
+            print(f"Error getting master release: {e}")
         
-        # Get country from main release if available, otherwise from current release
-        country = None
-        if main_release and hasattr(main_release, 'country'):
-            country = main_release.country
-        elif hasattr(release, 'country'):
-            country = release.country
+        # Tracklist priority: master → main → current
+        # (Will check main release after it's fetched below)
+        
+        print("\n--- Extracting Main/Original Release Data ---")
+        # Get the main/original release data
+        main_release = None
+        original_release_id = None
+        original_release_url = None
+        original_country = None
+        original_label = None
+        original_catno = None
+        original_release_date = None
+        original_identifiers = []
+        original_format = None
+        original_year = None
+        
+        all_credits_categorized = {}
+        
+        try:
+            if master and hasattr(master, 'main_release'):
+                print(f"Found main release ID: {master.main_release.id}")
+                main_release = d.release(master.main_release.id)
+                original_release_id = main_release.id
+                original_release_url = f'https://www.discogs.com/release/{original_release_id}'
+                print(f"Original release URL: {original_release_url}")
+                
+                # Get original country
+                original_country = getattr(main_release, 'country', None)
+                print(f"Original country: {original_country}")
+                
+                # Get original label and catno
+                if hasattr(main_release, 'labels') and main_release.labels:
+                    original_label = main_release.labels[0].name
+                    original_catno = main_release.labels[0].catno
+                    print(f"Original label: {original_label}, catno: {original_catno}")
+                
+                # Get original release date (full date if available)
+                original_year = getattr(main_release, 'year', None)
+                if hasattr(main_release, 'released'):
+                    original_release_date = main_release.released
+                    print(f"Original release date: {original_release_date}")
+                elif original_year:
+                    print(f"Original release year: {original_year}")
+                    
+                # Get original identifiers
+                if hasattr(main_release, 'identifiers'):
+                    original_identifiers = [
+                        {
+                            'type': id_item.get('type'),
+                            'value': id_item.get('value'),
+                            'description': id_item.get('description')
+                        }
+                        for id_item in main_release.identifiers
+                    ]
+                
+                # Get original release format
+                if hasattr(main_release, 'formats') and main_release.formats:
+                    format_parts = []
+                    for fmt in main_release.formats:
+                        parts = []
+                        if fmt.get('name'):
+                            parts.append(fmt.get('name'))
+                        if fmt.get('descriptions'):
+                            parts.extend(fmt.get('descriptions'))
+                        if fmt.get('text'):
+                            parts.append(fmt.get('text'))
+                        format_parts.append(', '.join(filter(None, parts)))
+                    original_format = ' ('.join(format_parts) + ')' * (len(format_parts) - 1) if format_parts else None
+                    print(f"Original release format: {original_format}")
+                
+                # Get all credits from main release (priority 1)
+                all_credits = []
+                if hasattr(main_release, 'credits'):
+                    print(f"Found main release credits: {[f'{c.name} ({c.role})' for c in main_release.credits]}")
+                    all_credits.extend(main_release.credits)
+                else:
+                    print("No credits found in main release, checking current release...")
+                
+                # Get credits from main release tracklist
+                if hasattr(main_release, 'tracklist'):
+                    for track in main_release.tracklist:
+                        track_title = track.title
+                        if hasattr(track, 'credits') and track.credits:
+                            print(f"Found track credits for {track_title}: {[f'{c.name} ({c.role})' for c in track.credits]}")
+                            all_credits.extend(track.credits)
+                        else:
+                            print(f"Found track credits for {track_title}: []")
+                
+                # If no credits in main release, fall back to current release
+                if not all_credits:
+                    print("\nNo credits found in main release, checking current release...")
+                    if hasattr(release, 'credits'):
+                        print(f"Found current release credits: {[f'{c.name} ({c.role})' for c in release.credits]}")
+                        all_credits.extend(release.credits)
+                    
+                    # Get credits from current release tracklist
+                    if hasattr(release, 'tracklist'):
+                        for track in release.tracklist:
+                            track_title = track.title
+                            if hasattr(track, 'credits') and track.credits:
+                                print(f"Found track credits for {track_title}: {[f'{c.name} ({c.role})' for c in track.credits]}")
+                                all_credits.extend(track.credits)
+                            else:
+                                print(f"Found track credits for {track_title}: []")
+                
+                # Categorize all credits using official Discogs list
+                if all_credits:
+                    all_credits_categorized = get_all_credits(all_credits)
+
+                # Fallback: get genres and styles from main release if not in master
+                if not main_genres and hasattr(main_release, 'genres'):
+                    main_genres = main_release.genres
+                    print(f"Main release genres: {main_genres}")
+                if not main_styles and hasattr(main_release, 'styles'):
+                    main_styles = main_release.styles
+                    print(f"Main release styles: {main_styles}")
+            else:
+                print("No main release available")
+                # Use current release data as original
+                original_release_id = current_release_id
+                original_release_url = f'https://www.discogs.com/release/{original_release_id}'
+                original_country = current_country
+                original_label = current_label
+                original_catno = current_catno
+                original_year = current_release_year
+                original_identifiers = current_identifiers
+                
+                # Get all credits from current release
+                all_credits = []
+                if hasattr(release, 'credits'):
+                    print(f"Found current release credits: {[f'{c.name} ({c.role})' for c in release.credits]}")
+                    all_credits.extend(release.credits)
+                
+                # Get credits from current release tracklist
+                if hasattr(release, 'tracklist'):
+                    for track in release.tracklist:
+                        track_title = track.title
+                        if hasattr(track, 'credits') and track.credits:
+                            print(f"Found track credits for {track_title}: {[f'{c.name} ({c.role})' for c in track.credits]}")
+                            all_credits.extend(track.credits)
+                        else:
+                            print(f"Found track credits for {track_title}: []")
+                
+                # Categorize all credits
+                if all_credits:
+                    all_credits_categorized = get_all_credits(all_credits)
+        except Exception as e:
+            print(f"Error getting main/original release info: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Tracklist fallback: master → main → current
+        if not tracklist and main_release and hasattr(main_release, 'tracklist') and main_release.tracklist:
+            tracklist = [
+                {
+                    'position': track.position,
+                    'title': track.title,
+                    'duration': track.duration
+                }
+                for track in main_release.tracklist
+            ]
+            print(f"Using main/original release tracklist: {len(tracklist)} tracks")
+        
+        if not tracklist and hasattr(release, 'tracklist') and release.tracklist:
+            tracklist = [
+                {
+                    'position': track.position,
+                    'title': track.title,
+                    'duration': track.duration
+                }
+                for track in release.tracklist
+            ]
+            print(f"Using current release tracklist: {len(tracklist)} tracks")
+        
+        # Final fallback for genres and styles (from current release)
+        if not main_genres:
+            main_genres = getattr(release, 'genres', [])
+        if not main_styles:
+            main_styles = getattr(release, 'styles', [])
+        
+        print(f"\nFinal genres (priority: master→main→current): {main_genres}")
+        print(f"Final styles (priority: master→main→current): {main_styles}")
+        print(f"Final country (priority: original→current): {original_country or current_country}")
 
         # Format the data
         data = {
             'artist': artist_name,
             'album': release.title,
-            'year': original_year or getattr(release, 'year', None),
-            'label': release.labels[0].name if release.labels else None,
-            'genres': getattr(release, 'genres', []),
-            'styles': getattr(release, 'styles', []),
-            'musicians': sorted(list(musicians)),
-            'master_url': f'https://www.discogs.com/master/{master.id}' if master else None,
-            'master_format': master_format,
-            'current_release_url': f'https://www.discogs.com/release/{release.id}',
-            'current_release_year': getattr(release, 'year', None),
-            'current_release_format': current_format,
-            'barcode': None,
-            'country': country,
+            'year': original_year,  # Original year (from main release or master)
+            'label': original_label,  # Original label
+            'genres': main_genres,  # Priority: master → main → current
+            'styles': main_styles,  # Priority: master → main → current
+            'country': original_country,  # Original country
+            'master_id': master_id,
+            'master_url': master_url,
+            'master_format': original_format,  # Store original release format in master_format field
+            'tracklist': tracklist,  # From master
+            'original_release_id': original_release_id,
+            'original_release_url': original_release_url,
+            'original_catno': original_catno,
+            'original_release_date': original_release_date,
+            'original_identifiers': original_identifiers,
+            'musicians': all_credits_categorized,  # Store categorized credits in musicians field (JSONB)
+            'current_release_id': current_release_id,
+            'current_release_url': f'https://www.discogs.com/release/{current_release_id}',
+            'current_release_year': str(current_release_year) if current_release_year else None,
+            'current_release_date': getattr(release, 'released', None),
+            'current_release_format': current_release_format,
+            'current_label': current_label,
+            'current_catno': current_catno,
+            'current_country': current_country,
+            'current_identifiers': current_identifiers,
+            'barcode': None,  # Will be set by caller if applicable
             'added_from': added_from
         }
 
-        print(f"Formatted data added_from value: {data['added_from']}")
-        print(f"Formatted release data: {data}")  # Debug logging
+        print(f"\nFormatted data added_from value: {data['added_from']}")
+        
+        # Count populated fields
+        populated = sum(1 for v in data.values() if v is not None and v != [] and v != {})
+        print(f"Total fields populated: {populated}/{len(data)}")
+        
         return data
 
     except Exception as e:
@@ -189,6 +522,42 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         import traceback
         traceback.print_exc()
         return None
+
+
+def lookup_release_by_url(url: str, added_from: str = 'discogs_url') -> Optional[Dict[str, Any]]:
+    """Look up a Discogs release by URL and format the data"""
+    try:
+        # Extract release ID from URL
+        release_id = url.split('/release/')[-1].split('-')[0]
+        print(f"Looking up release ID: {release_id}")
+        
+        release = d.release(release_id)
+        return format_release_data(release, added_from=added_from)
+    except Exception as e:
+        print(f"Error looking up release: {e}")
+        return None
+
+
+def lookup_master_by_url(url: str, added_from: str = 'discogs_url') -> Optional[Dict[str, Any]]:
+    """Look up a Discogs master by URL and format the data"""
+    try:
+        # Extract master ID from URL
+        master_id = url.split('/master/')[-1].split('-')[0]
+        print(f"Looking up master ID: {master_id}")
+        
+        master = d.master(master_id)
+        
+        # Get the main release from the master
+        if hasattr(master, 'main_release'):
+            release = master.main_release
+            return format_release_data(release, added_from=added_from)
+        else:
+            print("No main release found for master")
+            return None
+    except Exception as e:
+        print(f"Error looking up master: {e}")
+        return None
+
 
 def search_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
     """Search Discogs for a release using its barcode"""
@@ -214,6 +583,7 @@ def search_by_barcode(barcode: str) -> Optional[Dict[str, Any]]:
         import traceback
         traceback.print_exc()
         return None
+
 
 def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
     """Search for a release by Discogs release ID"""
@@ -266,6 +636,7 @@ def search_by_discogs_id(release_id: str) -> Optional[Dict[str, Any]]:
             'message': f'Error looking up release: {str(e)}'
         }
 
+
 def extract_release_id(discogs_url: str) -> Optional[str]:
     """Extract release ID or master ID from a Discogs URL"""
     try:
@@ -283,6 +654,7 @@ def extract_release_id(discogs_url: str) -> Optional[str]:
     except Exception as e:
         print(f"Error extracting ID: {str(e)}")
         return None
+
 
 def search_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
     """Search for a release using a Discogs URL (supports both release and master URLs)"""
@@ -329,47 +701,6 @@ def search_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
             'message': f'Error looking up release: {str(e)}'
         }
 
-def get_price_suggestions(release_id: str) -> Optional[Dict[str, Any]]:
-    """Get price suggestions for a release"""
-    try:
-        release = d.release(release_id)
-        return release.price_suggestions
-    except Exception as e:
-        print(f"Error getting price suggestions: {str(e)}")
-        return None
-
-def get_artist_info(artist_id: str) -> Optional[Dict[str, Any]]:
-    """Get detailed artist information"""
-    try:
-        artist = d.artist(artist_id)
-        return {
-            'name': artist.name,
-            'real_name': artist.real_name,
-            'profile': artist.profile,
-            'members': [m.name for m in artist.members] if hasattr(artist, 'members') else [],
-            'groups': [g.name for g in artist.groups] if hasattr(artist, 'groups') else [],
-            'aliases': [a.name for a in artist.aliases] if hasattr(artist, 'aliases') else [],
-            'urls': artist.urls
-        }
-    except Exception as e:
-        print(f"Error getting artist info: {str(e)}")
-        return None
-
-def get_label_info(label_id: str) -> Optional[Dict[str, Any]]:
-    """Get detailed label information"""
-    try:
-        label = d.label(label_id)
-        return {
-            'name': label.name,
-            'contact_info': label.contact_info,
-            'profile': label.profile,
-            'parent_label': label.parent_label.name if label.parent_label else None,
-            'sublabels': [l.name for l in label.sublabels],
-            'urls': label.urls
-        }
-    except Exception as e:
-        print(f"Error getting label info: {str(e)}")
-        return None
 
 def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> Optional[Dict[str, Any]]:
     """Search for a release by artist and album name"""
@@ -472,80 +803,47 @@ def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> O
             'error': f'Error looking up release: {str(e)}'
         }
 
-def main():
-    """Test the Discogs API with Blue Train release"""
-    print("\n=== Testing Discogs API ===")
     
-    # Test the client connection
-    print("\nTesting client connection...")
+def get_price_suggestions(release_id: str) -> Optional[Dict[str, Any]]:
+    """Get price suggestions for a release"""
     try:
-        me = d.identity()
-        print(f"✓ Successfully connected as: {me.username}")
+        release = d.release(release_id)
+        return release.price_suggestions
     except Exception as e:
-        print(f"✗ Connection failed: {str(e)}")
-        return
+        print(f"Error getting price suggestions: {str(e)}")
+        return None
 
-    # Test release lookup
-    release_id = "8067003"  # John Coltrane - Blue Train
-    print(f"\nLooking up release ID: {release_id}")
-    
+
+def get_artist_info(artist_id: str) -> Optional[Dict[str, Any]]:
+    """Get detailed artist information"""
     try:
-        # First try to get the raw release
-        print("\nFetching raw release data...")
-        release = d.release(int(release_id))
-        print("Raw release data:")
-        print(f"- Title: {release.title}")
-        print(f"- Artists: {[a.name for a in release.artists]}")
-        print(f"- Year: {release.year}")
-        print(f"- Labels: {[l.name for l in release.labels]}")
-        print(f"- Genres: {release.genres}")
-        print(f"- Styles: {release.styles}")
-        
-        # Try to get extra artists
-        if hasattr(release, 'extraartists'):
-            print("\nExtra artists:")
-            for artist in release.extraartists:
-                print(f"- {artist.name}: {artist.role}")
-        
-        # Try to get tracklist
-        if hasattr(release, 'tracklist'):
-            print("\nTracklist:")
-            for track in release.tracklist:
-                print(f"- {track.title}")
-                if hasattr(track, 'extraartists'):
-                    for artist in track.extraartists:
-                        print(f"  * {artist.name}: {artist.role}")
-        
-        # Now test our formatted data function
-        print("\nTesting format_release_data function...")
-        formatted = format_release_data(release)
-        if formatted:
-            print("\nFormatted release data:")
-            for key, value in formatted.items():
-                print(f"- {key}: {value}")
-        else:
-            print("✗ Failed to format release data")
-            
-        # Test the full search function with release ID
-        print("\nTesting full search_by_discogs_id function...")
-        result = search_by_discogs_id(release_id)
-        print(f"\nFinal search result: {result}")
-        
-        # Test the URL search function with both release and master URLs
-        print("\nTesting URL search with release URL...")
-        release_url = f"https://www.discogs.com/release/{release_id}-John-Coltrane-Blue-Train"
-        result = search_by_discogs_url(release_url)
-        print(f"\nRelease URL search result: {result}")
-        
-        print("\nTesting URL search with master URL...")
-        master_url = "https://www.discogs.com/master/32208-John-Coltrane-Blue-Train"
-        result = search_by_discogs_url(master_url)
-        print(f"\nMaster URL search result: {result}")
-        
+        artist = d.artist(artist_id)
+        return {
+            'name': artist.name,
+            'real_name': artist.real_name,
+            'profile': artist.profile,
+            'members': [m.name for m in artist.members] if hasattr(artist, 'members') else [],
+            'groups': [g.name for g in artist.groups] if hasattr(artist, 'groups') else [],
+            'aliases': [a.name for a in artist.aliases] if hasattr(artist, 'aliases') else [],
+            'urls': artist.urls
+        }
     except Exception as e:
-        print(f"✗ Error during testing: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error getting artist info: {str(e)}")
+        return None
 
-if __name__ == "__main__":
-    main()
+
+def get_label_info(label_id: str) -> Optional[Dict[str, Any]]:
+    """Get detailed label information"""
+    try:
+        label = d.label(label_id)
+        return {
+            'name': label.name,
+            'contact_info': label.contact_info,
+            'profile': label.profile,
+            'parent_label': label.parent_label.name if label.parent_label else None,
+            'sublabels': [l.name for l in label.sublabels],
+            'urls': label.urls
+        }
+    except Exception as e:
+        print(f"Error getting label info: {str(e)}")
+        return None
