@@ -457,30 +457,51 @@ def get_contributors_for_records(user_id: str, record_ids: list[str] = None):
     """
     Fetch contributors for records from the relational tables.
     Returns a dict mapping record_id to categorized contributors.
+    
+    Uses pagination to fetch all contributions (PostgREST has a 1000 row limit per request).
     """
     try:
         client = get_supabase_client()
         
-        # Build query for contributions with joins
-        query = client.table('contributions') \
-            .select('*, contributors(name), contribution_categories(main_category, sub_category)') \
-            .eq('user_id', user_id)
+        # Fetch all contributions using pagination
+        all_contributions = []
+        page_size = 1000
+        offset = 0
         
-        # Filter by specific record_ids if provided
-        if record_ids:
-            query = query.in_('record_id', record_ids)
+        while True:
+            # Build query for contributions with joins
+            # Note: Supabase range() is EXCLUSIVE of the end value (like Python's range)
+            # So range(0, 1000) returns 1000 rows (indices 0-999)
+            query = client.table('contributions') \
+                .select('*, contributors(name), contribution_categories(main_category, sub_category)') \
+                .eq('user_id', user_id) \
+                .range(offset, offset + page_size)
+            
+            # Filter by specific record_ids if provided
+            if record_ids:
+                query = query.in_('record_id', record_ids)
+            
+            response = query.execute()
+            
+            if not response.data or len(response.data) == 0:
+                break
+            
+            fetched_count = len(response.data)
+            all_contributions.extend(response.data)
+            
+            # If we got less than page_size, we've reached the end
+            if fetched_count < page_size:
+                break
+            
+            offset += page_size
         
-        response = query.execute()
-        
-        print(f"Contributors query returned {len(response.data) if response.data else 0} contributions")
-        
-        if not response.data:
+        if not all_contributions:
             return {}
         
         # Organize contributors by record_id, then by category/subcategory
         contributors_by_record = {}
         
-        for contrib in response.data:
+        for contrib in all_contributions:
             record_id = contrib['record_id']
             contributor_name = contrib['contributors']['name']
             main_cat = contrib['contribution_categories']['main_category']
@@ -501,12 +522,8 @@ def get_contributors_for_records(user_id: str, record_ids: list[str] = None):
                 'instruments': contrib['instruments'] or [],
                 'notes': contrib['notes']
             }
-            # Debug logging for Joel Ross
-            if 'Joel Ross' in contributor_name:
-                print(f"DEBUG - Joel Ross contributor: name={contributor_name}, roles={contrib['roles']}, instruments={contrib['instruments']}")
             contributors_by_record[record_id][main_cat][sub_cat].append(contributor_data)
         
-        print(f"Organized contributors for {len(contributors_by_record)} records")
         return contributors_by_record
     
     except Exception as e:

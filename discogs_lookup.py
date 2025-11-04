@@ -16,6 +16,16 @@ with open(DISCOGS_CREDITS_PATH, 'r', encoding='utf-8') as f:
     DISCOGS_CREDITS = json.load(f)
     ROLE_INDEX = DISCOGS_CREDITS.get('_role_index', {})
 
+# Add explicit mappings for legacy/non-linked roles that don't have categories in the official list
+LEGACY_ROLE_MAPPINGS = {
+    'artwork by': {'heading': 'Visual', 'subheading': 'Artwork'},
+    'photography': {'heading': 'Visual', 'subheading': 'Photography'},
+    'executive producer': {'heading': 'Production', 'subheading': 'Executive'},
+    'other': {'heading': 'Other', 'subheading': 'General'},
+}
+# Merge legacy mappings into ROLE_INDEX
+ROLE_INDEX.update(LEGACY_ROLE_MAPPINGS)
+
 # Get token and validate it's not None
 token = os.getenv('DISCOGS_TOKEN')
 if not token:

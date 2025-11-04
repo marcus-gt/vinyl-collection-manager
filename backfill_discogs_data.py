@@ -330,7 +330,7 @@ def update_records(records: List[Dict[str, Any]], limit: Optional[int] = None) -
                 .execute()
             
             # Also update the relational contributors tables
-            if musicians_data:
+            if musicians_data is not None:
                 print(f"  → Updating contributors in relational tables...")
                 # First, delete old contributions for this record
                 supabase.table('contributions')\
@@ -391,8 +391,14 @@ Examples:
     parser.add_argument('--user-id', type=str, required=True,
                        help='User ID to filter records (required)')
     
+    parser.add_argument('--record-id', type=str, metavar='RECORD_ID',
+                       help='Update a specific record by ID (for testing)')
+    
     parser.add_argument('--limit', type=int, metavar='N',
                        help='Limit to first N records (works with both --dry-run and --test)')
+    
+    parser.add_argument('--yes', action='store_true',
+                       help='Skip confirmation prompts (auto-confirm)')
     
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--dry-run', action='store_true', 
@@ -410,17 +416,28 @@ Examples:
         print("DISCOGS DATA BACKFILL SCRIPT")
         print(f"{'='*60}\n")
         
-        records = fetch_records_to_update(args.user_id)
-        print(f"\n✓ Found {len(records)} records marked 'Kjøpt'\n")
-        
-        if len(records) == 0:
-            print("No records to process. Exiting.")
-            return
-        
-        # Apply limit if specified
-        if args.limit:
-            records = records[:args.limit]
-            print(f"Limiting to first {args.limit} records\n")
+        # Handle single record ID mode
+        if args.record_id:
+            print(f"Fetching specific record: {args.record_id}\n")
+            supabase = get_supabase_client()
+            result = supabase.table('vinyl_records').select('*').eq('id', args.record_id).eq('user_id', args.user_id).execute()
+            records = result.data
+            if not records:
+                print(f"❌ Record {args.record_id} not found for user {args.user_id}")
+                return
+            print(f"✓ Found record: {records[0]['artist']} - {records[0]['album']}\n")
+        else:
+            records = fetch_records_to_update(args.user_id)
+            print(f"\n✓ Found {len(records)} records marked 'Kjøpt'\n")
+            
+            if len(records) == 0:
+                print("No records to process. Exiting.")
+                return
+            
+            # Apply limit if specified
+            if args.limit:
+                records = records[:args.limit]
+                print(f"Limiting to first {args.limit} records\n")
         
         # Execute based on mode
         if args.dry_run:
@@ -429,19 +446,27 @@ Examples:
             
         elif args.test:
             print(f"Mode: TEST ({args.test} records)")
-            confirm = input(f"\n⚠ This will UPDATE {args.test} records in the database.\nContinue? (yes/no): ")
-            if confirm.lower() == 'yes':
+            if args.yes:
+                print("Auto-confirmed with --yes flag")
                 update_records(records, limit=args.test)
             else:
-                print("Cancelled.")
+                confirm = input(f"\n⚠ This will UPDATE {args.test} records in the database.\nContinue? (yes/no): ")
+                if confirm.lower() == 'yes':
+                    update_records(records, limit=args.test)
+                else:
+                    print("Cancelled.")
                 
         elif args.full:
             print(f"Mode: FULL UPDATE (all {len(records)} records)")
-            confirm = input(f"\n⚠ This will UPDATE all {len(records)} records in the database.\nContinue? (yes/no): ")
-            if confirm.lower() == 'yes':
+            if args.yes:
+                print("Auto-confirmed with --yes flag")
                 update_records(records)
             else:
-                print("Cancelled.")
+                confirm = input(f"\n⚠ This will UPDATE all {len(records)} records in the database.\nContinue? (yes/no): ")
+                if confirm.lower() == 'yes':
+                    update_records(records)
+                else:
+                    print("Cancelled.")
     
     except Exception as e:
         print(f"\n✗ Script failed: {e}")

@@ -22,7 +22,7 @@ import sys
 
 sys.path.append(parent_dir)
 from discogs_lookup import search_by_barcode, search_by_discogs_id, search_by_discogs_url, search_by_artist_album
-from .db import (
+from barcode_scanner.db import (
     create_user,
     login_user,
     add_record_to_collection,
@@ -31,7 +31,7 @@ from .db import (
     get_supabase_client,
     refresh_session_token
 )
-from .spotify import (
+from barcode_scanner.spotify import (
     get_spotify_auth_url,
     handle_spotify_callback,
     get_spotify_playlists,

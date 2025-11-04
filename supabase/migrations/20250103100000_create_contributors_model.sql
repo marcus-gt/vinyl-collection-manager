@@ -58,9 +58,12 @@ CREATE INDEX IF NOT EXISTS idx_contribution_categories_main ON contribution_cate
 INSERT INTO contribution_categories (main_category, sub_category) VALUES
   -- Visual
   ('Visual', 'General'),
+  ('Visual', 'Artwork'),
+  ('Visual', 'Photography'),
   
   -- Production
   ('Production', 'General'),
+  ('Production', 'Executive'),
   
   -- Technical
   ('Technical', 'General'),
@@ -95,7 +98,7 @@ INSERT INTO contribution_categories (main_category, sub_category) VALUES
   ('Instruments', 'Keyboard'),
   ('Instruments', 'Stringed Instruments'),
   ('Instruments', 'Wind Instruments'),
-  ('Instruments', 'Technical musical'),
+  ('Instruments', 'Technical Musical'),
   ('Instruments', 'Other Musical'),
   
   -- Other/Uncategorized
