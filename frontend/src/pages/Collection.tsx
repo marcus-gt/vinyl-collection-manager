@@ -3133,24 +3133,6 @@ function Collection() {
               )
             },
             { 
-              id: 'musicians', 
-              accessorKey: 'musicians', 
-              header: 'Musicians', 
-              enableSorting: true,
-              size: 200,
-              enableResizing: true,
-              minSize: 100,
-              maxSize: 500,
-              filterFn: 'textMultiTermContains' as any,
-              cell: ({ row }: { row: Row<VinylRecord> }) => createEditableStandardCell(
-                row.original,
-                'musicians',
-                'Musicians (comma-separated)',
-                'array',
-                { displayValue: formatMusicians(row.original.musicians) }
-              )
-            },
-            { 
               id: 'contributors', 
               accessorKey: 'contributors', 
               header: 'Contributors', 
@@ -4118,40 +4100,52 @@ function Collection() {
             </Box>
 
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
-              <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Musicians (Legacy)</Text>
-              <Box style={{ flex: 1, minWidth: 0, maxHeight: '200px', overflowY: 'auto' }}>
-                {createEditableStandardCell(previewRecord, 'musicians', 'Musicians (comma-separated)', 'array', {
-                  displayValue: formatMusicians(previewRecord.musicians),
-                  noTruncate: true
-                })}
-              </Box>
-            </Box>
-
-            <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Contributors</Text>
-              <Box style={{ flex: 1, minWidth: 0, maxHeight: '400px', overflowY: 'auto' }}>
+              <Box style={{ flex: 1, minWidth: 0, maxHeight: '400px', overflowY: 'auto', paddingTop: '8px' }}>
                 {previewRecord.contributors && typeof previewRecord.contributors === 'object' && Object.keys(previewRecord.contributors).length > 0 ? (
-                  <Stack gap="md">
-                    {Object.entries(previewRecord.contributors).map(([mainCategory, subCategories]) => (
-                      <Box key={mainCategory}>
-                        <Text size="sm" fw={600} mb="xs">{mainCategory}</Text>
-                        {Object.entries(subCategories as any).map(([subCategory, contribList]) => (
-                          <Box key={subCategory} ml="md" mb="xs">
-                            <Text size="xs" c="dimmed" mb={4}>{subCategory}</Text>
-                            <Stack gap={4}>
-                              {(contribList as any[]).map((contrib, idx) => {
-                                const allParts = [...(contrib.roles || []), ...(contrib.instruments || [])];
-                                return (
-                                  <Text key={idx} size="sm">
-                                    {contrib.name} {allParts.length > 0 && `(${allParts.join(', ')})`}
-                                  </Text>
-                                );
-                              })}
-                            </Stack>
-                          </Box>
-                        ))}
-                      </Box>
-                    ))}
+                  <Stack gap="sm">
+                    {Object.entries(previewRecord.contributors).map(([mainCategory, subCategories]) => {
+                      // Collect all contributors from all subcategories for this main category
+                      const contributorsByName = new Map<string, {name: string, roles: Set<string>, instruments: Set<string>}>();
+                      
+                      Object.entries(subCategories as any).forEach(([_subCategory, contribList]) => {
+                        (contribList as any[]).forEach(contrib => {
+                          const cleanName = contrib.name.replace(/\s*\(\d+\)\s*$/, '').trim();
+                          if (!contributorsByName.has(cleanName)) {
+                            contributorsByName.set(cleanName, {
+                              name: cleanName,
+                              roles: new Set(),
+                              instruments: new Set()
+                            });
+                          }
+                          const existing = contributorsByName.get(cleanName)!;
+                          (contrib.roles || []).forEach((r: string) => existing.roles.add(r));
+                          (contrib.instruments || []).forEach((i: string) => existing.instruments.add(i));
+                        });
+                      });
+                      
+                      if (contributorsByName.size === 0) return null;
+                      
+                      return (
+                        <Box key={mainCategory}>
+                          <Text size="sm" fw={600} mb={4}>{mainCategory}</Text>
+                          {Array.from(contributorsByName.values()).map((contrib, cIdx) => {
+                            // Combine roles and instruments for display
+                            const allParts = [...Array.from(contrib.roles), ...Array.from(contrib.instruments)];
+                            
+                            // Skip if no parts to show
+                            if (allParts.length === 0) return null;
+                            
+                            return (
+                              <Text key={cIdx} size="sm" ml="md">
+                                <Text component="span" fw={500}>{contrib.name}</Text>
+                                <Text component="span" c="dimmed"> - {allParts.join(', ')}</Text>
+                              </Text>
+                            );
+                          })}
+                        </Box>
+                      );
+                    })}
                   </Stack>
                 ) : (
                   <Text size="sm" c="dimmed">-</Text>
@@ -4217,56 +4211,47 @@ function Collection() {
             <Box style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minHeight: '32px' }}>
               <Text size="sm" c="gray.6" style={{ minWidth: '140px', paddingTop: '8px', flexShrink: 0 }}>Discogs Links</Text>
               <Box style={{ flex: 1, minWidth: 0 }}>
-                <Stack gap="xs">
+                <Group gap="xs">
                   {previewRecord.master_url && (
-                    <Group gap="xs">
-                      <Text size="sm" c="dimmed">Master:</Text>
-                      <Button
-                        component="a"
-                        href={previewRecord.master_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="light"
-                        size="xs"
-                      >
-                        View Master
-                      </Button>
-                    </Group>
+                    <Button
+                      component="a"
+                      href={previewRecord.master_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="light"
+                      size="xs"
+                    >
+                      View Master
+                    </Button>
                   )}
                   {previewRecord.original_release_url && (
-                    <Group gap="xs">
-                      <Text size="sm" c="dimmed">Original:</Text>
-                      <Button
-                        component="a"
-                        href={previewRecord.original_release_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="light"
-                        size="xs"
-                      >
-                        View Original
-                      </Button>
-                    </Group>
+                    <Button
+                      component="a"
+                      href={previewRecord.original_release_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="light"
+                      size="xs"
+                    >
+                      View Original
+                    </Button>
                   )}
                   {previewRecord.current_release_url && (
-                    <Group gap="xs">
-                      <Text size="sm" c="dimmed">Current:</Text>
-                      <Button
-                        component="a"
-                        href={previewRecord.current_release_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        variant="light"
-                        size="xs"
-                      >
-                        View Current
-                      </Button>
-                    </Group>
+                    <Button
+                      component="a"
+                      href={previewRecord.current_release_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="light"
+                      size="xs"
+                    >
+                      View Current
+                    </Button>
                   )}
                   {!previewRecord.master_url && !previewRecord.original_release_url && !previewRecord.current_release_url && (
                     <Text size="sm">-</Text>
                   )}
-                </Stack>
+                </Group>
               </Box>
             </Box>
 
@@ -4284,31 +4269,62 @@ function Collection() {
                       allRecords={userRecords}
                       getAllRecords={() => userRecordsRef.current}
                       noTruncate={true}
-                      onUpdate={(recordId, columnId, newValue) => {
-                        setUserRecords(prevRecords =>
-                          prevRecords.map(r => {
-                            if (r.id === recordId) {
+                      onUpdate={async (recordId, columnId, newValue) => {
+                        try {
+                          console.log('Updating custom value in preview modal:', {
+                            columnId,
+                            newValue,
+                            recordId
+                          });
+                          
+                          const valueToSend = {
+                            [columnId]: newValue
+                          };
+
+                          const response = await customValuesService.update(recordId, valueToSend);
+                          
+                          if (response.success) {
+                            setUserRecords(prevRecords =>
+                              prevRecords.map(r => {
+                                if (r.id === recordId) {
+                                  return {
+                                    ...r,
+                                    custom_values_cache: {
+                                      ...r.custom_values_cache,
+                                      [columnId]: newValue
+                                    }
+                                  };
+                                }
+                                return r;
+                              })
+                            );
+                            setPreviewRecord(prev => {
+                              if (!prev) return null;
                               return {
-                                ...r,
+                                ...prev,
                                 custom_values_cache: {
-                                  ...r.custom_values_cache,
+                                  ...prev.custom_values_cache,
                                   [columnId]: newValue
                                 }
                               };
-                            }
-                            return r;
-                          })
-                        );
-                        setPreviewRecord(prev => {
-                          if (!prev) return null;
-                          return {
-                            ...prev,
-                            custom_values_cache: {
-                              ...prev.custom_values_cache,
-                              [columnId]: newValue
-                            }
-                          };
-                        });
+                            });
+                            console.log('Successfully updated custom value in preview modal');
+                          } else {
+                            console.error('Failed to update custom value in preview modal');
+                            notifications.show({
+                              title: 'Error',
+                              message: 'Failed to update value',
+                              color: 'red'
+                            });
+                          }
+                        } catch (err) {
+                          console.error('Error updating custom value in preview modal:', err);
+                          notifications.show({
+                            title: 'Error',
+                            message: 'Failed to update value',
+                            color: 'red'
+                          });
+                        }
                       }}
                     />
                   </Box>

@@ -427,6 +427,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       };
 
       console.log('Adding record with all fields:', recordData);
+      console.log('Custom values being sent:', recordData.custom_values_cache);
       const response = await records.add(recordData);
 
       if (response.success) {

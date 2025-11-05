@@ -384,7 +384,8 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
             now = datetime.utcnow().isoformat()
             
             # Get the custom values sent from frontend
-            frontend_custom_values = record_data.get('customValues', {})
+            # Frontend sends as 'custom_values_cache', fallback to 'customValues' for backwards compatibility
+            frontend_custom_values = record_data.get('custom_values_cache', record_data.get('customValues', {}))
             print(f"Custom values from frontend: {frontend_custom_values}")
             
             # Collect custom values to insert
@@ -394,8 +395,18 @@ def add_record_to_collection(user_id: str, record_data: Dict[str, Any]) -> Dict[
                 # Check if we have a value from the frontend
                 if column_id in frontend_custom_values:
                     value = frontend_custom_values[column_id]
-                    print(f"Using frontend value for {column['name']}: {value}")
-                # If not, use default value if available
+                    # Skip if value is None or empty string (unless it was explicitly set to empty)
+                    if value is None or value == '':
+                        # If it's explicitly in the dict but empty, check if there's a default
+                        if column.get('default_value'):
+                            value = column['default_value']
+                            print(f"Frontend sent empty value for {column['name']}, using default: {value}")
+                        else:
+                            print(f"Frontend sent empty value for {column['name']} and no default, skipping")
+                            continue
+                    else:
+                        print(f"Using frontend value for {column['name']}: {value}")
+                # If not in frontend values, use default value if available
                 elif column.get('default_value'):
                     value = column['default_value']
                     print(f"Using default value for {column['name']}: {value}")
