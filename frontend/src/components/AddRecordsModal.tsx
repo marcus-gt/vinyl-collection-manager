@@ -1412,8 +1412,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         </Box>
                       )}
 
-                      {/* Musicians - Collapsible */}
-                      {record.musicians && record.musicians.length > 0 && (
+                      {/* Contributors - Collapsible */}
+                      {record.musicians && typeof record.musicians === 'object' && Object.keys(record.musicians).length > 0 && (
                         <Box mb={4}>
                           <Group 
                             gap={4}
@@ -1421,14 +1421,67 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                             onClick={() => setMusiciansExpanded(!musiciansExpanded)}
                           >
                             <Text size="sm" fw={500} c="dimmed">
-                              Musicians ({record.musicians.length})
+                              Contributors
                             </Text>
                             {musiciansExpanded ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
                           </Group>
                           <Collapse in={musiciansExpanded}>
-                            <Text size="sm" mt={4}>
-                              {record.musicians.join(', ')}
-                            </Text>
+                            <Box mt={4}>
+                              {Object.entries(record.musicians).map(([mainCategory, subCategories]: [string, any]) => {
+                                // Skip internal fields
+                                if (mainCategory === '_role_index') return null;
+                                
+                                // Collect all contributors from all subcategories for this main category
+                                const contributorsByName = new Map<string, {name: string, parts: Set<string>}>();
+                                
+                                Object.entries(subCategories).forEach(([_subCategory, contribList]: [string, any]) => {
+                                  if (Array.isArray(contribList)) {
+                                    contribList.forEach((contribString: string) => {
+                                      // Parse strings like "Jack DeJohnette (Drums)" or "Val Valentin (Engineer [Engineering Director])"
+                                      const match = contribString.match(/^(.+?)\s*\((.+)\)$/);
+                                      if (match) {
+                                        const name = match[1].trim();
+                                        const rolesString = match[2].trim();
+                                        const cleanName = name.replace(/\s*\(\d+\)\s*$/, '').trim();
+                                        
+                                        if (!contributorsByName.has(cleanName)) {
+                                          contributorsByName.set(cleanName, {
+                                            name: cleanName,
+                                            parts: new Set()
+                                          });
+                                        }
+                                        const existing = contributorsByName.get(cleanName)!;
+                                        // Split roles by comma and add each
+                                        rolesString.split(',').forEach(part => {
+                                          existing.parts.add(part.trim());
+                                        });
+                                      }
+                                    });
+                                  }
+                                });
+                                
+                                if (contributorsByName.size === 0) return null;
+                                
+                                return (
+                                  <Box key={mainCategory} mb="xs">
+                                    <Text size="sm" fw={600} mb={4}>{mainCategory}</Text>
+                                    {Array.from(contributorsByName.values()).map((contrib, cIdx) => {
+                                      const allParts = Array.from(contrib.parts);
+                                      
+                                      // Skip if no parts to show
+                                      if (allParts.length === 0) return null;
+                                      
+                                      return (
+                                        <Text key={cIdx} size="sm" ml="md">
+                                          <Text component="span" fw={500}>{contrib.name}</Text>
+                                          <Text component="span" c="dimmed"> - {allParts.join(', ')}</Text>
+                                        </Text>
+                                      );
+                                    })}
+                                  </Box>
+                                );
+                              })}
+                            </Box>
                           </Collapse>
                         </Box>
                       )}
