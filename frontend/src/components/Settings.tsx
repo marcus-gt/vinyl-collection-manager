@@ -53,7 +53,7 @@ export function Settings({
     { id: 'current_release_format', name: 'Format' },
     { id: 'master_format', name: 'Master Format' },
     { id: 'tracklist', name: 'Tracklist' },
-    { id: 'musicians', name: 'Musicians' },
+    { id: 'contributors', name: 'Contributors' },
     { id: 'links', name: 'Discogs Links' },
     { id: 'created_at', name: 'Added' },
     // Hidden by default (advanced fields)

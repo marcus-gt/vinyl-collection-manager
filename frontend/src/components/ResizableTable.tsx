@@ -149,13 +149,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     defaultValue: []
   });
   
-  const columnOrder = externalColumnOrder !== undefined ? externalColumnOrder : localColumnOrder;
+  // Use external order if provided, otherwise use local order
+  // If both are empty arrays, treat as undefined so TanStack Table uses natural column order
+  let columnOrder: string[] | undefined;
+  if (externalColumnOrder !== undefined && externalColumnOrder.length > 0) {
+    columnOrder = externalColumnOrder;
+  } else if (localColumnOrder.length > 0) {
+    columnOrder = localColumnOrder;
+  } else {
+    columnOrder = undefined;
+  }
   
   // Wrap setColumnOrder to handle both direct values and updater functions
   const setColumnOrder = (updaterOrValue: string[] | ((old: string[]) => string[])) => {
     if (externalOnColumnOrderChange) {
       const newOrder = typeof updaterOrValue === 'function' 
-        ? updaterOrValue(columnOrder)
+        ? updaterOrValue(columnOrder || [])
         : updaterOrValue;
       externalOnColumnOrderChange(newOrder);
     } else {
