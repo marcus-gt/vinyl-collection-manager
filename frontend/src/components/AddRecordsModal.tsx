@@ -1375,7 +1375,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                       )}
 
                       {/* More Info - Collapsible */}
-                      {(record.master_format || record.current_release_format || record.current_release_year) && (
+                      {(record.master_format || record.current_release_format || record.current_release_year || record.current_country || record.current_label) && (
                         <Box mb={4}>
                           <Group 
                             gap={4}
@@ -1405,6 +1405,18 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                                 <Text size="sm" mb={4}>
                                   <Text component="span" fw={500} c="dimmed">Current Release Year: </Text>
                                   {record.current_release_year}
+                                </Text>
+                              )}
+                              {record.current_country && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Current Release Country: </Text>
+                                  {record.current_country}
+                                </Text>
+                              )}
+                              {record.current_label && (
+                                <Text size="sm" mb={4}>
+                                  <Text component="span" fw={500} c="dimmed">Current Release Label: </Text>
+                                  {record.current_label}
                                 </Text>
                               )}
                             </Box>
