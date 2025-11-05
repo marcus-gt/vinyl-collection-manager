@@ -38,29 +38,28 @@ export function Settings({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Standard columns definition (matching Collection.tsx)
+  // Standard columns definition (MUST match EXACT order from STANDARD_COLUMN_IDS in Collection.tsx)
   const standardColumns = [
     { id: 'artist', name: 'Artist' },
     { id: 'album', name: 'Album' },
     { id: 'year', name: 'Original Year' },
     { id: 'current_release_year', name: 'Release Year' },
     { id: 'label', name: 'Original Label' },
+    { id: 'original_catno', name: 'Original Catno' },
     { id: 'current_label', name: 'Release Label' },
+    { id: 'current_catno', name: 'Release Catno' },
     { id: 'country', name: 'Original Country' },
     { id: 'current_country', name: 'Release Country' },
+    { id: 'master_format', name: 'Master Format' },
+    { id: 'current_release_format', name: 'Format' },
     { id: 'genres', name: 'Genres' },
     { id: 'styles', name: 'Styles' },
-    { id: 'current_release_format', name: 'Format' },
-    { id: 'master_format', name: 'Master Format' },
-    { id: 'tracklist', name: 'Tracklist' },
-    { id: 'contributors', name: 'Contributors' },
-    { id: 'links', name: 'Discogs Links' },
     { id: 'created_at', name: 'Added' },
-    // Hidden by default (advanced fields)
     { id: 'added_from', name: 'Source' },
-    { id: 'original_catno', name: 'Original Catno' },
-    { id: 'current_catno', name: 'Release Catno' },
+    { id: 'links', name: 'Discogs Links' },
     { id: 'master_id', name: 'Master ID' },
+    { id: 'tracklist', name: 'Tracklist' },
+    { id: 'contributors', name: 'Contributors' },  // Right after tracklist
     { id: 'original_release_id', name: 'Original Release ID' },
     { id: 'original_release_date', name: 'Original Release Date' },
     { id: 'original_identifiers', name: 'Original Identifiers' },

@@ -2294,7 +2294,7 @@ function Collection() {
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
   const [editingColumn, setEditingColumn] = useState<CustomColumn | null>(null);
   const [returnToSettings, setReturnToSettings] = useState(false);
-  const [columnOrder, setColumnOrder, columnOrderLoading] = useBackendSettings<string[]>('table-column-order', []);
+  const [columnOrder, setColumnOrder] = useBackendSettings<string[]>('table-column-order', []);
   const [columnVisibility, setColumnVisibility] = useBackendSettings<Record<string, boolean>>('table-column-visibility', {});
   const [previewRecord, setPreviewRecord] = useState<VinylRecord | null>(null);
   
@@ -2333,50 +2333,6 @@ function Collection() {
     }
   }, []); // Run only once on mount
 
-  // Migration: Fix column order - remove musicians, add contributors after tracklist
-  // Wait for columnOrder to finish loading before running migration
-  const migrationDone = useRef(false);
-  useEffect(() => {
-    // Only run once, after columnOrder has finished loading
-    if (migrationDone.current || columnOrderLoading) return;
-    
-    migrationDone.current = true;
-    console.log('Running column order migration, current order:', columnOrder);
-    
-    // Check if columnOrder needs migration
-    if (columnOrder.length > 0) {
-      let needsUpdate = false;
-      let newOrder = [...columnOrder];
-      
-      // Remove 'musicians' if it exists
-      const musiciansIdx = newOrder.indexOf('musicians');
-      if (musiciansIdx !== -1) {
-        console.log('Removing musicians from column order');
-        newOrder.splice(musiciansIdx, 1);
-        needsUpdate = true;
-      }
-      
-      // Check if contributors exists
-      const contributorsIdx = newOrder.indexOf('contributors');
-      const tracklistIdx = newOrder.indexOf('tracklist');
-      
-      // If contributors doesn't exist, add it after tracklist
-      if (contributorsIdx === -1 && tracklistIdx !== -1) {
-        console.log('Adding contributors after tracklist');
-        newOrder.splice(tracklistIdx + 1, 0, 'contributors');
-        needsUpdate = true;
-      }
-      
-      if (needsUpdate) {
-        console.log('Migrated column order:', newOrder);
-        setColumnOrder(newOrder);
-      } else {
-        console.log('No migration needed');
-      }
-    } else {
-      console.log('No saved column order to migrate');
-    }
-  }, [columnOrder, columnOrderLoading, setColumnOrder]); // Run when columnOrder finishes loading
 
   useEffect(() => {
     loadRecords();
@@ -2569,29 +2525,28 @@ function Collection() {
     }
   };
 
-  // Define standard column IDs (must match the table column definitions)
+  // Define standard column IDs (must match the EXACT order in standardColumns definition)
   const STANDARD_COLUMN_IDS = [
     'artist',
     'album',
     'year',
     'current_release_year',
     'label',
+    'original_catno',
     'current_label',
+    'current_catno',
     'country',
     'current_country',
+    'master_format',
+    'current_release_format',
     'genres',
     'styles',
-    'current_release_format',
-    'master_format',
-    'tracklist',
-    'musicians',
-    'links', // Discogs Links column
     'created_at',
-    // Hidden by default (advanced fields)
     'added_from',
-    'original_catno',
-    'current_catno',
+    'links',
     'master_id',
+    'tracklist',
+    'contributors',  // Right after tracklist, matching standardColumns definition
     'original_release_id',
     'original_release_date',
     'original_identifiers',
