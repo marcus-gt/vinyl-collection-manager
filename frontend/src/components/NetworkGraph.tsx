@@ -18,14 +18,6 @@ interface GraphNode {
   roles?: string[];
 }
 
-interface GraphLink {
-  source: string;
-  target: string;
-  value: number;
-  roles?: string[];
-  albums?: string[];
-}
-
 export default function NetworkGraph({ data }: NetworkGraphProps) {
   const fgRef = useRef<any>();
   const [dimensions, setDimensions] = useState({ width: 0, height: 800 });
