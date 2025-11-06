@@ -1,5 +1,6 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { Select } from '@mantine/core';
 import type { MusicianNetworkData } from '../services/api';
 
 interface NetworkGraphProps {
@@ -31,6 +32,9 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
   const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
   const [highlightLinks, setHighlightLinks] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [graphReady, setGraphReady] = useState(false);
+  const [searchValue, setSearchValue] = useState<string | null>(null);
+  const pendingZoomRef = useRef<string | null>(null);
 
   console.log('NetworkGraph received data:', { 
     nodes: data?.nodes?.length, 
@@ -126,6 +130,126 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
   };
 
   console.log('Transformed graphData:', graphData);
+
+  // Create search options from all nodes
+  const searchOptions = useMemo(() => {
+    return graphData.nodes.map((node: GraphNode) => ({
+      value: node.id,
+      label: `${node.name} (${node.category === 'artist' ? 'Artist' : 'Musician'})`,
+      category: node.category
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [graphData.nodes]);
+
+  // Handle node click - highlight node and its connections
+  const handleNodeClick = useCallback((node: any) => {
+    // If clicking the same node, deselect it
+    if (selectedNode === node.id) {
+      setSelectedNode(null);
+      setHighlightNodes(new Set());
+      setHighlightLinks(new Set());
+      setSearchValue(null); // Clear search selector too
+      return;
+    }
+
+    // Set selected node
+    setSelectedNode(node.id);
+    setSearchValue(node.id); // Update search selector to match clicked node
+
+    // Find all connected nodes and links
+    const connectedNodes = new Set<string>([node.id]);
+    const connectedLinks = new Set<string>();
+
+    graphData.links.forEach((link: any) => {
+      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+      const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+
+      if (sourceId === node.id) {
+        connectedNodes.add(targetId);
+        connectedLinks.add(`${sourceId}-${targetId}`);
+      } else if (targetId === node.id) {
+        connectedNodes.add(sourceId);
+        connectedLinks.add(`${sourceId}-${targetId}`);
+      }
+    });
+
+    setHighlightNodes(connectedNodes);
+    setHighlightLinks(connectedLinks);
+  }, [selectedNode, graphData]);
+
+  // Zoom to a specific node
+  const zoomToNode = useCallback((nodeId: string) => {
+    if (!fgRef.current) return;
+
+    // Find the node from our graphData (nodes already have x, y coordinates from the simulation)
+    const node = graphData.nodes.find((n: GraphNode) => n.id === nodeId);
+    
+    if (node) {
+      console.log('Found node:', node);
+      
+      // Get the node's position - it should have x, y coordinates after simulation
+      const nodeObj = node as any;
+      
+      if (nodeObj.x !== undefined && nodeObj.y !== undefined) {
+        console.log('Zooming to node at:', { x: nodeObj.x, y: nodeObj.y });
+        
+        // Zoom to node
+        fgRef.current.centerAt(nodeObj.x, nodeObj.y, 1000);
+        fgRef.current.zoom(3, 1000);
+
+        // Highlight node and connections
+        handleNodeClick(nodeObj);
+      } else {
+        console.warn('Node found but missing coordinates, retrying...:', nodeObj);
+        // Try again after a short delay to let simulation position the nodes
+        setTimeout(() => {
+          const updatedNode = graphData.nodes.find((n: GraphNode) => n.id === nodeId) as any;
+          if (updatedNode && updatedNode.x !== undefined && updatedNode.y !== undefined) {
+            fgRef.current.centerAt(updatedNode.x, updatedNode.y, 1000);
+            fgRef.current.zoom(3, 1000);
+            handleNodeClick(updatedNode);
+          }
+        }, 500);
+      }
+    } else {
+      console.warn('Node not found:', nodeId);
+    }
+  }, [handleNodeClick, graphData.nodes]);
+
+  // Handle when graph engine stops (simulation stabilizes)
+  const handleEngineStop = useCallback(() => {
+    console.log('Graph engine stopped, graph is ready');
+    setGraphReady(true);
+    
+    // If there's a pending zoom request, execute it now
+    if (pendingZoomRef.current) {
+      const nodeId = pendingZoomRef.current;
+      pendingZoomRef.current = null;
+      zoomToNode(nodeId);
+    }
+  }, [zoomToNode]);
+
+  // Handle search selection
+  const handleSearchSelect = useCallback((nodeId: string | null) => {
+    console.log('handleSearchSelect called with:', nodeId);
+    setSearchValue(nodeId);
+    
+    if (!nodeId) {
+      console.log('No nodeId selected, clearing selection');
+      return;
+    }
+
+    console.log('Search selected node:', nodeId, 'Graph ready:', graphReady);
+
+    if (graphReady && fgRef.current) {
+      // Graph is ready, zoom immediately
+      console.log('Calling zoomToNode');
+      zoomToNode(nodeId);
+    } else {
+      // Graph not ready, store for later
+      console.log('Graph not ready yet, storing pending zoom');
+      pendingZoomRef.current = nodeId;
+    }
+  }, [graphReady, zoomToNode]);
 
   // Node color based on category
   const getNodeColor = useCallback((node: GraphNode) => {
@@ -262,40 +386,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     return label;
   }, []);
 
-  // Handle node click - highlight node and its connections
-  const handleNodeClick = useCallback((node: any) => {
-    // If clicking the same node, deselect it
-    if (selectedNode === node.id) {
-      setSelectedNode(null);
-      setHighlightNodes(new Set());
-      setHighlightLinks(new Set());
-      return;
-    }
-
-    // Set selected node
-    setSelectedNode(node.id);
-
-    // Find all connected nodes and links
-    const connectedNodes = new Set<string>([node.id]);
-    const connectedLinks = new Set<string>();
-
-    graphData.links.forEach((link: any) => {
-      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-      const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-
-      if (sourceId === node.id) {
-        connectedNodes.add(targetId);
-        connectedLinks.add(`${sourceId}-${targetId}`);
-      } else if (targetId === node.id) {
-        connectedNodes.add(sourceId);
-        connectedLinks.add(`${sourceId}-${targetId}`);
-      }
-    });
-
-    setHighlightNodes(connectedNodes);
-    setHighlightLinks(connectedLinks);
-  }, [selectedNode, graphData]);
-
   return (
     <div 
       ref={containerRef}
@@ -309,6 +399,46 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
         position: 'relative'
       }}
     >
+      {/* Search box */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        width: '300px',
+        zIndex: 10
+      }}>
+        <Select
+          placeholder="Search for artist or musician..."
+          data={searchOptions}
+          value={searchValue}
+          searchable
+          clearable
+          onChange={handleSearchSelect}
+          styles={{
+            input: {
+              backgroundColor: 'rgba(30, 30, 30, 0.95)',
+              color: '#e0e0e0',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(4px)'
+            },
+            dropdown: {
+              backgroundColor: 'rgba(30, 30, 30, 0.98)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(8px)'
+            },
+            option: {
+              color: '#e0e0e0',
+              '&[data-selected]': {
+                backgroundColor: 'rgba(31, 119, 180, 0.3)'
+              },
+              '&[data-hovered]': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }
+          }}
+        />
+      </div>
+
       {/* Legend */}
       <div style={{
         position: 'absolute',
@@ -365,7 +495,9 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
           setSelectedNode(null);
           setHighlightNodes(new Set());
           setHighlightLinks(new Set());
+          setSearchValue(null); // Clear search selector too
         }}
+        onEngineStop={handleEngineStop}
         // Use force-directed layout with tighter clustering
         cooldownTicks={150}
         d3AlphaDecay={0.015}
