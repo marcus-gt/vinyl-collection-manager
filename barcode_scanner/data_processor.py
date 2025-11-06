@@ -390,7 +390,8 @@ def create_echarts_network_data(network_df, collection_df):
         
         # Only create links if both nodes exist
         if musician in node_ids and artist in node_ids:
-            link_key = f"{musician}_{artist}"
+            # Create separate links for each unique musician-artist-category-subcategory combination
+            link_key = f"{musician}_{artist}_{main_category}_{sub_category}"
             link_counts[link_key] += 1
             
             if link_counts[link_key] == 1:
@@ -427,18 +428,16 @@ def create_echarts_network_data(network_df, collection_df):
                     'custom_data': custom_data
                 })
             else:
-                # Find existing link and add role/album/custom data
+                # Find existing link (matching by musician, artist, AND category) and add role/album/custom data
                 for link in links:
-                    if link['source'] == musician and link['target'] == artist:
+                    if (link['source'] == musician and 
+                        link['target'] == artist and
+                        link['main_category'] == main_category and
+                        link['sub_category'] == sub_category):
                         link['roles'].append(role)
                         link['clean_roles'].append(clean_role)
                         link['albums'].append(album)
                         link['value'] += 1
-                        # Update category info (use first non-empty value encountered)
-                        if not link.get('main_category') and main_category:
-                            link['main_category'] = main_category
-                        if not link.get('sub_category') and sub_category:
-                            link['sub_category'] = sub_category
                         # Merge custom data
                         for col in filtered_df.columns:
                             if col not in ['musician', 'role', 'main_artist', 'album', 'clean_role', 'main_category', 'sub_category']:
