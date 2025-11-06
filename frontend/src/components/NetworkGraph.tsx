@@ -402,9 +402,11 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
       {/* Search box */}
       <div style={{
         position: 'absolute',
-        top: '20px',
-        right: '20px',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
         width: '300px',
+        maxWidth: 'calc(100% - 40px)',
         zIndex: 10
       }}>
         <Select
@@ -460,11 +462,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff7f0e', marginRight: '8px' }}></div>
           <span>Musician</span>
-        </div>
-        <div style={{ marginTop: '12px', fontSize: '11px', color: '#aaa' }}>
-          Click node to highlight<br/>
-          Drag to pan<br/>
-          Scroll to zoom
         </div>
       </div>
 

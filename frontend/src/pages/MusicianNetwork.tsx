@@ -476,7 +476,7 @@ export default function MusicianNetwork() {
         <Tabs.Panel value="network" pt="xl">
           <Title order={3} mb="md">Network Visualization</Title>
           <Text size="sm" c="dimmed" mb="md">
-            Hover for details • Drag to move • Scroll to zoom
+            Click to highlight • Drag to move • Scroll/pinch to zoom
           </Text>
           {filteredData && <NetworkGraph data={filteredData} />}
         </Tabs.Panel>
