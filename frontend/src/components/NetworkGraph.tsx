@@ -28,6 +28,9 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
   const fgRef = useRef<any>();
   const [dimensions, setDimensions] = useState({ width: 0, height: 800 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
+  const [highlightLinks, setHighlightLinks] = useState<Set<string>>(new Set());
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   console.log('NetworkGraph received data:', { 
     nodes: data?.nodes?.length, 
@@ -140,36 +143,62 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     const label = node.name;
     const fontSize = 12 / globalScale;
     
+    // Determine if node should be highlighted
+    const isHighlighted = highlightNodes.size === 0 || highlightNodes.has(node.id);
+    const opacity = isHighlighted ? 1.0 : 0.1;
+    
     // Draw node circle
     ctx.beginPath();
     ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
-    ctx.fillStyle = getNodeColor(node);
+    
+    // Apply opacity to fill color
+    const baseColor = getNodeColor(node);
+    const colorMatch = baseColor.match(/^#([0-9a-f]{6})$/i);
+    if (colorMatch) {
+      const r = parseInt(colorMatch[1].substring(0, 2), 16);
+      const g = parseInt(colorMatch[1].substring(2, 4), 16);
+      const b = parseInt(colorMatch[1].substring(4, 6), 16);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    } else {
+      ctx.fillStyle = baseColor;
+      ctx.globalAlpha = opacity;
+    }
     ctx.fill();
+    ctx.globalAlpha = 1.0; // Reset alpha
     
     // Draw outline for better visibility when overlapping
-    ctx.strokeStyle = 'rgba(30, 30, 30, 0.8)'; // Dark outline
+    ctx.strokeStyle = `rgba(30, 30, 30, ${opacity * 0.8})`; // Dark outline with opacity
     ctx.lineWidth = 0.5;
     ctx.stroke();
     
     // Draw label if zoom is sufficient
-    if (globalScale > 1.5) {
+    if (globalScale > 1.5 && isHighlighted) {
       ctx.font = `${fontSize}px Sans-Serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ffffff';
       ctx.fillText(label, node.x, node.y + size + fontSize);
     }
-  }, [getNodeColor, getNodeSize]);
+  }, [getNodeColor, getNodeSize, highlightNodes]);
 
-  // Link color with transparency
-  const getLinkColor = useCallback(() => {
-    return 'rgba(150, 150, 150, 0.3)';
-  }, []);
-
-  // Link width based on connection strength
-  const getLinkWidth = useCallback((link: GraphLink) => {
-    return Math.max(1, link.value * 0.5);
-  }, []);
+  // Link color with transparency based on highlight state
+  const paintLink = useCallback((link: any, ctx: CanvasRenderingContext2D) => {
+    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+    const linkId = `${sourceId}-${targetId}`;
+    
+    const isHighlighted = highlightLinks.size === 0 || highlightLinks.has(linkId);
+    const opacity = isHighlighted ? 0.3 : 0.02;
+    const width = Math.max(1, link.value * 0.5);
+    
+    ctx.strokeStyle = `rgba(150, 150, 150, ${opacity})`;
+    ctx.lineWidth = width;
+    
+    ctx.beginPath();
+    ctx.moveTo(link.source.x, link.source.y);
+    ctx.lineTo(link.target.x, link.target.y);
+    ctx.stroke();
+  }, [highlightLinks]);
 
   // Tooltip content
   const getNodeLabel = useCallback((node: GraphNode) => {
@@ -233,14 +262,39 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     return label;
   }, []);
 
-  // Handle node click - zoom to node and highlight connections
+  // Handle node click - highlight node and its connections
   const handleNodeClick = useCallback((node: any) => {
-    if (fgRef.current) {
-      // Center camera on node with smooth animation
-      fgRef.current.centerAt(node.x, node.y, 1000);
-      fgRef.current.zoom(3, 1000);
+    // If clicking the same node, deselect it
+    if (selectedNode === node.id) {
+      setSelectedNode(null);
+      setHighlightNodes(new Set());
+      setHighlightLinks(new Set());
+      return;
     }
-  }, []);
+
+    // Set selected node
+    setSelectedNode(node.id);
+
+    // Find all connected nodes and links
+    const connectedNodes = new Set<string>([node.id]);
+    const connectedLinks = new Set<string>();
+
+    graphData.links.forEach((link: any) => {
+      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+      const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+
+      if (sourceId === node.id) {
+        connectedNodes.add(targetId);
+        connectedLinks.add(`${sourceId}-${targetId}`);
+      } else if (targetId === node.id) {
+        connectedNodes.add(sourceId);
+        connectedLinks.add(`${sourceId}-${targetId}`);
+      }
+    });
+
+    setHighlightNodes(connectedNodes);
+    setHighlightLinks(connectedLinks);
+  }, [selectedNode, graphData]);
 
   return (
     <div 
@@ -278,7 +332,7 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
           <span>Musician</span>
         </div>
         <div style={{ marginTop: '12px', fontSize: '11px', color: '#aaa' }}>
-          Click node to zoom<br/>
+          Click node to highlight<br/>
           Drag to pan<br/>
           Scroll to zoom
         </div>
@@ -300,13 +354,18 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
           ctx.fillStyle = color;
           ctx.fill();
         }}
-        linkColor={getLinkColor}
-        linkWidth={getLinkWidth}
+        linkCanvasObject={paintLink}
         linkLabel={getLinkLabel}
         linkDirectionalParticles={2}
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.003}
         onNodeClick={handleNodeClick}
+        onBackgroundClick={() => {
+          // Clear selection when clicking background
+          setSelectedNode(null);
+          setHighlightNodes(new Set());
+          setHighlightLinks(new Set());
+        }}
         // Use force-directed layout with tighter clustering
         cooldownTicks={150}
         d3AlphaDecay={0.015}
