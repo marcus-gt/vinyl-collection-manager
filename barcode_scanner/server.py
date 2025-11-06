@@ -1613,6 +1613,17 @@ def get_musician_network():
         records = result.data
         collection_df = pd.DataFrame(records)
         
+        # Fetch contributors from relational tables
+        print("Fetching contributors from relational tables...")
+        from barcode_scanner.db import get_contributors_for_records
+        record_ids = [r['id'] for r in records]
+        contributors_data = get_contributors_for_records(user_id, record_ids)
+        print(f"Fetched contributors for {len(contributors_data)} records")
+        
+        # Attach contributors to records
+        for record in records:
+            record['contributors'] = contributors_data.get(record['id'], {})
+        
         # Expand custom_values_cache into separate columns
         if 'custom_values_cache' in collection_df.columns:
             # Extract custom column data and add as new columns
@@ -1644,6 +1655,11 @@ def get_musician_network():
                 )
                 print(f"Added custom column: {col_name}")
         
+        # Add contributors data to DataFrame
+        collection_df['contributors'] = collection_df['id'].apply(
+            lambda record_id: contributors_data.get(record_id, {})
+        )
+        
         # Rename columns to match the analysis format
         column_mapping = {
             'artist': 'Artist',
@@ -1654,8 +1670,10 @@ def get_musician_network():
         }
         collection_df = collection_df.rename(columns=column_mapping)
         
-        # Filter out records without musician data
-        collection_df = collection_df[collection_df['Musicians'].notna()]
+        # Filter out records without contributor or musician data
+        has_contributors = collection_df['contributors'].apply(lambda x: bool(x))
+        has_musicians = collection_df['Musicians'].notna() if 'Musicians' in collection_df.columns else False
+        collection_df = collection_df[has_contributors | has_musicians]
         
         if len(collection_df) == 0:
             return jsonify({
@@ -1664,6 +1682,7 @@ def get_musician_network():
                     'nodes': [],
                     'links': [],
                     'categories': [],
+                    'contributor_categories': {},
                     'genres': [],
                     'styles': [],
                     'clean_roles': [],
@@ -1671,10 +1690,15 @@ def get_musician_network():
                     'session_musicians': [],
                     'stats': {}
                 },
-                'message': 'No musician data found in collection'
+                'message': 'No contributor or musician data found in collection'
             })
         
-        print(f"Processing {len(collection_df)} records with musician data")
+        print(f"Processing {len(collection_df)} records with contributor/musician data")
+        
+        # Get available contributor categories for filtering
+        from .data_processor import get_available_categories
+        contributor_categories = get_available_categories(collection_df)
+        print(f"Available contributor categories: {contributor_categories}")
         
         # Step 1: Create network data
         network_df = create_network_data(collection_df)
@@ -1700,47 +1724,60 @@ def get_musician_network():
         custom_filter_data = get_custom_filter_data(collection_df)
         print(f"Custom filter data keys: {list(custom_filter_data.keys())}")
         
+        # Helper function to convert values to JSON-safe types
+        def sanitize_value(val):
+            """Convert numpy/pandas types to JSON-serializable Python types"""
+            import math
+            import numpy as np
+            
+            if isinstance(val, (list, tuple)):
+                return [sanitize_value(v) for v in val]
+            elif isinstance(val, dict):
+                return {k: sanitize_value(v) for k, v in val.items()}
+            elif pd.isna(val):
+                return None
+            elif isinstance(val, (np.integer, np.floating)):
+                val = val.item()
+                # Check for NaN, Infinity
+                if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+                    return None
+                return val
+            elif isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+                return None
+            elif hasattr(val, 'item'):  # numpy scalar
+                return sanitize_value(val.item())
+            else:
+                return val
+        
         # Convert DataFrames to dictionaries for JSON serialization
-        # Use orient='records' to get list of dicts, then convert to pure Python types
         musician_stats_data = []
         for _, row in musician_stats_df.iterrows():
-            record = {}
-            for col in musician_stats_df.columns:
-                val = row[col]
-                # Convert numpy/pandas types to Python types
-                if isinstance(val, (list, tuple)):
-                    record[col] = list(val)
-                elif pd.isna(val):
-                    record[col] = None
-                else:
-                    record[col] = val
+            record = {col: sanitize_value(row[col]) for col in musician_stats_df.columns}
             musician_stats_data.append(record)
         
         session_musicians_data = []
         for _, row in session_musicians_df.iterrows():
-            record = {}
-            for col in session_musicians_df.columns:
-                val = row[col]
-                # Convert numpy/pandas types to Python types
-                if isinstance(val, (list, tuple)):
-                    record[col] = list(val)
-                elif pd.isna(val):
-                    record[col] = None
-                else:
-                    record[col] = val
+            record = {col: sanitize_value(row[col]) for col in session_musicians_df.columns}
             session_musicians_data.append(record)
         
         print(f"Analysis complete: {len(musician_stats_data)} musicians, {len(session_musicians_data)} session musicians")
+        
+        # Sanitize all data before building response
+        sanitized_echarts_data = sanitize_value(echarts_data)
+        sanitized_stats = sanitize_value(stats)
+        sanitized_custom_filters = sanitize_value(custom_filter_data)
+        sanitized_contributor_categories = sanitize_value(contributor_categories)
         
         # Build response data
         response_data = {
             'success': True,
             'data': {
-                **echarts_data,
+                **sanitized_echarts_data,
                 'musician_stats': musician_stats_data,
                 'session_musicians': session_musicians_data,
-                'stats': stats,
-                'custom_filters': custom_filter_data
+                'stats': sanitized_stats,
+                'custom_filters': sanitized_custom_filters,
+                'contributor_categories': sanitized_contributor_categories
             }
         }
         

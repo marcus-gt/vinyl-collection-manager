@@ -3071,7 +3071,7 @@ function Collection() {
                 );
               }
             },
-            {
+            { 
               id: 'current_release_format',
               accessorKey: 'current_release_format',
               header: 'Release Format',
@@ -3454,8 +3454,8 @@ function Collection() {
                             <Text size="sm" fw={500}>Contributors</Text>
                             <ActionIcon size="sm" variant="subtle" onClick={(e) => { e.stopPropagation(); setOpened(false); }}>
                               <IconX size={16} />
-                            </ActionIcon>
-                          </Group>
+                      </ActionIcon>
+                </Group>
                           <Box style={{ maxHeight: '400px', overflowY: 'auto' }}>
                             {structuredDisplay || <Text size="sm">{displayValue}</Text>}
                           </Box>

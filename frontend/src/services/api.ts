@@ -732,6 +732,7 @@ export interface MusicianNetworkData {
     most_collaborative_artist: string;
   };
   custom_filters: Record<string, string[]>;
+  contributor_categories: Record<string, string[]>;
 }
 
 export const musicianNetwork = {

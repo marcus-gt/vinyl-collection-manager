@@ -18,6 +18,8 @@ export default function MusicianNetwork() {
   
   // Filter state
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedMainCategories, setSelectedMainCategories] = useState<string[]>([]);
+  const [selectedSubCategories, setSelectedSubCategories] = useState<Record<string, string[]>>({});
   const [customFilters, setCustomFilters] = useState<CustomFilter[]>([]);
   const [nextFilterId, setNextFilterId] = useState(1);
   const [filtersOpened, setFiltersOpened] = useState(false);
@@ -70,15 +72,34 @@ export default function MusicianNetwork() {
   const filteredData = useMemo(() => {
     if (!data) return null;
 
+    const hasCategoryFilter = selectedMainCategories.length > 0;
     const hasRoleFilter = selectedRoles.length > 0;
     const hasCustomFilters = customFilters.some(f => f.column && f.selectedValues.length > 0);
     
-    if (!hasRoleFilter && !hasCustomFilters) {
+    if (!hasCategoryFilter && !hasRoleFilter && !hasCustomFilters) {
       return data; // No filters, return original data
     }
 
     // Filter links based on criteria
     const filteredLinks = data.links.filter((link: any) => {
+      // Category filter
+      if (hasCategoryFilter) {
+        const mainCategory = link.main_category;
+        const subCategory = link.sub_category;
+        
+        // If main category doesn't match any selected, exclude this link
+        if (!selectedMainCategories.includes(mainCategory)) {
+          return false;
+        }
+        
+        // If this main category has subcategory filters, check them
+        if (selectedSubCategories[mainCategory] && selectedSubCategories[mainCategory].length > 0) {
+          if (!selectedSubCategories[mainCategory].includes(subCategory)) {
+            return false;
+          }
+        }
+      }
+      
       // Role filter
       if (hasRoleFilter) {
         const hasSelectedRole = link.roles && link.roles.some((role: string) => 
@@ -162,7 +183,7 @@ export default function MusicianNetwork() {
       session_musicians: filteredSessionMusicians,
       stats: filteredStats,
     };
-  }, [data, selectedRoles, customFilters]);
+  }, [data, selectedRoles, selectedMainCategories, selectedSubCategories, customFilters]);
 
   if (loading) {
     return (
@@ -236,9 +257,9 @@ export default function MusicianNetwork() {
           fullWidth={false}
         >
           Filters
-          {(selectedRoles.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) && (
+          {(selectedRoles.length > 0 || selectedMainCategories.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) && (
             <Badge size="sm" ml="xs" variant="filled" color="blue">
-              {selectedRoles.length + customFilters.filter(f => f.selectedValues.length > 0).length}
+              {selectedRoles.length + selectedMainCategories.length + Object.values(selectedSubCategories).flat().length + customFilters.filter(f => f.selectedValues.length > 0).length}
             </Badge>
           )}
         </Button>
@@ -254,6 +275,42 @@ export default function MusicianNetwork() {
             }}
           >
             <Stack gap="md">
+              {/* Contributor Category Filters */}
+              <Box>
+                <Text size="sm" fw={500} mb="xs">Contributor Categories</Text>
+                <Stack gap="sm">
+                  <MultiSelect
+                    label="Main Categories"
+                    placeholder="All categories"
+                    data={data?.contributor_categories ? Object.keys(data.contributor_categories) : []}
+                    value={selectedMainCategories}
+                    onChange={setSelectedMainCategories}
+                    searchable
+                    clearable
+                    size="sm"
+                  />
+                  
+                  {selectedMainCategories.length > 0 && selectedMainCategories.map((mainCat) => (
+                    <MultiSelect
+                      key={mainCat}
+                      label={`${mainCat} - Subcategories`}
+                      placeholder={`All ${mainCat} subcategories`}
+                      data={data?.contributor_categories?.[mainCat] || []}
+                      value={selectedSubCategories[mainCat] || []}
+                      onChange={(values) => {
+                        setSelectedSubCategories(prev => ({
+                          ...prev,
+                          [mainCat]: values
+                        }));
+                      }}
+                      searchable
+                      clearable
+                      size="sm"
+                    />
+                  ))}
+                </Stack>
+              </Box>
+
               {/* Role Filter */}
               <MultiSelect
                 label="Role"
@@ -325,7 +382,7 @@ export default function MusicianNetwork() {
               </Box>
 
               {/* Clear all button */}
-              {(selectedRoles.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) && (
+              {(selectedRoles.length > 0 || selectedMainCategories.length > 0 || customFilters.some(f => f.selectedValues.length > 0)) && (
                 <Group justify="space-between">
                   <Text size="sm" c="dimmed">
                     Showing {filteredData?.nodes.length || 0} nodes, {filteredData?.links.length || 0} connections
@@ -335,6 +392,8 @@ export default function MusicianNetwork() {
                     variant="subtle"
                     onClick={() => {
                       setSelectedRoles([]);
+                      setSelectedMainCategories([]);
+                      setSelectedSubCategories({});
                       setCustomFilters([]);
                     }}
                   >
@@ -431,8 +490,10 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
 
     // Build two lists:
     // 1. Albums with roles (where musician is working)
+    // Key: "artist - album" to uniquely identify each album
     const albumsWithRoles = new Map<string, {
       artist: string;
+      album: string;
       roles: Set<string>;
     }>();
     
@@ -440,37 +501,83 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
     const artistCollaborations = new Map<string, Set<string>>();
 
     connections.forEach(link => {
-      const artist = link.source === selectedMusician ? link.target : link.source;
+      // In the network graph: Musician (source) -> Artist (target)
+      // If selected musician is the source, they're working as a session musician for the target artist
+      // If selected musician is the target, they're the main artist and source is a session musician working for them
       
-      // Add to artist collaborations
-      if (!artistCollaborations.has(artist)) {
-        artistCollaborations.set(artist, new Set());
-      }
-      if (link.albums) {
-        link.albums.forEach(album => artistCollaborations.get(artist)!.add(album));
-      }
+      if (link.source === selectedMusician) {
+        // Selected musician is working as a session musician for link.target (the artist)
+        const artist = link.target;
+        
+        // Add to artist collaborations
+        if (!artistCollaborations.has(artist)) {
+          artistCollaborations.set(artist, new Set());
+        }
+        if (link.albums) {
+          link.albums.forEach(album => artistCollaborations.get(artist)!.add(album));
+        }
 
-      // Add to albums with roles
-      if (link.albums && link.roles) {
-        link.albums.forEach(album => {
-          if (!albumsWithRoles.has(album)) {
-            albumsWithRoles.set(album, {
-              artist: artist,
-              roles: new Set(),
-            });
-          }
-          link.roles.forEach(role => albumsWithRoles.get(album)!.roles.add(role));
-        });
+        // Add to albums with roles
+        if (link.albums && link.roles) {
+          link.albums.forEach(album => {
+            const key = `${artist} - ${album}`;
+            if (!albumsWithRoles.has(key)) {
+              albumsWithRoles.set(key, {
+                artist: artist,
+                album: album,
+                roles: new Set(),
+              });
+            }
+            link.roles.forEach(role => albumsWithRoles.get(key)!.roles.add(role));
+          });
+        }
+      } else if (link.target === selectedMusician) {
+        // Selected musician is the main artist, link.source is a collaborator
+        const collaborator = link.source;
+        
+        // Add to artist collaborations (in this case, it's musicians who worked with them)
+        if (!artistCollaborations.has(collaborator)) {
+          artistCollaborations.set(collaborator, new Set());
+        }
+        if (link.albums) {
+          link.albums.forEach(album => artistCollaborations.get(collaborator)!.add(album));
+        }
+
+        // For albums where they're the main artist, we also want to show these albums
+        // Use the link's roles which are the collaborator's roles, but we'll mark these differently
+        if (link.albums) {
+          link.albums.forEach(album => {
+            const key = `${selectedMusician} - ${album}`;
+            if (!albumsWithRoles.has(key)) {
+              // For albums where they're the main artist, mark them as such
+              // We don't have their specific roles in this link (it shows collaborator's roles)
+              albumsWithRoles.set(key, {
+                artist: selectedMusician,
+                album: album,
+                roles: new Set(['Main Artist']),
+              });
+            }
+          });
+        }
       }
     });
 
-    // Convert to sorted arrays
-    const albumsList = Array.from(albumsWithRoles.entries())
-      .map(([album, data]) => ({
-        album,
+    // Convert to sorted arrays and separate main artist albums from session work
+    const allAlbums = Array.from(albumsWithRoles.values())
+      .map(data => ({
+        album: data.album,
         artist: data.artist,
         roles: Array.from(data.roles).sort().join(', '),
-      }))
+        isMainArtist: data.artist === selectedMusician,
+      }));
+    
+    // Separate main artist albums from session work
+    const mainArtistAlbums = allAlbums
+      .filter(a => a.isMainArtist)
+      .sort((a, b) => a.album.localeCompare(b.album));
+    
+    const sessionAlbums = allAlbums
+      .filter(a => !a.isMainArtist)
       .sort((a, b) => {
         // Sort by artist first, then album
         const artistCompare = a.artist.localeCompare(b.artist);
@@ -478,6 +585,7 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
       });
 
     const artistsList = Array.from(artistCollaborations.entries())
+      .filter(([artist]) => artist !== selectedMusician) // Remove themselves from collaborations
       .map(([artist, albums]) => ({
         artist,
         albums: Array.from(albums).sort(),
@@ -487,7 +595,8 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
 
     return {
       stats,
-      albums: albumsList,
+      mainArtistAlbums,
+      sessionAlbums,
       artists: artistsList,
     };
   }, [selectedMusician, data]);
@@ -550,25 +659,62 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
           </Paper>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            {/* Albums and Roles */}
+            {/* Albums */}
             <Paper p="md" style={{ backgroundColor: '#2e2e2e', borderRadius: '8px' }}>
-              <Title order={5} mb="sm">Albums & Roles ({musicianDetails.albums.length})</Title>
+              <Title order={5} mb="sm">Albums ({musicianDetails.mainArtistAlbums.length + musicianDetails.sessionAlbums.length})</Title>
               <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                <Stack gap="xs">
-                  {musicianDetails.albums.map((item, idx) => (
-                    <Box 
-                      key={`${item.artist}-${item.album}-${idx}`}
-                      p="xs"
-                      style={{
-                        borderBottom: '1px solid #404040',
-                      }}
-                    >
-                      <Text size="sm" fw={500} mb={4}>
-                        {item.artist} - {item.album}
+                <Stack gap="md">
+                  {/* As Main Artist */}
+                  {musicianDetails.mainArtistAlbums.length > 0 && (
+                    <Box>
+                      <Text size="xs" fw={600} c="cyan" mb="xs" tt="uppercase">
+                        As Main Artist ({musicianDetails.mainArtistAlbums.length})
                       </Text>
-                      <Text size="xs" c="dimmed">{item.roles}</Text>
+                      <Stack gap="xs">
+                        {musicianDetails.mainArtistAlbums.map((item, idx) => (
+                          <Box 
+                            key={`main-${item.album}-${idx}`}
+                            p="xs"
+                            style={{
+                              borderBottom: '1px solid #404040',
+                              paddingLeft: '12px',
+                            }}
+                          >
+                            <Text size="sm" fw={500} mb={4}>
+                              {item.album}
+                            </Text>
+                            <Text size="xs" c="dimmed">{item.roles}</Text>
+                          </Box>
+                        ))}
+                      </Stack>
                     </Box>
-                  ))}
+                  )}
+                  
+                  {/* Session Work */}
+                  {musicianDetails.sessionAlbums.length > 0 && (
+                    <Box>
+                      <Text size="xs" fw={600} c="violet" mb="xs" tt="uppercase">
+                        Session Work ({musicianDetails.sessionAlbums.length})
+                      </Text>
+                      <Stack gap="xs">
+                        {musicianDetails.sessionAlbums.map((item, idx) => (
+                          <Box 
+                            key={`session-${item.artist}-${item.album}-${idx}`}
+                            p="xs"
+                            style={{
+                              borderBottom: '1px solid #404040',
+                              paddingLeft: '12px',
+                            }}
+                          >
+                            <Text size="sm" fw={500} mb={4}>
+                              {item.artist} - {item.album}
+                            </Text>
+                            <Text size="xs" c="dimmed">{item.roles}</Text>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
                 </Stack>
               </div>
             </Paper>
