@@ -429,8 +429,7 @@ export default function MusicianNetwork() {
               <Tabs defaultValue="network">
                 <Tabs.List>
                   <Tabs.Tab value="network">🌐 Network</Tabs.Tab>
-                  <Tabs.Tab value="top">🏆 Top Musicians</Tabs.Tab>
-                  <Tabs.Tab value="lookup">🔍 Musician Lookup</Tabs.Tab>
+                  <Tabs.Tab value="musicians">🎵 Musicians</Tabs.Tab>
                 </Tabs.List>
 
         <Tabs.Panel value="network" pt="xl">
@@ -441,15 +440,55 @@ export default function MusicianNetwork() {
           {filteredData && <NetworkGraph data={filteredData} />}
         </Tabs.Panel>
 
-        <Tabs.Panel value="top" pt="xl">
-          <TopMusiciansPanel data={filteredData || data} />
-        </Tabs.Panel>
-
-        <Tabs.Panel value="lookup" pt="xl">
-          <MusicianLookupPanel data={filteredData || data} />
+        <Tabs.Panel value="musicians" pt="xl">
+          <CombinedMusiciansPanel data={filteredData || data} />
         </Tabs.Panel>
       </Tabs>
     </Container>
+  );
+}
+
+// Combined Musicians Panel (Top Musicians + Lookup)
+interface CombinedMusiciansPanelProps {
+  data: MusicianNetworkData;
+}
+
+function CombinedMusiciansPanel({ data }: CombinedMusiciansPanelProps) {
+  const [sortBy, setSortBy] = useState<'total' | 'main' | 'session'>('total');
+
+  return (
+    <Stack gap="xl">
+      {/* Top Musicians Section */}
+      <div>
+        <Title order={3} mb="md">🏆 Top 15</Title>
+        <Text size="sm" c="dimmed" mb="lg">
+          Musicians ranked by record count, showing main artist vs session work breakdown
+        </Text>
+
+        <Paper
+          p="md"
+          style={{
+            backgroundColor: '#2e2e2e',
+            borderRadius: '8px',
+          }}
+        >
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '20px',
+            width: '100%'
+          }}>
+            <TopMusiciansChart data={data} sortBy={sortBy} onSortByChange={setSortBy} />
+            <SessionScatterChart data={data} />
+          </div>
+        </Paper>
+      </div>
+
+      {/* Musician Lookup Section */}
+      <div>
+        <MusicianLookupPanel data={data} />
+      </div>
+    </Stack>
   );
 }
 
@@ -751,42 +790,6 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
           </div>
         </Stack>
       )}
-    </>
-  );
-}
-
-// Top Musicians Panel with Toggle
-interface TopMusiciansPanelProps {
-  data: MusicianNetworkData;
-}
-
-function TopMusiciansPanel({ data }: TopMusiciansPanelProps) {
-  const [sortBy, setSortBy] = useState<'total' | 'main' | 'session'>('total');
-
-  return (
-    <>
-      <Title order={3} mb="md">🏆 Top 15</Title>
-      <Text size="sm" c="dimmed" mb="lg">
-        Musicians ranked by record count, showing main artist vs session work breakdown
-      </Text>
-
-      <Paper
-        p="md"
-        style={{
-          backgroundColor: '#2e2e2e',
-          borderRadius: '8px',
-        }}
-      >
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-          gap: '20px',
-          width: '100%'
-        }}>
-          <TopMusiciansChart data={data} sortBy={sortBy} onSortByChange={setSortBy} />
-          <SessionScatterChart data={data} />
-        </div>
-      </Paper>
     </>
   );
 }
