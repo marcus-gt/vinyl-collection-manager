@@ -37,12 +37,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
   const [searchValue, setSearchValue] = useState<string | null>(null);
   const pendingZoomRef = useRef<string | null>(null);
 
-  console.log('NetworkGraph received data:', { 
-    nodes: data?.nodes?.length, 
-    links: data?.links?.length,
-    data 
-  });
-
   // Handle responsive sizing
   useEffect(() => {
     const updateDimensions = () => {
@@ -132,8 +126,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     }))
   }), [data.nodes, data.links]);
 
-  console.log('Transformed graphData:', graphData);
-
   // Create search options from all nodes
   const searchOptions = useMemo(() => {
     return graphData.nodes.map((node: GraphNode) => ({
@@ -187,14 +179,10 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     const node = graphData.nodes.find((n: GraphNode) => n.id === nodeId);
     
     if (node) {
-      console.log('Found node:', node);
-      
       // Get the node's position - it should have x, y coordinates after simulation
       const nodeObj = node as any;
       
       if (nodeObj.x !== undefined && nodeObj.y !== undefined) {
-        console.log('Zooming to node at:', { x: nodeObj.x, y: nodeObj.y });
-        
         // Zoom to node
         fgRef.current.centerAt(nodeObj.x, nodeObj.y, 1000);
         fgRef.current.zoom(3, 1000);
@@ -202,7 +190,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
         // Highlight node and connections
         handleNodeClick(nodeObj);
       } else {
-        console.warn('Node found but missing coordinates, retrying...:', nodeObj);
         // Try again after a short delay to let simulation position the nodes
         setTimeout(() => {
           const updatedNode = graphData.nodes.find((n: GraphNode) => n.id === nodeId) as any;
@@ -213,8 +200,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
           }
         }, 500);
       }
-    } else {
-      console.warn('Node not found:', nodeId);
     }
   }, [handleNodeClick, graphData.nodes]);
 
@@ -233,23 +218,17 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
 
   // Handle search selection
   const handleSearchSelect = useCallback((nodeId: string | null) => {
-    console.log('handleSearchSelect called with:', nodeId);
     setSearchValue(nodeId);
     
     if (!nodeId) {
-      console.log('No nodeId selected, clearing selection');
       return;
     }
 
-    console.log('Search selected node:', nodeId, 'Graph ready:', graphReady);
-
     if (graphReady && fgRef.current) {
       // Graph is ready, zoom immediately
-      console.log('Calling zoomToNode');
       zoomToNode(nodeId);
     } else {
       // Graph not ready, store for later
-      console.log('Graph not ready yet, storing pending zoom');
       pendingZoomRef.current = nodeId;
     }
   }, [graphReady, zoomToNode]);
@@ -445,10 +424,10 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
             },
             option: {
               color: '#e0e0e0',
-              '&[data-selected]': {
+              '&[dataSelected="true"]': {
                 backgroundColor: 'rgba(31, 119, 180, 0.3)'
               },
-              '&[data-hovered]': {
+              '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
               }
             }
