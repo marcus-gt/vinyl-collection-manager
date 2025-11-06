@@ -109,8 +109,8 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     );
   }
 
-  // Transform data for react-force-graph
-  const graphData = {
+  // Transform data for react-force-graph (memoized to prevent re-renders)
+  const graphData = useMemo(() => ({
     nodes: data.nodes.map((node: any) => ({
       id: node.id,
       name: node.name,
@@ -127,7 +127,7 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
       roles: link.roles || [],
       albums: link.albums || []
     }))
-  };
+  }), [data.nodes, data.links]);
 
   console.log('Transformed graphData:', graphData);
 
@@ -483,9 +483,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
         }}
         linkCanvasObject={paintLink}
         linkLabel={getLinkLabel}
-        linkDirectionalParticles={2}
-        linkDirectionalParticleWidth={2}
-        linkDirectionalParticleSpeed={0.003}
         onNodeClick={handleNodeClick}
         onBackgroundClick={() => {
           // Clear selection when clicking background
