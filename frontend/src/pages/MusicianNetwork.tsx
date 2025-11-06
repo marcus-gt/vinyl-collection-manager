@@ -3,6 +3,7 @@ import { Container, Title, Text, Tabs, Loader, Center, Alert, Button, Group, Sta
 import { IconNetworkOff, IconAlertCircle, IconPlus, IconX, IconFilter, IconChevronDown, IconChevronUp, IconSearch } from '@tabler/icons-react';
 import { musicianNetwork, type MusicianNetworkData, type MusicianStats } from '../services/api';
 import NetworkGraph from '../components/NetworkGraph';
+import * as echarts from 'echarts';
 
 interface CustomFilter {
   id: number;

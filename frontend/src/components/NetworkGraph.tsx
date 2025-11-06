@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { Select } from '@mantine/core';
+import { Select, ActionIcon } from '@mantine/core';
+import { IconZoomReset } from '@tabler/icons-react';
 import type { MusicianNetworkData } from '../services/api';
 
 interface NetworkGraphProps {
@@ -78,13 +79,15 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     }
   }, [data]);
 
-  // Zoom to fit after graph stabilizes
+  // Zoom to fit when graph loads
   useEffect(() => {
     if (fgRef.current) {
-      // Wait for simulation to settle, then zoom to fit with more padding
+      // Small delay to ensure graph is rendered, then zoom to fit quickly
       const timer = setTimeout(() => {
-        fgRef.current?.zoomToFit(400, 80);
-      }, 2500);
+        if (fgRef.current) {
+          fgRef.current.zoomToFit(100, 80);
+        }
+      }, 200);
       
       return () => clearTimeout(timer);
     }
@@ -250,6 +253,18 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
       pendingZoomRef.current = nodeId;
     }
   }, [graphReady, zoomToNode]);
+
+  // Handle reset zoom
+  const handleResetZoom = useCallback(() => {
+    if (fgRef.current) {
+      fgRef.current.zoomToFit(400, 80);
+      // Clear selection
+      setSelectedNode(null);
+      setHighlightNodes(new Set());
+      setHighlightLinks(new Set());
+      setSearchValue(null);
+    }
+  }, []);
 
   // Node color based on category
   const getNodeColor = useCallback((node: GraphNode) => {
@@ -439,6 +454,29 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
             }
           }}
         />
+      </div>
+
+      {/* Reset zoom button */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        zIndex: 10
+      }}>
+        <ActionIcon
+          size="lg"
+          variant="filled"
+          color="dark"
+          onClick={handleResetZoom}
+          title="Reset zoom"
+          style={{
+            backgroundColor: 'rgba(30, 30, 30, 0.9)',
+            backdropFilter: 'blur(4px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          <IconZoomReset size={18} />
+        </ActionIcon>
       </div>
 
       {/* Legend */}
