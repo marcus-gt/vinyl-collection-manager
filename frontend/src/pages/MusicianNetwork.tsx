@@ -18,7 +18,7 @@ export default function MusicianNetwork() {
   
   // Filter state
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const [selectedMainCategories, setSelectedMainCategories] = useState<string[]>([]);
+  const [selectedMainCategories, setSelectedMainCategories] = useState<string[]>(['Instruments', 'Vocals', 'Production']);
   const [selectedSubCategories, setSelectedSubCategories] = useState<Record<string, string[]>>({});
   const [customFilters, setCustomFilters] = useState<CustomFilter[]>([]);
   const [nextFilterId, setNextFilterId] = useState(1);
@@ -67,6 +67,48 @@ export default function MusicianNetwork() {
       f.id === id ? { ...f, column, selectedValues: values } : f
     ));
   };
+
+  // Compute available roles based on selected categories
+  const availableRoles = useMemo(() => {
+    if (!data) return [];
+    
+    // If no category filter, return all roles
+    if (selectedMainCategories.length === 0) {
+      return data.clean_roles;
+    }
+    
+    // Filter links based on selected categories
+    const filteredLinks = data.links.filter((link: any) => {
+      const mainCategory = link.main_category;
+      const subCategory = link.sub_category;
+      
+      // Must match main category
+      if (!selectedMainCategories.includes(mainCategory)) {
+        return false;
+      }
+      
+      // If Instruments subcategory filter is active, must match
+      if (mainCategory === 'Instruments' && 
+          selectedSubCategories['Instruments'] && 
+          selectedSubCategories['Instruments'].length > 0) {
+        if (!selectedSubCategories['Instruments'].includes(subCategory)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+    
+    // Extract unique roles from filtered links
+    const rolesSet = new Set<string>();
+    filteredLinks.forEach((link: any) => {
+      if (link.clean_roles) {
+        link.clean_roles.forEach((role: string) => rolesSet.add(role));
+      }
+    });
+    
+    return Array.from(rolesSet).sort();
+  }, [data, selectedMainCategories, selectedSubCategories]);
 
   // Compute filtered data based on current filters
   const filteredData = useMemo(() => {
@@ -290,24 +332,24 @@ export default function MusicianNetwork() {
                     size="sm"
                   />
                   
-                  {selectedMainCategories.length > 0 && selectedMainCategories.map((mainCat) => (
+                  {/* Only show subcategories for Instruments */}
+                  {selectedMainCategories.includes('Instruments') && (
                     <MultiSelect
-                      key={mainCat}
-                      label={`${mainCat} - Subcategories`}
-                      placeholder={`All ${mainCat} subcategories`}
-                      data={data?.contributor_categories?.[mainCat] || []}
-                      value={selectedSubCategories[mainCat] || []}
+                      label="Instruments - Subcategories"
+                      placeholder="All instruments"
+                      data={data?.contributor_categories?.['Instruments'] || []}
+                      value={selectedSubCategories['Instruments'] || []}
                       onChange={(values) => {
                         setSelectedSubCategories(prev => ({
                           ...prev,
-                          [mainCat]: values
+                          'Instruments': values
                         }));
                       }}
                       searchable
                       clearable
                       size="sm"
                     />
-                  ))}
+                  )}
                 </Stack>
               </Box>
 
@@ -315,7 +357,7 @@ export default function MusicianNetwork() {
               <MultiSelect
                 label="Role"
                 placeholder="All roles"
-                data={data?.clean_roles || []}
+                data={availableRoles}
                 value={selectedRoles}
                 onChange={setSelectedRoles}
                 searchable
