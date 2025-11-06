@@ -658,7 +658,11 @@ function MusicianLookupPanel({ data }: MusicianLookupPanelProps) {
             </Group>
           </Paper>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '20px' 
+          }}>
             {/* Albums */}
             <Paper p="md" style={{ backgroundColor: '#2e2e2e', borderRadius: '8px' }}>
               <Title order={5} mb="sm">Albums ({musicianDetails.mainArtistAlbums.length + musicianDetails.sessionAlbums.length})</Title>
@@ -775,7 +779,7 @@ function TopMusiciansPanel({ data }: TopMusiciansPanelProps) {
       >
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '1fr 1fr', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
           gap: '20px',
           width: '100%'
         }}>
