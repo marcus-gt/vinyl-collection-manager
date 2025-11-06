@@ -129,9 +129,9 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     return node.category === 'artist' ? '#1f77b4' : '#ff7f0e';
   }, []);
 
-  // Node size based on connections
+  // Node size based on connections (scaled down a bit)
   const getNodeSize = useCallback((node: GraphNode) => {
-    return Math.max(4, Math.min(12, node.value * 1.5));
+    return Math.max(3, Math.min(9, node.value * 1.3)); // Reduced from 4-12 with 1.5x
   }, []);
 
   // Custom node canvas rendering for better performance
@@ -145,6 +145,11 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     ctx.arc(node.x, node.y, size, 0, 2 * Math.PI);
     ctx.fillStyle = getNodeColor(node);
     ctx.fill();
+    
+    // Draw outline for better visibility when overlapping
+    ctx.strokeStyle = 'rgba(30, 30, 30, 0.8)'; // Dark outline
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
     
     // Draw label if zoom is sufficient
     if (globalScale > 1.5) {
