@@ -51,6 +51,38 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Configure forces to pull isolated islands closer
+  useEffect(() => {
+    if (fgRef.current) {
+      // Add a stronger center force to pull distant nodes toward the center
+      const centerForce = fgRef.current.d3Force('center');
+      if (centerForce) {
+        centerForce.strength(0.4); // Increased from default ~0.1
+      }
+      
+      // Optionally adjust charge force for better distribution
+      const chargeForce = fgRef.current.d3Force('charge');
+      if (chargeForce) {
+        chargeForce.strength(-20); // Moderate repulsion
+      }
+      
+      // Reheat the simulation to apply changes
+      fgRef.current.d3ReheatSimulation();
+    }
+  }, [data]);
+
+  // Zoom to fit after graph stabilizes
+  useEffect(() => {
+    if (fgRef.current) {
+      // Wait for simulation to settle, then zoom to fit with more padding
+      const timer = setTimeout(() => {
+        fgRef.current?.zoomToFit(400, 80);
+      }, 2500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [data]);
+
   // Check if data is valid
   if (!data || !data.nodes || !data.links) {
     console.error('Invalid graph data:', data);
@@ -270,13 +302,15 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.003}
         onNodeClick={handleNodeClick}
-        cooldownTicks={100}
-        d3AlphaDecay={0.02}
+        // Use force-directed layout with tighter clustering
+        cooldownTicks={150}
+        d3AlphaDecay={0.015}
         d3VelocityDecay={0.3}
+        warmupTicks={100}
         enableNodeDrag={true}
         enableZoomInteraction={true}
         enablePanInteraction={true}
-        minZoom={0.5}
+        minZoom={0.1}
         maxZoom={8}
       />
     </div>
