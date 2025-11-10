@@ -13,14 +13,102 @@ def load_collection_data(csv_path):
     return pd.read_csv(csv_path)
 
 
-def parse_musicians(musicians_str, main_artist):
+def parse_contributors(contributors_data, main_artist, include_categories=None, exclude_categories=None):
     """
-    Parse musician string into individual musician entries with roles.
+    Parse contributors data from the relational model into individual entries.
     
     Args:
-        musicians_str: String or list containing musician data in format:
-                      "Name (optional number) (roles); Name2 (roles)"
-                      Or a list of musician dictionaries from the database
+        contributors_data: Dictionary with structure {main_category: {sub_category: [contributor_list]}}
+        main_artist: Main artist for this record
+        include_categories: List of (main_category, sub_category) tuples to include (None = include all)
+        exclude_categories: List of (main_category, sub_category) tuples to exclude (None = exclude none)
+        
+    Returns:
+        List of dictionaries with musician, role, main_artist, main_category, sub_category
+    """
+    # Handle None, empty, or invalid data
+    if not contributors_data or not isinstance(contributors_data, dict):
+        return []
+    
+    parsed_data = []
+    
+    for main_category, sub_categories in contributors_data.items():
+        # Skip internal fields
+        if main_category == '_role_index':
+            continue
+            
+        if not isinstance(sub_categories, dict):
+            continue
+            
+        for sub_category, contributor_list in sub_categories.items():
+            # Check if this category should be included/excluded
+            if include_categories is not None:
+                if (main_category, sub_category) not in include_categories and (main_category, None) not in include_categories:
+                    continue
+                    
+            if exclude_categories is not None:
+                if (main_category, sub_category) in exclude_categories or (main_category, None) in exclude_categories:
+                    continue
+            
+            if not isinstance(contributor_list, list):
+                continue
+                
+            for contributor in contributor_list:
+                # Handle both dict format (from relational DB) and string format (legacy)
+                if isinstance(contributor, dict):
+                    name = contributor.get('name', '')
+                    roles = contributor.get('roles', [])
+                    instruments = contributor.get('instruments', [])
+                    
+                    # Combine roles and instruments
+                    all_parts = []
+                    if isinstance(roles, list):
+                        all_parts.extend(roles)
+                    if isinstance(instruments, list):
+                        all_parts.extend(instruments)
+                    
+                    # Clean name (remove disambiguation numbers for display)
+                    clean_name = re.sub(r'\s*\(\d+\)\s*$', '', name).strip()
+                    
+                    for part in all_parts:
+                        parsed_data.append({
+                            'musician': clean_name,
+                            'role': part,
+                            'main_artist': main_artist,
+                            'main_category': main_category,
+                            'sub_category': sub_category
+                        })
+                elif isinstance(contributor, str):
+                    # Legacy string format: "Name (Role1, Role2)"
+                    match = re.match(r'^(.+?)\s*\((.+)\)$', contributor)
+                    if match:
+                        name = match[1].strip()
+                        roles_str = match[2].strip()
+                        
+                        # Clean name (remove disambiguation numbers)
+                        clean_name = re.sub(r'\s*\(\d+\)\s*$', '', name).strip()
+                        
+                        roles = [r.strip() for r in roles_str.split(',')]
+                        for role in roles:
+                            if role:
+                                parsed_data.append({
+                                    'musician': clean_name,
+                                    'role': role,
+                                    'main_artist': main_artist,
+                                    'main_category': main_category,
+                                    'sub_category': sub_category
+                                })
+    
+    return parsed_data
+
+
+def parse_musicians(musicians_str, main_artist):
+    """
+    LEGACY: Parse musician string into individual musician entries with roles.
+    This is kept for backwards compatibility but should use parse_contributors instead.
+    
+    Args:
+        musicians_str: String or list containing musician data
         main_artist: Main artist for this record
         
     Returns:
@@ -81,31 +169,80 @@ def parse_musicians(musicians_str, main_artist):
     return parsed_data
 
 
-def create_network_data(collection_df):
+def create_network_data(collection_df, include_categories=None, exclude_categories=None):
     """
-    Create network dataset from collection dataframe.
+    Create network dataset from collection dataframe using relational contributors.
+    
+    Args:
+        collection_df: DataFrame with 'contributors' column containing relational data
+        include_categories: List of (main_category, sub_category) tuples to include (None = include all)
+        exclude_categories: List of (main_category, sub_category) tuples to exclude (None = exclude none)
     
     Returns:
-        pandas.DataFrame with columns: musician, role, main_artist, album, and all original columns
+        pandas.DataFrame with columns: musician, role, main_artist, album, main_category, sub_category, and all original columns
     """
     all_connections = []
     
     for idx, row in collection_df.iterrows():
         main_artist = row['Artist']
-        musicians_str = row['Musicians']
         album = row['Album']
         
-        connections = parse_musicians(musicians_str, main_artist)
+        # Try to use new relational contributors first
+        if 'contributors' in row and row['contributors']:
+            connections = parse_contributors(
+                row['contributors'], 
+                main_artist,
+                include_categories=include_categories,
+                exclude_categories=exclude_categories
+            )
+        # Fallback to legacy musicians field
+        elif 'Musicians' in row and row['Musicians']:
+            connections = parse_musicians(row['Musicians'], main_artist)
+        else:
+            connections = []
         
         for connection in connections:
             connection['album'] = album
             # Add all original collection columns for custom filtering
             for col in collection_df.columns:
-                if col not in ['Artist', 'Album', 'Musicians']:
+                if col not in ['Artist', 'Album', 'Musicians', 'contributors']:
                     connection[col] = row[col]
             all_connections.append(connection)
     
     return pd.DataFrame(all_connections)
+
+
+def get_available_categories(collection_df):
+    """
+    Extract all available main categories and subcategories from contributors data.
+    
+    Args:
+        collection_df: DataFrame with 'contributors' column
+        
+    Returns:
+        Dictionary with structure: {main_category: [sub_category1, sub_category2, ...]}
+    """
+    categories = defaultdict(set)
+    
+    for idx, row in collection_df.iterrows():
+        if 'contributors' not in row or not row['contributors']:
+            continue
+            
+        contributors_data = row['contributors']
+        if not isinstance(contributors_data, dict):
+            continue
+            
+        for main_category, sub_categories in contributors_data.items():
+            if main_category == '_role_index':
+                continue
+            if not isinstance(sub_categories, dict):
+                continue
+                
+            for sub_category in sub_categories.keys():
+                categories[main_category].add(sub_category)
+    
+    # Convert sets to sorted lists
+    return {main_cat: sorted(list(sub_cats)) for main_cat, sub_cats in categories.items()}
 
 
 def clean_role_name(role):
@@ -248,10 +385,13 @@ def create_echarts_network_data(network_df, collection_df):
         role = row['role']
         clean_role = row['clean_role']
         album = row['album']
+        main_category = row.get('main_category', '')
+        sub_category = row.get('sub_category', '')
         
         # Only create links if both nodes exist
         if musician in node_ids and artist in node_ids:
-            link_key = f"{musician}_{artist}"
+            # Create separate links for each unique musician-artist-category-subcategory combination
+            link_key = f"{musician}_{artist}_{main_category}_{sub_category}"
             link_counts[link_key] += 1
             
             if link_counts[link_key] == 1:
@@ -262,7 +402,7 @@ def create_echarts_network_data(network_df, collection_df):
                 # Get custom filter data for this connection
                 custom_data = {}
                 for col in filtered_df.columns:
-                    if col not in ['musician', 'role', 'main_artist', 'album', 'clean_role']:
+                    if col not in ['musician', 'role', 'main_artist', 'album', 'clean_role', 'main_category', 'sub_category']:
                         val = row[col]
                         # Convert to plain Python types to avoid circular references
                         if isinstance(val, list):
@@ -283,19 +423,24 @@ def create_echarts_network_data(network_df, collection_df):
                     'albums': [album],
                     'genres': connection_genres,
                     'styles': connection_styles,
+                    'main_category': main_category,
+                    'sub_category': sub_category,
                     'custom_data': custom_data
                 })
             else:
-                # Find existing link and add role/album/custom data
+                # Find existing link (matching by musician, artist, AND category) and add role/album/custom data
                 for link in links:
-                    if link['source'] == musician and link['target'] == artist:
+                    if (link['source'] == musician and 
+                        link['target'] == artist and
+                        link['main_category'] == main_category and
+                        link['sub_category'] == sub_category):
                         link['roles'].append(role)
                         link['clean_roles'].append(clean_role)
                         link['albums'].append(album)
                         link['value'] += 1
                         # Merge custom data
                         for col in filtered_df.columns:
-                            if col not in ['musician', 'role', 'main_artist', 'album', 'clean_role']:
+                            if col not in ['musician', 'role', 'main_artist', 'album', 'clean_role', 'main_category', 'sub_category']:
                                 val = row[col]
                                 # Convert to plain Python types to avoid circular references
                                 if isinstance(val, list):
