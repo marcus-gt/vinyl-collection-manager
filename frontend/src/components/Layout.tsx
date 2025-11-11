@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { AppShell, Button, Group, Title, Burger, Drawer, Stack, Modal, FileInput, Text, Progress } from '@mantine/core';
-import { IconDownload, IconUpload, IconNetwork } from '@tabler/icons-react';
+import { IconDownload, IconUpload, IconNetwork, IconFileImport } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
@@ -213,9 +213,18 @@ function Layout() {
 
   const isCollectionPage = location.pathname === '/collection';
   const isMusicianNetworkPage = location.pathname === '/musician-network';
+  const isBatchImportPage = location.pathname === '/batch-import';
 
   const NavLinks = () => (
     <>
+      {!isCollectionPage && (
+        <Button 
+          variant="light" 
+          onClick={() => { navigate('/collection'); close(); }}
+        >
+          Collection
+        </Button>
+      )}
       {!isMusicianNetworkPage && (
         <Button 
           variant="light" 
@@ -225,12 +234,13 @@ function Layout() {
           Musician Network
         </Button>
       )}
-      {!isCollectionPage && (
+      {!isBatchImportPage && (
         <Button 
           variant="light" 
-          onClick={() => { navigate('/collection'); close(); }}
+          onClick={() => { navigate('/batch-import'); close(); }} 
+          leftSection={<IconFileImport size={16} />}
         >
-          Collection
+          Batch Import
         </Button>
       )}
       {isCollectionPage && (

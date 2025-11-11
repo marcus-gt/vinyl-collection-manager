@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon, Collapse } from '@mantine/core';
 import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronRight } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
+import * as lookupService from '../services/lookupService';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
@@ -225,12 +226,12 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     abortControllerRef.current = new AbortController();
     
     try {
-      const response = await lookup.byArtistAlbum(artist, album, abortControllerRef.current.signal);
+      const response = await lookupService.lookupByArtistAlbum(artist, album, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
         setError(undefined);
       } else {
-        setError("Couldn't find record");
+        setError(response.error || "Couldn't find record");
         setRecord(undefined);
       }
     } catch (err) {
@@ -299,7 +300,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     abortControllerRef.current = new AbortController();
     
     try {
-      const response = await lookup.byBarcode(barcodeValue, abortControllerRef.current.signal);
+      const response = await lookupService.lookupByBarcode(barcodeValue, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
         setError(undefined);
@@ -329,7 +330,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     abortControllerRef.current = new AbortController();
     
     try {
-      const response = await lookup.byDiscogsUrl(url, abortControllerRef.current.signal);
+      const response = await lookupService.lookupByDiscogsUrl(url, abortControllerRef.current.signal);
       if (response.success && response.data) {
         setRecord(getRecordWithDefaults(response.data));
         setError(undefined);

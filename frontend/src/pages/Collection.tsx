@@ -3165,7 +3165,8 @@ function Collection() {
                   'Spotify List Auto',
                   'Barcode',
                   'Discogs',
-                  'CSV Import'
+                  'CSV Import',
+                  'Batch Import'
                 ],
                 valueMap: {
                   'manual': 'Manual',
@@ -3174,7 +3175,8 @@ function Collection() {
                   'spotify_list_sub': 'Spotify List Auto',
                   'barcode': 'Barcode',
                   'discogs_url': 'Discogs',
-                  'csv_import': 'CSV Import'
+                  'csv_import': 'CSV Import',
+                  'batch_import': 'Batch Import'
                 },
                 labelMap: {
                   'Manual': 'manual',
@@ -3183,7 +3185,8 @@ function Collection() {
                   'Spotify List Auto': 'spotify_list_sub',
                   'Barcode': 'barcode',
                   'Discogs': 'discogs_url',
-                  'CSV Import': 'csv_import'
+                  'CSV Import': 'csv_import',
+                  'Batch Import': 'batch_import'
                 },
                 option_colors: {
                   'Manual': 'gray',
@@ -3192,7 +3195,8 @@ function Collection() {
                   'Spotify List Auto': 'green',
                   'Barcode': 'blue',
                   'Discogs': 'orange',
-                  'CSV Import': 'violet'
+                  'CSV Import': 'purple',
+                  'Batch Import': 'pink'
                 }
               },
               filterFn: (row: Row<VinylRecord>, columnId: string, filterValue: string | string[]) => {
@@ -3210,7 +3214,8 @@ function Collection() {
                   'Spotify List Auto': 'spotify_list_sub',
                   'Barcode': 'barcode',
                   'Discogs': 'discogs_url',
-                  'CSV Import': 'csv_import'
+                  'CSV Import': 'csv_import',
+                  'Batch Import': 'batch_import'
                 };
                 
                 // Convert filter values (display labels) to internal values and check if cell matches any
@@ -3228,7 +3233,8 @@ function Collection() {
                   'spotify_list_sub': 'Spotify List Auto',
                   'barcode': 'Barcode',
                   'discogs_url': 'Discogs',
-                  'csv_import': 'CSV Import'
+                  'csv_import': 'CSV Import',
+                  'batch_import': 'Batch Import'
                 };
                 const optionColors: Record<string, string> = {
                   'Manual': 'gray',
@@ -3237,7 +3243,8 @@ function Collection() {
                   'Spotify List Auto': 'green',
                   'Barcode': 'blue',
                   'Discogs': 'orange',
-                  'CSV Import': 'violet'
+                  'CSV Import': 'purple',
+                  'Batch Import': 'pink'
                 };
                 // Normalize to lowercase to handle database inconsistencies
                 const rawValue = (row.original.added_from || '').toLowerCase();

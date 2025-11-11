@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Collection from './pages/Collection';
 import MusicianNetwork from './pages/MusicianNetwork';
+import BatchImport from './pages/BatchImport';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { Notifications } from '@mantine/notifications';
@@ -111,6 +112,14 @@ function App() {
                   element={
                     <PrivateRoute>
                       <MusicianNetwork />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="batch-import"
+                  element={
+                    <PrivateRoute>
+                      <BatchImport />
                     </PrivateRoute>
                   }
                 />
