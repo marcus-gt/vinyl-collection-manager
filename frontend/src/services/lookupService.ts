@@ -13,10 +13,11 @@ export interface LookupResult {
 export async function lookupByArtistAlbum(
   artist: string,
   album: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  fetchMode?: 'full' | 'minimal'
 ): Promise<LookupResult> {
   try {
-    const response = await lookup.byArtistAlbum(artist, album, signal);
+    const response = await lookup.byArtistAlbum(artist, album, signal, fetchMode);
     if (response.success && response.data) {
       return {
         success: true,

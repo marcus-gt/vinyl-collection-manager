@@ -194,8 +194,16 @@ def get_musicians(credits) -> list[str]:
     return sorted(list(musicians))
 
 
-def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
-    """Format a Discogs release object into a standardized format with extended fields"""
+def format_release_data(release, added_from: str = None, fetch_mode: str = 'full') -> Dict[str, Any]:
+    """
+    Format a Discogs release object into a standardized format with extended fields.
+    
+    Args:
+        release: Discogs release object
+        added_from: Source of the record (manual, spotify, barcode, etc.)
+        fetch_mode: 'full' (default) fetches master and main release for complete metadata,
+                   'minimal' uses only current release data for faster batch imports
+    """
     try:
         print("\n=== Formatting Release Data ===")
         print(f"Input added_from value: {added_from}")
@@ -262,8 +270,18 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         
         try:
             if hasattr(release, 'master') and release.master:
-                print("Found master release, fetching full master data...")
-                master = d.master(release.master.id)
+                if fetch_mode == 'full':
+                    print("Found master release, fetching full master data...")
+                    master = d.master(release.master.id)
+                else:  # fetch_mode == 'minimal'
+                    print("Found master release, using reference only (minimal mode)...")
+                    master_id = release.master.id
+                    master_url = f'https://www.discogs.com/master/{master_id}'
+                    print(f"Master ID: {master_id}")
+                    print(f"Master URL: {master_url}")
+            
+            # Only process master data if we fetched it
+            if fetch_mode == 'full' and master:
                 master_id = master.id
                 master_url = f'https://www.discogs.com/master/{master_id}'
                 print(f"Master ID: {master_id}")
@@ -312,7 +330,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
         all_credits_categorized = {}
         
         try:
-            if master and hasattr(master, 'main_release'):
+            if fetch_mode == 'full' and master and hasattr(master, 'main_release'):
                 print(f"Found main release ID: {master.main_release.id}")
                 main_release = d.release(master.main_release.id)
                 original_release_id = main_release.id
@@ -410,7 +428,7 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                     main_styles = main_release.styles
                     print(f"Main release styles: {main_styles}")
             else:
-                print("No main release available")
+                print("No main release available" + (" (minimal mode)" if fetch_mode == 'minimal' else ""))
                 # Use current release data as original
                 original_release_id = current_release_id
                 original_release_url = f'https://www.discogs.com/release/{original_release_id}'
@@ -420,14 +438,14 @@ def format_release_data(release, added_from: str = None) -> Dict[str, Any]:
                 original_year = current_release_year
                 original_identifiers = current_identifiers
                 
-                # Get all credits from current release
+                # Get all credits from current release (album-level only in minimal mode)
                 all_credits = []
                 if hasattr(release, 'credits'):
                     print(f"Found current release credits: {[f'{c.name} ({c.role})' for c in release.credits]}")
                     all_credits.extend(release.credits)
                 
-                # Get credits from current release tracklist
-                if hasattr(release, 'tracklist'):
+                # Get credits from current release tracklist (only in full mode)
+                if fetch_mode == 'full' and hasattr(release, 'tracklist'):
                     for track in release.tracklist:
                         track_title = track.title
                         if hasattr(track, 'credits') and track.credits:
@@ -702,11 +720,19 @@ def search_by_discogs_url(url: str) -> Optional[Dict[str, Any]]:
         }
 
 
-def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> Optional[Dict[str, Any]]:
-    """Search for a release by artist and album name"""
+def search_by_artist_album(artist: str, album: str, source: str = 'manual', fetch_mode: str = 'full') -> Optional[Dict[str, Any]]:
+    """
+    Search for a release by artist and album name.
+    
+    Args:
+        artist: Artist name
+        album: Album name
+        source: Source of the record (manual, spotify, etc.)
+        fetch_mode: 'full' (default) for complete metadata, 'minimal' for faster batch imports
+    """
     try:
         print(f"\n=== Looking up release by artist: {artist}, album: {album} ===")
-        print(f"Source: {source}")
+        print(f"Source: {source}, Mode: {fetch_mode}")
         
         # Clean up search terms
         artist = artist.strip()
@@ -717,54 +743,71 @@ def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> O
         print(f"Search query: {query}")
         
         # Search for releases with a timeout
-        try:
-            results = d.search(query, type='release', timeout=30)  # 30 second timeout
-            if not results:
-                print("No results found")
-                return {
-                    'success': False,
-                    'error': 'No results found'
-                }
-        except Exception as search_err:
-            print(f"Search timed out or failed: {str(search_err)}")
-            return {
-                'success': False,
-                'error': 'Search timed out or failed'
-            }
-            
-        # Find best match by comparing artist and album names
+        # In minimal mode, sort by year to get earliest/best release
+        # If sorted search fails or finds no valid results, retry without sorting
         best_match = None
         best_score = 0
+        search_attempts = []
         
-        # Only check first 10 results to avoid timeouts
-        for result in list(results)[:10]:
-            # Get artist name(s)
-            result_artists = [a.name.lower() for a in result.artists]
-            artist_match = any(artist.lower() in result_artist or result_artist in artist.lower() 
-                             for result_artist in result_artists)
-            
-            # Get album name
-            result_album = result.title.lower()
-            album_match = album.lower() in result_album or result_album in album.lower()
-            
-            # Calculate match score
-            score = 0
-            if artist_match:
-                score += 1
-            if album_match:
-                score += 1
+        if fetch_mode == 'minimal':
+            search_attempts = [
+                ('sorted by year', {'sort': 'year', 'sort_order': 'asc'}),
+                ('unsorted', {})  # Fallback if sorted results are all invalid
+            ]
+        else:
+            search_attempts = [('standard', {})]
+        
+        for attempt_name, search_params in search_attempts:
+            try:
+                print(f"Searching ({attempt_name})...")
+                results = d.search(query, type='release', timeout=30, **search_params)
+                if not results:
+                    print(f"No results in {attempt_name} search")
+                    continue
+            except Exception as search_err:
+                print(f"Search failed ({attempt_name}): {str(search_err)}")
+                continue
                 
-            # Update best match if this is better
-            if score > best_score:
-                best_score = score
-                best_match = result
-                
-            # Break early if we found a perfect match
-            if score == 2:
+            # Find best match by comparing artist and album names
+            # Only check first 10 results to avoid timeouts
+            for result in list(results)[:10]:
+                try:
+                    # Get artist name(s) - this may fail for deleted/invalid releases
+                    result_artists = [a.name.lower() for a in result.artists]
+                    artist_match = any(artist.lower() in result_artist or result_artist in artist.lower() 
+                                     for result_artist in result_artists)
+                    
+                    # Get album name
+                    result_album = result.title.lower()
+                    album_match = album.lower() in result_album or result_album in album.lower()
+                    
+                    # Calculate match score - BOTH artist and album must match
+                    score = 0
+                    if artist_match:
+                        score += 1
+                    if album_match:
+                        score += 1
+                    
+                    # Only consider results where BOTH artist and album match
+                    if score == 2:
+                        # Update best match if this is better (we'll still pick the first perfect match)
+                        if score > best_score:
+                            best_score = score
+                            best_match = result
+                        # Break early since we found a perfect match
+                        print(f"Found match in {attempt_name} search")
+                        break
+                except Exception as e:
+                    # Skip invalid/deleted releases (404, JSON decode errors, etc.)
+                    print(f"Skipping invalid result: {str(e)}")
+                    continue
+            
+            # If we found a match, stop trying other search methods
+            if best_match and best_score == 2:
                 break
                 
-        if not best_match:
-            print("No matching results found")
+        if not best_match or best_score < 2:
+            print("No matching results found (both artist and album must match)")
             return {
                 'success': False,
                 'error': 'No matching results found'
@@ -775,7 +818,7 @@ def search_by_artist_album(artist: str, album: str, source: str = 'manual') -> O
         try:
             # Get the full release data with timeout
             full_release = d.release(best_match.id)
-            formatted_data = format_release_data(full_release, added_from=source)
+            formatted_data = format_release_data(full_release, added_from=source, fetch_mode=fetch_mode)
             
             if not formatted_data:
                 return {

@@ -297,12 +297,13 @@ export const lookup = {
     };
   },
 
-  byArtistAlbum: async (artist: string, album: string, signal?: AbortSignal): Promise<ApiResponse<VinylRecord>> => {
+  byArtistAlbum: async (artist: string, album: string, signal?: AbortSignal, fetchMode?: 'full' | 'minimal'): Promise<ApiResponse<VinylRecord>> => {
     // URL encode the parameters
     const encodedArtist = encodeURIComponent(artist);
     const encodedAlbum = encodeURIComponent(album);
+    const fetchModeParam = fetchMode ? `&fetch_mode=${fetchMode}` : '';
     const response = await api.get<{success: boolean, data: VinylRecord, error?: string}>(
-      `/api/lookup/artist-album?artist=${encodedArtist}&album=${encodedAlbum}`,
+      `/api/lookup/artist-album?artist=${encodedArtist}&album=${encodedAlbum}${fetchModeParam}`,
       { signal }
     );
     return {

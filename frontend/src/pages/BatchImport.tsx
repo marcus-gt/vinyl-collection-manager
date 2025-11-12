@@ -37,7 +37,7 @@ import { records } from '../services/api';
 import type { VinylRecord } from '../types';
 import { notifications } from '@mantine/notifications';
 
-type RowStatus = 'pending' | 'processing' | 'success' | 'duplicate' | 'failed';
+type RowStatus = 'pending' | 'fetching' | 'saving' | 'success' | 'duplicate' | 'failed';
 
 interface ImportRow {
   id: string;
@@ -61,6 +61,7 @@ export default function BatchImport() {
   const [discogsColumn, setDiscogsColumn] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [importComplete, setImportComplete] = useState(false);
   const [existingRecords, setExistingRecords] = useState<VinylRecord[]>([]);
   const [fileParseError, setFileParseError] = useState<string | undefined>();
 
@@ -68,13 +69,15 @@ export default function BatchImport() {
   const stats = useMemo(() => {
     const total = rows.length;
     const pending = rows.filter(r => r.status === 'pending').length;
-    const processing = rows.filter(r => r.status === 'processing').length;
+    const fetching = rows.filter(r => r.status === 'fetching').length;
+    const saving = rows.filter(r => r.status === 'saving').length;
+    const processing = fetching + saving; // Combined for display
     const success = rows.filter(r => r.status === 'success').length;
     const duplicate = rows.filter(r => r.status === 'duplicate').length;
     const failed = rows.filter(r => r.status === 'failed').length;
     const selected = rows.filter(r => r.selected).length;
 
-    return { total, pending, processing, success, duplicate, failed, selected };
+    return { total, pending, processing, fetching, saving, success, duplicate, failed, selected };
   }, [rows]);
 
   // Handle file upload and parse
@@ -223,10 +226,15 @@ export default function BatchImport() {
     );
   }, [existingRecords]);
 
-  // Process a single row
-  const processRow = async (row: ImportRow): Promise<ImportRow> => {
+  // Process a single row with status callback
+  const processRow = async (
+    row: ImportRow,
+    onStatusChange: (rowId: string, status: RowStatus) => void
+  ): Promise<ImportRow> => {
     try {
-      // Lookup record
+      // Stage 1: Fetching from Discogs
+      onStatusChange(row.id, 'fetching');
+      
       let lookupResult: lookupService.LookupResult;
 
       if (row.discogsIdOrUrl && hasDiscogsColumn) {
@@ -245,10 +253,10 @@ export default function BatchImport() {
               errorMessage: 'Invalid Discogs ID/URL and no artist/album provided'
             };
           }
-          lookupResult = await lookupService.lookupByArtistAlbum(row.artist, row.album);
+          lookupResult = await lookupService.lookupByArtistAlbum(row.artist, row.album, undefined, 'minimal');
         }
       } else {
-        // Use artist + album
+        // Use artist + album (batch import uses minimal mode for speed)
         if (!row.artist || !row.album) {
           return {
             ...row,
@@ -256,7 +264,7 @@ export default function BatchImport() {
             errorMessage: 'Missing artist or album'
           };
         }
-        lookupResult = await lookupService.lookupByArtistAlbum(row.artist, row.album);
+        lookupResult = await lookupService.lookupByArtistAlbum(row.artist, row.album, undefined, 'minimal');
       }
 
       if (!lookupResult.success || !lookupResult.data) {
@@ -267,7 +275,9 @@ export default function BatchImport() {
         };
       }
 
-      // Save to database
+      // Stage 2: Saving to database
+      onStatusChange(row.id, 'saving');
+      
       const createResponse = await records.add({
         ...lookupResult.data,
         added_from: 'batch_import'
@@ -302,41 +312,35 @@ export default function BatchImport() {
     async (rowsToProcess: ImportRow[]) => {
       setProcessing(true);
       setProgress(0);
+      setImportComplete(false);
 
-      const batchSize = 50;
       let processedCount = 0;
       const totalCount = rowsToProcess.length;
 
-      for (let i = 0; i < rowsToProcess.length; i += batchSize) {
-        const batch = rowsToProcess.slice(i, i + batchSize);
+      // Status update callback
+      const updateRowStatus = (rowId: string, status: RowStatus) => {
+        setRows(prev => prev.map(r => (r.id === rowId ? { ...r, status } : r)));
+      };
 
-        // Process batch in parallel
-        const results = await Promise.all(
-          batch.map(async row => {
-            // Update to processing
-            setRows(prev =>
-              prev.map(r => (r.id === row.id ? { ...r, status: 'processing' as RowStatus } : r))
-            );
+      // Process rows one at a time (sequential)
+      for (const row of rowsToProcess) {
+        const result = await processRow(row, updateRowStatus);
 
-            const result = await processRow(row);
-
-            // Update with result
-            setRows(prev => prev.map(r => (r.id === row.id ? result : r)));
-
-            return result;
-          })
-        );
-
-        processedCount += results.length;
+        // Update with final result
+        setRows(prev => prev.map(r => (r.id === row.id ? result : r)));
+        
+        // Increment progress after each row
+        processedCount += 1;
         setProgress((processedCount / totalCount) * 100);
 
-        // Small delay between batches
-        if (i + batchSize < rowsToProcess.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+        // Add delay between requests (0.5 seconds)
+        if (processedCount < totalCount) {
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
       setProcessing(false);
+      setImportComplete(true);
 
       // Show notification
       const successCount = rowsToProcess.filter(r => r.status === 'success').length;
@@ -348,7 +352,7 @@ export default function BatchImport() {
         color: failedCount > 0 ? 'yellow' : 'green'
       });
     },
-    []
+    [processRow]
   );
 
   // Start import
@@ -416,6 +420,14 @@ export default function BatchImport() {
 
   // Clear all
   const handleClearAll = useCallback(() => {
+    // If import just completed, confirm before clearing
+    if (importComplete) {
+      const confirmed = window.confirm(
+        'Are you sure you want to clear the results? This will reset the batch import page.'
+      );
+      if (!confirmed) return;
+    }
+    
     setFile(null);
     setColumns([]);
     setRows([]);
@@ -424,10 +436,11 @@ export default function BatchImport() {
     setHasDiscogsColumn(false);
     setDiscogsColumn('');
     setProgress(0);
+    setImportComplete(false);
     setFileParseError(undefined);
     // Clear temporary data
     delete (window as any)._tempImportRows;
-  }, []);
+  }, [importComplete]);
 
   // Toggle row selection
   const toggleRowSelection = useCallback((rowId: string) => {
@@ -485,7 +498,8 @@ export default function BatchImport() {
   const getStatusBadge = (status: RowStatus) => {
     const config = {
       pending: { color: 'gray', icon: <IconAlertCircle size={14} />, label: 'Pending' },
-      processing: { color: 'blue', icon: <Loader size={14} />, label: 'Processing' },
+      fetching: { color: 'blue', icon: <Loader size={14} />, label: 'Fetching' },
+      saving: { color: 'cyan', icon: <Loader size={14} />, label: 'Saving' },
       success: { color: 'green', icon: <IconCheck size={14} />, label: 'Success' },
       duplicate: { color: 'yellow', icon: <IconAlertCircle size={14} />, label: 'Duplicate' },
       failed: { color: 'red', icon: <IconX size={14} />, label: 'Failed' }
@@ -631,13 +645,45 @@ export default function BatchImport() {
             </Group>
 
             {/* Progress */}
-            {processing && (
+            {(processing || importComplete) && (
               <Paper p="md" withBorder>
                 <Stack gap="xs">
-                  <Text size="sm" fw={500}>
-                    Processing... {Math.round(progress)}%
-                  </Text>
-                  <Progress value={progress} animated />
+                  {processing ? (
+                    <>
+                      <Group justify="space-between">
+                        <Text size="sm" fw={500}>
+                          Processing records...
+                        </Text>
+                        <Text size="sm" fw={500}>
+                          {Math.round(progress)}%
+                        </Text>
+                      </Group>
+                      <Progress value={progress} animated />
+                      <Text size="xs" c="dimmed">
+                        {stats.fetching > 0 && `Fetching: ${stats.fetching} • `}
+                        {stats.saving > 0 && `Saving: ${stats.saving} • `}
+                        Completed: {stats.success + stats.duplicate + stats.failed}
+                      </Text>
+                    </>
+                  ) : importComplete ? (
+                    <>
+                      <Group justify="space-between">
+                        <Text size="sm" fw={500} c="green">
+                          Import Complete
+                        </Text>
+                        <Text size="sm" fw={500}>
+                          100%
+                        </Text>
+                      </Group>
+                      <Progress value={100} color="green" />
+                      <Text size="xs" c="dimmed">
+                        Successfully imported: {stats.success} • Duplicates: {stats.duplicate} • Failed: {stats.failed}
+                      </Text>
+                      <Text size="xs" c="dimmed" mt="xs">
+                        Review the results below. Click "Start New Import" when ready to import another batch.
+                      </Text>
+                    </>
+                  ) : null}
                 </Stack>
               </Paper>
             )}
@@ -676,7 +722,7 @@ export default function BatchImport() {
                 Export Failed
               </Button>
               <Button leftSection={<IconTrash size={16} />} onClick={handleClearAll} variant="light" color="red">
-                Clear All
+                {importComplete ? 'Start New Import' : 'Clear All'}
               </Button>
             </Group>
 
@@ -714,7 +760,7 @@ export default function BatchImport() {
                             value={row.artist}
                             onChange={e => editRowField(row.id, 'artist', e.currentTarget.value)}
                             size="xs"
-                            disabled={row.status === 'processing' || row.status === 'success'}
+                            disabled={row.status === 'fetching' || row.status === 'saving' || row.status === 'success'}
                           />
                         </Table.Td>
                         <Table.Td>
@@ -722,7 +768,7 @@ export default function BatchImport() {
                             value={row.album}
                             onChange={e => editRowField(row.id, 'album', e.currentTarget.value)}
                             size="xs"
-                            disabled={row.status === 'processing' || row.status === 'success'}
+                            disabled={row.status === 'fetching' || row.status === 'saving' || row.status === 'success'}
                           />
                         </Table.Td>
                         {hasDiscogsColumn && (
@@ -731,7 +777,7 @@ export default function BatchImport() {
                               value={row.discogsIdOrUrl}
                               onChange={e => editRowField(row.id, 'discogsIdOrUrl', e.currentTarget.value)}
                               size="xs"
-                              disabled={row.status === 'processing' || row.status === 'success'}
+                              disabled={row.status === 'fetching' || row.status === 'saving' || row.status === 'success'}
                             />
                           </Table.Td>
                         )}

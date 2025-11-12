@@ -255,12 +255,12 @@ function Layout() {
             }
           `}} />
           <div className="csv-buttons-wrapper">
-            <Button variant="light" onClick={handleExportCSV} leftSection={<IconDownload size={16} />}>
-              Export CSV
-            </Button>
-            <Button variant="light" onClick={() => setImportModalOpened(true)} leftSection={<IconUpload size={16} />}>
-              Import CSV
-            </Button>
+          <Button variant="light" onClick={handleExportCSV} leftSection={<IconDownload size={16} />}>
+            Export CSV
+          </Button>
+          <Button variant="light" onClick={() => setImportModalOpened(true)} leftSection={<IconUpload size={16} />}>
+            Import CSV
+          </Button>
           </div>
         </>
       )}
