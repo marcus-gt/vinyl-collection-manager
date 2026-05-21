@@ -272,6 +272,18 @@ function Layout() {
 
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 1024px) {
+          .desktop-nav {
+            display: none !important;
+          }
+        }
+        @media (min-width: 1025px) {
+          .mobile-burger {
+            display: none !important;
+          }
+        }
+      `}} />
       <AppShell
         header={{ height: { base: 60, sm: 60 } }}
         padding="0"
@@ -295,10 +307,10 @@ function Layout() {
             </Title>
             {user && (
               <>
-                <Group visibleFrom="sm" gap="sm">
+                <Group gap="xs" className="desktop-nav">
                   <NavLinks />
                 </Group>
-                <Burger opened={opened} onClick={toggle} hiddenFrom="sm" />
+                <Burger opened={opened} onClick={toggle} className="mobile-burger" />
               </>
             )}
           </Group>
@@ -321,7 +333,6 @@ function Layout() {
         onClose={close}
         size="100%"
         padding="md"
-        hiddenFrom="sm"
       >
         <Stack>
           <NavLinks />

@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Title,
@@ -20,7 +21,6 @@ import {
   ScrollArea
 } from '@mantine/core';
 import {
-  IconUpload,
   IconFileSpreadsheet,
   IconRefresh,
   IconCheck,
@@ -28,7 +28,9 @@ import {
   IconAlertCircle,
   IconPlayerPlay,
   IconDownload,
-  IconTrash
+  IconTrash,
+  IconChevronUp,
+  IconChevronDown
 } from '@tabler/icons-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -36,6 +38,8 @@ import * as lookupService from '../services/lookupService';
 import { records } from '../services/api';
 import type { VinylRecord } from '../types';
 import { notifications } from '@mantine/notifications';
+import { modals } from '@mantine/modals';
+import { MyCustomPagination } from '../components/MyCustomPagination';
 
 type RowStatus = 'pending' | 'fetching' | 'saving' | 'success' | 'duplicate' | 'failed';
 
@@ -51,7 +55,10 @@ interface ImportRow {
   recordData?: VinylRecord;
 }
 
+const STORAGE_KEY = 'batch-import-state';
+
 export default function BatchImport() {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [columns, setColumns] = useState<string[]>([]);
   const [rows, setRows] = useState<ImportRow[]>([]);
@@ -64,6 +71,58 @@ export default function BatchImport() {
   const [importComplete, setImportComplete] = useState(false);
   const [existingRecords, setExistingRecords] = useState<VinylRecord[]>([]);
   const [fileParseError, setFileParseError] = useState<string | undefined>();
+  const [currentProcessingRow, setCurrentProcessingRow] = useState<ImportRow | null>(null);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  const cancelRequestedRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 50;
+  const [sortBy, setSortBy] = useState<'rowNumber' | 'artist' | 'album' | 'status'>('rowNumber');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [stateRestored, setStateRestored] = useState(false);
+
+  // Sorted rows
+  const sortedRows = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => {
+      let compareValue = 0;
+      
+      switch (sortBy) {
+        case 'rowNumber':
+          compareValue = a.rowNumber - b.rowNumber;
+          break;
+        case 'artist':
+          compareValue = a.artist.localeCompare(b.artist);
+          break;
+        case 'album':
+          compareValue = a.album.localeCompare(b.album);
+          break;
+        case 'status':
+          const statusOrder = { pending: 0, fetching: 1, saving: 2, success: 3, duplicate: 4, failed: 5 };
+          compareValue = statusOrder[a.status] - statusOrder[b.status];
+          break;
+      }
+      
+      return sortOrder === 'asc' ? compareValue : -compareValue;
+    });
+    
+    return sorted;
+  }, [rows, sortBy, sortOrder]);
+
+  // Paginated rows
+  const paginatedRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+    const endIndex = startIndex + ROWS_PER_PAGE;
+    return sortedRows.slice(startIndex, endIndex);
+  }, [sortedRows, currentPage, ROWS_PER_PAGE]);
+
+  const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE);
+
+  // Ensure current page is valid when rows change
+  useEffect(() => {
+    if (rows.length > 0 && currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [rows.length, currentPage, totalPages]);
 
   // Stats
   const stats = useMemo(() => {
@@ -79,6 +138,134 @@ export default function BatchImport() {
 
     return { total, pending, processing, fetching, saving, success, duplicate, failed, selected };
   }, [rows]);
+
+  // Save state to localStorage
+  const saveState = useCallback(() => {
+    try {
+      const state = {
+        columns,
+        rows,
+        artistColumn,
+        albumColumn,
+        hasDiscogsColumn,
+        discogsColumn,
+        progress,
+        importComplete,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.error('Failed to save import state:', error);
+    }
+  }, [columns, rows, artistColumn, albumColumn, hasDiscogsColumn, discogsColumn, progress, importComplete]);
+
+  // Restore state from localStorage on mount
+  useEffect(() => {
+    if (stateRestored) return;
+    
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        setStateRestored(true);
+        return;
+      }
+
+      const state = JSON.parse(saved);
+      
+      // Check if state is recent (within 24 hours)
+      const age = Date.now() - (state.timestamp || 0);
+      if (age > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(STORAGE_KEY);
+        setStateRestored(true);
+        return;
+      }
+
+      // Restore state
+      if (state.rows && state.rows.length > 0) {
+        setColumns(state.columns || []);
+        setRows(state.rows || []);
+        setArtistColumn(state.artistColumn || '');
+        setAlbumColumn(state.albumColumn || '');
+        setHasDiscogsColumn(state.hasDiscogsColumn || false);
+        setDiscogsColumn(state.discogsColumn || '');
+        setProgress(state.progress || 0);
+        setImportComplete(state.importComplete || false);
+
+        notifications.show({
+          title: 'Import Recovered',
+          message: `Restored ${state.rows.length} rows from previous session`,
+          color: 'blue',
+          autoClose: 5000
+        });
+      }
+      
+      setStateRestored(true);
+    } catch (error) {
+      console.error('Failed to restore import state:', error);
+      localStorage.removeItem(STORAGE_KEY);
+      setStateRestored(true);
+    }
+  }, [stateRestored]);
+
+  // Auto-save state whenever rows change
+  useEffect(() => {
+    if (!stateRestored || rows.length === 0) return;
+    
+    const timeoutId = setTimeout(() => {
+      saveState();
+    }, 1000); // Debounce saves
+
+    return () => clearTimeout(timeoutId);
+  }, [rows, saveState, stateRestored]);
+
+  // Handle visibility change and page lifecycle
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page is hidden (tab switched, minimized, or locked)
+        console.log('Page hidden - saving state');
+        saveState();
+      } else {
+        // Page is visible again
+        console.log('Page visible again');
+        
+        // If we were processing, the process likely failed
+        // Reset processing state but keep data
+        if (processing) {
+          console.log('Stopping stale processing state');
+          setProcessing(false);
+          setCurrentProcessingRow(null);
+          setCancelRequested(false);
+          cancelRequestedRef.current = false;
+          abortControllerRef.current = null;
+          
+          notifications.show({
+            title: 'Import Paused',
+            message: 'The import was interrupted. You can resume by clicking "Import Selected" again.',
+            color: 'yellow',
+            autoClose: 10000
+          });
+        }
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (rows.length > 0 && !importComplete) {
+        saveState();
+        e.preventDefault();
+        e.returnValue = 'You have an ongoing import. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [processing, rows, importComplete, saveState]);
 
   // Handle file upload and parse
   const handleFileUpload = useCallback(async (uploadedFile: File | null) => {
@@ -297,12 +484,21 @@ export default function BatchImport() {
         recordData: lookupResult.data,
         errorMessage: undefined
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error processing row:', err);
+      
+      // More descriptive error messages
+      let errorMessage = 'Network error';
+      if (err.name === 'AbortError') {
+        errorMessage = 'Cancelled';
+      } else if (err.message) {
+        errorMessage = err.message.substring(0, 100); // Limit length
+      }
+      
       return {
         ...row,
         status: 'failed',
-        errorMessage: 'Network error'
+        errorMessage
       };
     }
   };
@@ -313,9 +509,15 @@ export default function BatchImport() {
       setProcessing(true);
       setProgress(0);
       setImportComplete(false);
+      setCancelRequested(false);
+      cancelRequestedRef.current = false;
+      
+      // Create abort controller for this batch
+      abortControllerRef.current = new AbortController();
 
       let processedCount = 0;
       const totalCount = rowsToProcess.length;
+      let wasCancelled = false;
 
       // Status update callback
       const updateRowStatus = (rowId: string, status: RowStatus) => {
@@ -323,52 +525,89 @@ export default function BatchImport() {
       };
 
       // Process rows one at a time (sequential)
-      for (const row of rowsToProcess) {
-        const result = await processRow(row, updateRowStatus);
+      try {
+        for (const row of rowsToProcess) {
+          // Check if cancellation was requested (use ref for current value)
+          if (cancelRequestedRef.current) {
+            wasCancelled = true;
+            console.log("Import cancelled by user.");
+            break;
+          }
 
-        // Update with final result
-        setRows(prev => prev.map(r => (r.id === row.id ? result : r)));
-        
-        // Increment progress after each row
-        processedCount += 1;
-        setProgress((processedCount / totalCount) * 100);
+          // Set current processing row
+          setCurrentProcessingRow(row);
 
-        // Add delay between requests (0.5 seconds)
-        if (processedCount < totalCount) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          const result = await processRow(row, updateRowStatus);
+
+          // Update with final result
+          setRows(prev => prev.map(r => (r.id === row.id ? result : r)));
+          
+          // Increment progress after each row
+          processedCount += 1;
+          setProgress((processedCount / totalCount) * 100);
+
+          // Add delay between requests (0.5 seconds)
+          if (processedCount < totalCount && !cancelRequestedRef.current) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      } catch (error: any) {
+        // If aborted, just exit cleanly
+        if (error.name === 'AbortError') {
+          console.log("Import aborted.");
+          wasCancelled = true;
+        } else {
+          console.error("Error during batch processing:", error);
         }
       }
 
-      setProcessing(false);
-      setImportComplete(true);
+      // Only clean up if not already cancelled (handleCancelImport does its own cleanup)
+      if (!cancelRequestedRef.current) {
+        setProcessing(false);
+        setCurrentProcessingRow(null);
+        abortControllerRef.current = null;
+        
+        if (!wasCancelled) {
+          setImportComplete(true);
+          
+          // Show notification
+          const successCount = rowsToProcess.filter(r => r.status === 'success').length;
+          const failedCount = rowsToProcess.filter(r => r.status === 'failed').length;
 
-      // Show notification
-      const successCount = rowsToProcess.filter(r => r.status === 'success').length;
-      const failedCount = rowsToProcess.filter(r => r.status === 'failed').length;
-
-      notifications.show({
-        title: 'Import Complete',
-        message: `Successfully imported ${successCount} records. ${failedCount} failed.`,
-        color: failedCount > 0 ? 'yellow' : 'green'
-      });
+          notifications.show({
+            title: 'Import Complete',
+            message: `Successfully imported ${successCount} records. ${failedCount} failed.`,
+            color: failedCount > 0 ? 'yellow' : 'green'
+          });
+        }
+      }
     },
     [processRow]
   );
 
-  // Start import
-  const handleStartImport = useCallback(() => {
-    // Rows are already mapped when user clicks "Continue" in column mapping step
-    const rowsToProcess = rows.filter(r => r.selected && r.status === 'pending');
-    if (rowsToProcess.length === 0) {
-      notifications.show({
-        title: 'No Rows to Process',
-        message: 'Please select rows to import',
-        color: 'yellow'
-      });
-      return;
+  // Cancel import
+  const handleCancelImport = useCallback(() => {
+    setCancelRequested(true);
+    cancelRequestedRef.current = true;
+    
+    // Abort any ongoing network requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
-    processBatch(rowsToProcess);
-  }, [rows, processBatch]);
+    
+    // Immediately stop processing
+    setProcessing(false);
+    setCurrentProcessingRow(null);
+    setCancelRequested(false);
+    cancelRequestedRef.current = false;
+    abortControllerRef.current = null;
+    
+    notifications.show({
+      title: 'Import Cancelled',
+      message: 'The import process has been stopped.',
+      color: 'yellow'
+    });
+  }, []);
 
   // Retry failed
   const handleRetryFailed = useCallback(() => {
@@ -418,28 +657,83 @@ export default function BatchImport() {
     }, 100);
   }, [rows, processBatch]);
 
+  // Handle close - navigate back to collection with confirmation if needed
+  const handleClose = useCallback(() => {
+    // If there's data (file uploaded or rows present), confirm before leaving
+    if (file || rows.length > 0) {
+      modals.openConfirmModal({
+        title: 'Leave Batch Import',
+        children: (
+          <Stack gap="xs">
+            <Text size="sm">
+              Are you sure you want to leave the batch import page?
+            </Text>
+            {importComplete ? (
+              <Text size="xs" c="dimmed">
+                You will return to your collection.
+              </Text>
+            ) : (
+              <Text size="xs" c="dimmed">
+                Any unsaved data will be lost.
+              </Text>
+            )}
+          </Stack>
+        ),
+        labels: { confirm: 'Leave', cancel: 'Stay' },
+        confirmProps: { color: 'red' },
+        onConfirm: () => {
+          // Clear temporary data before navigating
+          delete (window as any)._tempImportRows;
+          navigate('/collection');
+        }
+      });
+    } else {
+      // No data, navigate directly
+      navigate('/collection');
+    }
+  }, [file, rows.length, importComplete, navigate]);
+
   // Clear all
   const handleClearAll = useCallback(() => {
-    // If import just completed, confirm before clearing
-    if (importComplete) {
-      const confirmed = window.confirm(
-        'Are you sure you want to clear the results? This will reset the batch import page.'
-      );
-      if (!confirmed) return;
-    }
-    
-    setFile(null);
-    setColumns([]);
-    setRows([]);
-    setArtistColumn('');
-    setAlbumColumn('');
-    setHasDiscogsColumn(false);
-    setDiscogsColumn('');
-    setProgress(0);
-    setImportComplete(false);
-    setFileParseError(undefined);
-    // Clear temporary data
-    delete (window as any)._tempImportRows;
+    // Always confirm before clearing to prevent accidental data loss
+    modals.openConfirmModal({
+      title: 'Clear Import',
+      children: (
+        <Stack gap="xs">
+          <Text size="sm">
+            Are you sure you want to clear the batch import?
+          </Text>
+          {importComplete ? (
+            <Text size="xs" c="dimmed">
+              This will remove all results and reset the page.
+            </Text>
+          ) : (
+            <Text size="xs" c="dimmed">
+              This will remove all uploaded data and reset the page.
+            </Text>
+          )}
+        </Stack>
+      ),
+      labels: { confirm: 'Clear', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: () => {
+        setFile(null);
+        setColumns([]);
+        setRows([]);
+        setArtistColumn('');
+        setAlbumColumn('');
+        setHasDiscogsColumn(false);
+        setDiscogsColumn('');
+        setProgress(0);
+        setImportComplete(false);
+        setFileParseError(undefined);
+        setCurrentPage(1);
+        // Clear temporary data
+        delete (window as any)._tempImportRows;
+        // Clear localStorage
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    });
   }, [importComplete]);
 
   // Toggle row selection
@@ -447,11 +741,26 @@ export default function BatchImport() {
     setRows(prev => prev.map(r => (r.id === rowId ? { ...r, selected: !r.selected } : r)));
   }, []);
 
-  // Toggle all selection
+  // Toggle all selection (for current page only)
   const toggleAllSelection = useCallback(() => {
-    const allSelected = rows.every(r => r.selected);
-    setRows(prev => prev.map(r => ({ ...r, selected: !allSelected })));
-  }, [rows]);
+    const pageRowIds = paginatedRows.map(r => r.id);
+    const allPageSelected = paginatedRows.every(r => r.selected);
+    setRows(prev => prev.map(r => 
+      pageRowIds.includes(r.id) ? { ...r, selected: !allPageSelected } : r
+    ));
+  }, [paginatedRows]);
+
+  // Handle sort
+  const handleSort = useCallback((column: 'rowNumber' | 'artist' | 'album' | 'status') => {
+    if (sortBy === column) {
+      // Toggle sort order if clicking the same column
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setSortBy(column);
+      setSortOrder('asc');
+    }
+  }, [sortBy]);
 
   // Edit row field
   const editRowField = useCallback((rowId: string, field: 'artist' | 'album' | 'discogsIdOrUrl', value: string) => {
@@ -516,12 +825,23 @@ export default function BatchImport() {
   return (
     <Container size="xl" py="xl">
       <Stack gap="xl">
-        <div>
-          <Title order={2}>Batch Import</Title>
-          <Text size="sm" c="dimmed" mt="xs">
-            Upload a CSV or Excel file to import multiple records at once
-          </Text>
-        </div>
+        <Group justify="space-between" align="flex-start">
+          <div>
+            <Title order={2}>Batch Import</Title>
+            <Text size="sm" c="dimmed" mt="xs">
+              Upload a CSV or Excel file to import multiple records at once
+            </Text>
+          </div>
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="lg"
+            onClick={handleClose}
+            title="Close and return to collection"
+          >
+            <IconX size={20} />
+          </ActionIcon>
+        </Group>
 
         {/* File Upload Section */}
         {!file && (
@@ -563,6 +883,7 @@ export default function BatchImport() {
                   value={artistColumn}
                   onChange={value => setArtistColumn(value || '')}
                   required
+                  withAsterisk
                 />
                 <Select
                   label="Album Column"
@@ -571,8 +892,15 @@ export default function BatchImport() {
                   value={albumColumn}
                   onChange={value => setAlbumColumn(value || '')}
                   required
+                  withAsterisk
                 />
               </Group>
+
+              {(!artistColumn || !albumColumn) && (
+                <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
+                  Please select both Artist and Album columns to continue
+                </Alert>
+              )}
 
               <Checkbox
                 label="My file contains Discogs IDs or URLs"
@@ -591,26 +919,31 @@ export default function BatchImport() {
               )}
 
               <Group>
-                <Button onClick={() => {
-                  // Create ImportRow objects from the temporarily stored data
-                  const tempRows = (window as any)._tempImportRows || [];
-                  const importRows: ImportRow[] = tempRows.map((rowData: any) => ({
-                    id: `row-${rowData._index}`,
-                    rowNumber: rowData._rowNumber,
-                    artist: artistColumn ? (rowData[artistColumn] || '').toString().trim() : '',
-                    album: albumColumn ? (rowData[albumColumn] || '').toString().trim() : '',
-                    discogsIdOrUrl: hasDiscogsColumn && discogsColumn
-                      ? (rowData[discogsColumn] || '').toString().trim()
-                      : '',
-                    status: 'pending' as RowStatus,
-                    selected: true,
-                    errorMessage: undefined,
-                    recordData: undefined
-                  }));
-                  
-                  setRows(importRows);
-                  setTimeout(checkDuplicates, 100);
-                }} leftSection={<IconCheck size={16} />}>
+                <Button 
+                  onClick={() => {
+                    // Create ImportRow objects from the temporarily stored data
+                    const tempRows = (window as any)._tempImportRows || [];
+                    const importRows: ImportRow[] = tempRows.map((rowData: any) => ({
+                      id: `row-${rowData._index}`,
+                      rowNumber: rowData._rowNumber,
+                      artist: artistColumn ? (rowData[artistColumn] || '').toString().trim() : '',
+                      album: albumColumn ? (rowData[albumColumn] || '').toString().trim() : '',
+                      discogsIdOrUrl: hasDiscogsColumn && discogsColumn
+                        ? (rowData[discogsColumn] || '').toString().trim()
+                        : '',
+                      status: 'pending' as RowStatus,
+                      selected: true,
+                      errorMessage: undefined,
+                      recordData: undefined
+                    }));
+                    
+                    setRows(importRows);
+                    setCurrentPage(1);
+                    setTimeout(checkDuplicates, 100);
+                  }} 
+                  leftSection={<IconCheck size={16} />}
+                  disabled={!artistColumn || !albumColumn}
+                >
                   Continue
                 </Button>
                 <Button variant="light" onClick={handleClearAll}>
@@ -659,11 +992,13 @@ export default function BatchImport() {
                         </Text>
                       </Group>
                       <Progress value={progress} animated />
-                      <Text size="xs" c="dimmed">
-                        {stats.fetching > 0 && `Fetching: ${stats.fetching} • `}
-                        {stats.saving > 0 && `Saving: ${stats.saving} • `}
-                        Completed: {stats.success + stats.duplicate + stats.failed}
-                      </Text>
+                      {currentProcessingRow && (
+                        <Text size="xs" c="dimmed">
+                          {stats.fetching > 0 && `Fetching from Discogs: `}
+                          {stats.saving > 0 && `Uploading to database: `}
+                          {currentProcessingRow.artist} - {currentProcessingRow.album}
+                        </Text>
+                      )}
                     </>
                   ) : importComplete ? (
                     <>
@@ -677,7 +1012,7 @@ export default function BatchImport() {
                       </Group>
                       <Progress value={100} color="green" />
                       <Text size="xs" c="dimmed">
-                        Successfully imported: {stats.success} • Duplicates: {stats.duplicate} • Failed: {stats.failed}
+                        Success: {stats.success} • Duplicates: {stats.duplicate} • Failed: {stats.failed}
                       </Text>
                       <Text size="xs" c="dimmed" mt="xs">
                         Review the results below. Click "Start New Import" when ready to import another batch.
@@ -690,38 +1025,50 @@ export default function BatchImport() {
 
             {/* Action Buttons */}
             <Group>
-              <Button
-                leftSection={<IconPlayerPlay size={16} />}
-                onClick={handleStartImport}
-                disabled={processing || stats.pending === 0}
-              >
-                Start Import
-              </Button>
-              <Button
-                leftSection={<IconRefresh size={16} />}
-                onClick={handleRetryFailed}
-                disabled={processing || stats.failed === 0}
-                variant="light"
-              >
-                Retry Failed ({stats.failed})
-              </Button>
-              <Button
-                leftSection={<IconUpload size={16} />}
-                onClick={handleUploadSelected}
-                disabled={processing || stats.selected === 0}
-                variant="light"
-              >
-                Upload Selected ({stats.selected})
-              </Button>
+              {processing ? (
+                <Button
+                  leftSection={<IconX size={16} />}
+                  onClick={handleCancelImport}
+                  variant="light"
+                  color="red"
+                  disabled={cancelRequested}
+                >
+                  {cancelRequested ? 'Cancelling...' : 'Cancel Import'}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    leftSection={<IconPlayerPlay size={16} />}
+                    onClick={handleUploadSelected}
+                    disabled={stats.selected === 0}
+                  >
+                    Import Selected ({stats.selected})
+                  </Button>
+                  <Button
+                    leftSection={<IconRefresh size={16} />}
+                    onClick={handleRetryFailed}
+                    disabled={stats.failed === 0}
+                    variant="light"
+                  >
+                    Retry Failed ({stats.failed})
+                  </Button>
+                </>
+              )}
               <Button
                 leftSection={<IconDownload size={16} />}
                 onClick={handleExportFailed}
-                disabled={stats.failed === 0}
+                disabled={stats.failed === 0 || processing}
                 variant="light"
               >
                 Export Failed
               </Button>
-              <Button leftSection={<IconTrash size={16} />} onClick={handleClearAll} variant="light" color="red">
+              <Button 
+                leftSection={<IconTrash size={16} />} 
+                onClick={handleClearAll} 
+                variant="light" 
+                color="red"
+                disabled={processing}
+              >
                 {importComplete ? 'Start New Import' : 'Clear All'}
               </Button>
             </Group>
@@ -733,19 +1080,63 @@ export default function BatchImport() {
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th style={{ width: 50 }}>
-                        <Checkbox checked={rows.every(r => r.selected)} onChange={toggleAllSelection} />
+                        <Checkbox 
+                          checked={paginatedRows.length > 0 && paginatedRows.every(r => r.selected)} 
+                          onChange={toggleAllSelection}
+                          indeterminate={paginatedRows.some(r => r.selected) && !paginatedRows.every(r => r.selected)}
+                        />
                       </Table.Th>
-                      <Table.Th style={{ width: 60 }}>Row #</Table.Th>
-                      <Table.Th>Artist</Table.Th>
-                      <Table.Th>Album</Table.Th>
+                      <Table.Th 
+                        style={{ width: 60, cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('rowNumber')}
+                      >
+                        <Group gap={4} wrap="nowrap">
+                          Row #
+                          {sortBy === 'rowNumber' && (
+                            sortOrder === 'asc' ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />
+                          )}
+                        </Group>
+                      </Table.Th>
+                      <Table.Th 
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('artist')}
+                      >
+                        <Group gap={4} wrap="nowrap">
+                          Artist
+                          {sortBy === 'artist' && (
+                            sortOrder === 'asc' ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />
+                          )}
+                        </Group>
+                      </Table.Th>
+                      <Table.Th 
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('album')}
+                      >
+                        <Group gap={4} wrap="nowrap">
+                          Album
+                          {sortBy === 'album' && (
+                            sortOrder === 'asc' ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />
+                          )}
+                        </Group>
+                      </Table.Th>
                       {hasDiscogsColumn && <Table.Th>Discogs ID/URL</Table.Th>}
-                      <Table.Th>Status</Table.Th>
+                      <Table.Th 
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => handleSort('status')}
+                      >
+                        <Group gap={4} wrap="nowrap">
+                          Status
+                          {sortBy === 'status' && (
+                            sortOrder === 'asc' ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />
+                          )}
+                        </Group>
+                      </Table.Th>
                       <Table.Th>Error</Table.Th>
                       <Table.Th style={{ width: 80 }}>Actions</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {rows.slice(0, 100).map(row => (
+                    {paginatedRows.map(row => (
                       <Table.Tr key={row.id}>
                         <Table.Td>
                           <Checkbox
@@ -811,13 +1202,20 @@ export default function BatchImport() {
                     ))}
                   </Table.Tbody>
                 </Table>
-                {rows.length > 100 && (
-                  <Alert m="md" color="blue">
-                    Showing first 100 rows of {rows.length}. All rows will be processed.
-                  </Alert>
-                )}
               </ScrollArea>
             </Paper>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <MyCustomPagination
+                page={currentPage}
+                onChange={setCurrentPage}
+                total={totalPages}
+                siblings={0}
+                recordsPerPage={ROWS_PER_PAGE}
+                totalRecords={rows.length}
+              />
+            )}
           </>
         )}
       </Stack>
