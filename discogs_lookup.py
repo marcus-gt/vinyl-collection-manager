@@ -31,14 +31,11 @@ token = os.getenv('DISCOGS_TOKEN')
 if not token:
     raise ValueError("DISCOGS_TOKEN environment variable is not set")
 
-print(f"Initializing Discogs client with token: {token[:4]}...{token[-4:]}")  # Only show first/last 4 chars for security
-
 # Initialize Discogs client
 try:
     d = Client('VinylCollectionManager/1.0', user_token=token)
     # Test the client with a simple identity call
-    me = d.identity()
-    print(f"Successfully authenticated with Discogs as: {me.username}")
+    d.identity()
 except Exception as e:
     print(f"Error initializing Discogs client: {str(e)}")
     raise

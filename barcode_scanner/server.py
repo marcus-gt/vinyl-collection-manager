@@ -114,18 +114,6 @@ else:
 
 app.config.update(**session_config)
 
-print("\n=== Session Configuration ===")
-print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set - using request host')}")
-print(f"SESSION_COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
-print(f"SESSION_COOKIE_SAMESITE: {app.config['SESSION_COOKIE_SAMESITE']}")
-
-# At the top of the file, after loading environment variables
-print("\n=== Environment Configuration ===")
-print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
-print(f"SPOTIFY_CLIENT_ID: {os.getenv('SPOTIFY_CLIENT_ID')}")
-print(f"SPOTIFY_CLIENT_SECRET: {'Present' if os.getenv('SPOTIFY_CLIENT_SECRET') else 'Missing'}")
-print(f"SPOTIFY_REDIRECT_URI: {os.getenv('SPOTIFY_REDIRECT_URI')}")
-
 # Validate required environment variables
 required_vars = [
     'FLASK_SECRET_KEY',
@@ -214,38 +202,18 @@ def check_token_expiration():
 
 @app.before_request
 def before_request():
-    """Debug request information and ensure session is configured."""
-    print("\n=== Request Debug ===")
-    print(f"Request path: {request.path}")
-    print(f"Request method: {request.method}")
-    print(f"Request headers: {dict(request.headers)}")
-    print(f"Request cookies: {request.cookies}")
-    print(f"Current session before: {dict(session)}")
-    
+    """Ensure session is configured and refresh the access token if needed."""
     # Ensure session is permanent
     if not session.get('_permanent'):
         session.permanent = True
-        
+
     # Check and refresh token if needed
     if 'user_id' in session and request.method != 'OPTIONS':
         check_token_expiration()
-        
-    # Debug session configuration
-    print("\n=== Session Configuration ===")
-    print(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN')}")
-    print(f"SESSION_COOKIE_SECURE: {app.config.get('SESSION_COOKIE_SECURE')}")
-    print(f"SESSION_COOKIE_SAMESITE: {app.config.get('SESSION_COOKIE_SAMESITE')}")
-    print(f"SESSION_COOKIE_PATH: {app.config.get('SESSION_COOKIE_PATH')}")
-    print(f"SESSION_COOKIE_NAME: {app.config.get('SESSION_COOKIE_NAME')}")
-    print(f"Request is secure: {request.is_secure}")
-    print(f"Request scheme: {request.scheme}")
-    print(f"X-Forwarded-Proto: {request.headers.get('X-Forwarded-Proto')}")
 
 @app.after_request
 def after_request(response):
     """Modify response headers for CORS and security."""
-    origin = request.headers.get('Origin')
-    
     if os.getenv('FLASK_ENV') == 'production':
         response.headers.update({
             'Access-Control-Allow-Origin': 'https://vinyl-collection-manager.onrender.com',
@@ -275,14 +243,6 @@ def after_request(response):
         'X-Frame-Options': 'SAMEORIGIN'
     })
     
-    # Debug logging for cookie issues
-    if 'Set-Cookie' in response.headers:
-        print("\n=== Cookie Debug ===")
-        print(f"Set-Cookie header: {response.headers['Set-Cookie']}")
-        print(f"Request origin: {origin}")
-        print(f"Request host: {request.host}")
-        print(f"Session config: {app.config['SESSION_COOKIE_DOMAIN']}")
-    
     return response
 
 @app.before_request
@@ -296,11 +256,6 @@ def ensure_https():
 def make_session_permanent():
     """Ensure session is permanent."""
     session.permanent = True
-    # Print session info for debugging
-    print("\n=== Session Debug ===")
-    print(f"Current session: {dict(session)}")
-    print(f"Session cookie name: {app.config.get('SESSION_COOKIE_NAME', 'session')}")
-    print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
 
 # Frontend routes - these must be before API routes
 @app.route('/')
@@ -310,13 +265,6 @@ def make_session_permanent():
 @app.route('/scanner')
 def serve_spa():
     """Serve the SPA for known frontend routes."""
-    print("\n=== Serving SPA Route ===")
-    print(f"Request path: {request.path}")
-    print(f"Static folder: {app.static_folder}")
-    print(f"Session: {dict(session)}")
-    print(f"Request cookies: {request.cookies}")
-    print(f"Request host: {request.host}")
-    print(f"Request environ: {request.environ.get('SERVER_NAME')}")
     return send_from_directory(app.static_folder, 'index.html')
 
 # Static files route
@@ -407,9 +355,6 @@ def register():
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login a user."""
-    print("\n=== Login Attempt ===")
-    print(f"Request Headers: {dict(request.headers)}")
-    
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
@@ -422,7 +367,6 @@ def login():
     
     try:
         result = login_user(email, password)
-        print(f"Login result: {result}")
         
         if result['success'] and result['session']:
             # Set session data BEFORE creating response
@@ -431,9 +375,6 @@ def login():
             session['access_token'] = result['session'].access_token
             session['refresh_token'] = result['session'].refresh_token
             session.modified = True  # Ensure Flask knows to save the session
-            
-            print("\n=== Session After Login ===")
-            print(f"Session data: {dict(session)}")
             
             response = jsonify({
                 'success': True,
@@ -445,11 +386,6 @@ def login():
                     }
                 }
             })
-            
-            # Debug the cookie
-            print("\n=== Cookie Debug ===")
-            print(f"Session cookie: {session.get('user_id')}")
-            print(f"Response cookies: {response.headers.get('Set-Cookie')}")
             
             return response
             
@@ -474,10 +410,6 @@ def logout():
 @app.route('/api/auth/me')
 def get_current_user():
     """Get current authenticated user."""
-    print("\n=== Auth Check ===")
-    print(f"Session data: {dict(session)}")
-    print(f"Request cookies: {request.cookies}")
-    
     try:
         user_id = session.get('user_id')
         
@@ -491,7 +423,7 @@ def get_current_user():
         client = get_supabase_client()
         
         try:
-            response = client.table('users').select('*').eq('id', user_id).single().execute()
+            response = client.table('profiles').select('*').eq('id', user_id).single().execute()
             
             if response.data:
                 # Return both user data and session info
@@ -702,13 +634,9 @@ def lookup_barcode(barcode):
 @app.route('/api/custom-columns', methods=['GET'])
 def get_custom_columns():
     """Get all custom columns for the current user."""
-    print("\n=== Getting Custom Columns ===")
     user_id = session.get('user_id')
-    print(f"User ID from session: {user_id}")
-    print(f"Session data: {dict(session)}")
-    
+
     if not user_id:
-        print("Error: User not authenticated")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
@@ -742,15 +670,9 @@ def get_custom_columns():
 @app.route('/api/custom-columns', methods=['POST'])
 def create_custom_column():
     """Create a new custom column."""
-    print("\n=== Creating Custom Column ===")
     user_id = session.get('user_id')
-    print(f"User ID: {user_id}")
-    access_token = session.get('access_token')
-    print(f"Access token present: {'Yes' if access_token else 'No'}")
-    print(f"Session data: {dict(session)}")
-    
+
     if not user_id:
-        print("Error: User not authenticated")
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
@@ -1184,8 +1106,6 @@ def lookup_artist_album():
 @app.route('/api/spotify/auth')
 def spotify_auth():
     """Start Spotify OAuth flow"""
-    print("\n=== Starting Spotify Auth ===")
-    print(f"Session before: {dict(session)}")
     
     result = get_spotify_auth_url()
     print(f"Got auth URL result: {result}")
@@ -1219,8 +1139,6 @@ def spotify_callback():
 @app.route('/api/spotify/playlists')
 def spotify_playlists():
     """Get user's Spotify playlists"""
-    print("\n=== Getting Spotify Playlists ===")
-    print(f"Session data: {dict(session)}")
     
     # Check for Spotify authentication
     if 'spotify_access_token' not in session:
@@ -1251,8 +1169,6 @@ def spotify_playlists():
 @app.route('/api/spotify/playlists/<playlist_id>/tracks')
 def spotify_playlist_tracks(playlist_id):
     """Get tracks from a specific playlist"""
-    print(f"\n=== Getting Playlist Tracks: {playlist_id} ===")
-    print(f"Session data: {dict(session)}")
     
     # Check for Spotify authentication
     if 'spotify_access_token' not in session:
@@ -1283,8 +1199,6 @@ def spotify_playlist_tracks(playlist_id):
 @app.route('/api/spotify/album-from-url')
 def spotify_album_from_url():
     """Get album information from a Spotify URL"""
-    print("\n=== Getting Album from Spotify URL ===")
-    print(f"Session data: {dict(session)}")
     
     url = request.args.get('url')
     if not url:
@@ -1322,18 +1236,13 @@ def spotify_album_from_url_public():
 @app.route('/api/spotify/disconnect', methods=['POST'])
 def spotify_disconnect():
     """Disconnect Spotify integration by clearing tokens"""
-    print("\n=== Disconnecting Spotify ===")
-    print(f"Session before: {dict(session)}")
-    
     # Clear Spotify-related session data
     session.pop('spotify_access_token', None)
     session.pop('spotify_refresh_token', None)
     session.pop('spotify_token_type', None)
     session.pop('spotify_auth_started', None)
     session.modified = True
-    
-    print(f"Session after: {dict(session)}")
-    
+
     return jsonify({
         'success': True,
         'message': 'Spotify disconnected successfully'
@@ -1405,8 +1314,9 @@ def sync_playlists():
             'error': 'Failed to sync playlists'
         }), 500
 
-# Add new endpoint for automated sync
-@app.route('/api/spotify/playlist/sync', methods=['POST'])
+# Automated sync endpoint hit by the Supabase cron job (sync_spotify_playlists_cron).
+# Must stay on a distinct path from the manual user sync above to avoid a route collision.
+@app.route('/api/spotify/playlist/sync/automated', methods=['POST'])
 def automated_sync_playlists():
     """Automated playlist sync triggered by cron job"""
     # Verify sync key
@@ -1426,18 +1336,6 @@ def automated_sync_playlists():
             'success': False,
             'error': 'Failed to sync playlists'
         }), 500
-
-# Add session debug middleware
-@app.before_request
-def debug_session():
-    """Debug session state before each request."""
-    print("\n=== Session Debug ===")
-    print(f"Endpoint: {request.endpoint}")
-    print(f"Method: {request.method}")
-    print(f"Session data: {dict(session)}")
-    print(f"User ID in session: {session.get('user_id')}")
-    print(f"Request cookies: {request.cookies}")
-    print(f"Session cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN')}")
 
 @app.route('/api/column-filters', methods=['GET'])
 @require_auth

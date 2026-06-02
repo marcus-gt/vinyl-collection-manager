@@ -23,13 +23,6 @@ SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1"
 
-# Debug environment variables
-print("\n=== Spotify Configuration ===")
-print(f"Environment variables:")
-print(f"SPOTIFY_CLIENT_ID: {os.getenv('SPOTIFY_CLIENT_ID')}")
-print(f"SPOTIFY_CLIENT_SECRET: {'Present' if os.getenv('SPOTIFY_CLIENT_SECRET') else 'Missing'}")
-print(f"SPOTIFY_REDIRECT_URI: {os.getenv('SPOTIFY_REDIRECT_URI')}")
-
 # Load and validate configuration
 CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
 CLIENT_SECRET = os.getenv('SPOTIFY_CLIENT_SECRET')
@@ -158,14 +151,8 @@ def require_spotify_auth(f):
 
 def get_spotify_auth_url():
     """Generate the Spotify authorization URL"""
-    print("\n=== Generating Spotify Auth URL ===")
-    print(f"Using configuration:")
-    print(f"CLIENT_ID: {CLIENT_ID}")
-    print(f"REDIRECT_URI: {REDIRECT_URI}")
-    
     try:
         if not CLIENT_ID:
-            print("Error: Missing CLIENT_ID")
             return jsonify({
                 'success': False,
                 'error': 'Spotify CLIENT_ID is missing'
