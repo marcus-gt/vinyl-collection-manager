@@ -18,6 +18,8 @@ if not os.getenv('FLASK_ENV'):
 # Now import everything else
 from flask import Flask, jsonify, request, session, send_from_directory, redirect
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import sys
 
 sys.path.append(parent_dir)
@@ -79,6 +81,20 @@ else:
          allow_headers=["Content-Type", "Authorization", "Cookie"],
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
+# Rate limiter, used to protect the unauthenticated public Discogs lookup
+# endpoints from abuse that could burn the shared Discogs API quota. Logged-in
+# requests are exempted (see is_authenticated_request) so bulk/batch imports
+# are never throttled.
+def is_authenticated_request():
+    return 'user_id' in session
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    storage_uri="memory://",
+    default_limits=[],
+)
+
 # Add session configuration
 print("\n=== Flask Configuration ===")
 print(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
@@ -92,7 +108,7 @@ if os.getenv('FLASK_ENV') == 'production':
         'SESSION_COOKIE_HTTPONLY': True,
         'SESSION_COOKIE_SAMESITE': 'None',
         'SESSION_COOKIE_PATH': '/',
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=365),  # Set to 1 year
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=30),  # Sliding 30-day expiry
         'SESSION_REFRESH_EACH_REQUEST': True,
         'SESSION_COOKIE_DOMAIN': 'vinyl-collection-manager.onrender.com',
         'SESSION_COOKIE_NAME': 'session',
@@ -108,7 +124,7 @@ else:
         'SESSION_COOKIE_HTTPONLY': True,
         'SESSION_COOKIE_SAMESITE': 'Lax',  # More permissive for local development
         'SESSION_COOKIE_PATH': '/',
-        'PERMANENT_SESSION_LIFETIME': timedelta(days=365),
+        'PERMANENT_SESSION_LIFETIME': timedelta(days=30),
         'SESSION_REFRESH_EACH_REQUEST': True
     }
 
@@ -232,7 +248,7 @@ def after_request(response):
                 'Secure',
                 'HttpOnly',
                 'SameSite=None',
-                'Max-Age=31536000'  # Add one year expiration
+                'Max-Age=2592000'  # 30 days, matches PERMANENT_SESSION_LIFETIME
             ]
             response.headers['Set-Cookie'] = '; '.join(cookie_parts)
     
@@ -301,6 +317,7 @@ def api_index():
     })
 
 @app.route('/lookup/<barcode>')
+@limiter.limit("30 per minute", exempt_when=is_authenticated_request)
 def lookup(barcode):
     try:
         result = search_by_barcode(barcode)
@@ -376,10 +393,11 @@ def login():
             session['refresh_token'] = result['session'].refresh_token
             session.modified = True  # Ensure Flask knows to save the session
             
+            # The access token lives only in the httpOnly session cookie; it is
+            # deliberately not returned in the body to keep it out of reach of JS/XSS.
             response = jsonify({
                 'success': True,
                 'session': {
-                    'access_token': result['session'].access_token,
                     'user': {
                         'id': result['session'].user.id,
                         'email': result['session'].user.email
@@ -426,13 +444,12 @@ def get_current_user():
             response = client.table('profiles').select('*').eq('id', user_id).single().execute()
             
             if response.data:
-                # Return both user data and session info
+                # Access token stays in the httpOnly session cookie, not the body.
                 return jsonify({
                     'success': True,
                     'user': response.data,
                     'session': {
-                        'user': response.data,
-                        'access_token': session.get('access_token')
+                        'user': response.data
                     }
                 })
             
@@ -556,6 +573,7 @@ def delete_record(record_id):
     return jsonify({'success': False, 'error': result['error']}), 400
 
 @app.route('/api/lookup/barcode/<barcode>')
+@limiter.limit("30 per minute", exempt_when=is_authenticated_request)
 def lookup_barcode(barcode):
     try:
         print(f"\n=== Looking up barcode: {barcode} ===")
@@ -889,6 +907,18 @@ def set_setting():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+def _user_owns_record(client, record_id, user_id):
+    """Return True if the given record belongs to the user.
+
+    RLS already scopes vinyl_records to the authenticated user, but we check
+    ownership explicitly at the Flask layer so record-scoped endpoints cannot be
+    used to read or write rows tied to another user's record_id.
+    """
+    owned = client.table('vinyl_records').select('id').eq(
+        'id', record_id
+    ).eq('user_id', user_id).execute()
+    return bool(owned.data)
+
 @app.route('/api/records/<record_id>/custom-values', methods=['GET'])
 def get_custom_values(record_id):
     """Get all custom values for a record."""
@@ -898,6 +928,8 @@ def get_custom_values(record_id):
     
     try:
         client = get_supabase_client()
+        if not _user_owns_record(client, record_id, user_id):
+            return jsonify({'success': False, 'error': 'Record not found'}), 404
         response = client.table('custom_column_values').select('*').eq('record_id', record_id).execute()
         return jsonify({'success': True, 'data': response.data}), 200
     except Exception as e:
@@ -916,6 +948,8 @@ def update_custom_values(record_id):
             return jsonify({'success': False, 'error': 'Invalid data format'}), 400
         
         client = get_supabase_client()
+        if not _user_owns_record(client, record_id, user_id):
+            return jsonify({'success': False, 'error': 'Record not found'}), 404
         
         # Get existing values
         existing = client.table('custom_column_values').select('*').eq('record_id', record_id).execute()
@@ -1002,6 +1036,7 @@ def update_record(record_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/lookup/discogs/<release_id>')
+@limiter.limit("30 per minute", exempt_when=is_authenticated_request)
 def lookup_discogs(release_id):
     """Look up a release by Discogs release ID."""
     try:
@@ -1027,6 +1062,7 @@ def lookup_discogs(release_id):
         }), 500
 
 @app.route('/api/lookup/discogs-url')
+@limiter.limit("30 per minute", exempt_when=is_authenticated_request)
 def lookup_discogs_url():
     """Look up a release by Discogs URL"""
     try:
@@ -1058,6 +1094,7 @@ def lookup_discogs_url():
         }), 500
 
 @app.route('/api/lookup/artist-album')
+@limiter.limit("30 per minute", exempt_when=is_authenticated_request)
 def lookup_artist_album():
     """Look up a release by artist and album name"""
     try:
