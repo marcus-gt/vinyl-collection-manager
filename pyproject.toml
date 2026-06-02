@@ -10,7 +10,6 @@ package-mode = false
 python = "^3.9"
 flask = "3.0.0"
 flask-cors = "4.0.0"
-flask-login = "0.6.3"
 python3-discogs-client = "2.7.1"
 supabase = "1.2.0"
 python-dotenv = "1.0.0"

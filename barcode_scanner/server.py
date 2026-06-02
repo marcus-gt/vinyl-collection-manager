@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta, datetime
@@ -94,6 +95,13 @@ limiter = Limiter(
     storage_uri="memory://",
     default_limits=[],
 )
+
+# In-memory TTL cache for the expensive musician-network analysis (full
+# collection load + pandas pipeline). Keyed by user_id. Some staleness is
+# acceptable for a personal app; clients can pass ?refresh=true to force a
+# recompute (e.g. right after adding records).
+_MUSICIAN_NETWORK_CACHE = {}
+_MUSICIAN_NETWORK_TTL_SECONDS = 300
 
 # Add session configuration
 print("\n=== Flask Configuration ===")
@@ -1496,6 +1504,14 @@ def get_musician_network():
             'error': 'User not authenticated'
         }), 401
     
+    # Serve from cache unless a refresh is explicitly requested.
+    force_refresh = request.args.get('refresh') == 'true'
+    cached = _MUSICIAN_NETWORK_CACHE.get(user_id)
+    if cached and not force_refresh:
+        cached_at, cached_response = cached
+        if (time.time() - cached_at) < _MUSICIAN_NETWORK_TTL_SECONDS:
+            return jsonify(cached_response)
+    
     try:
         # Import analysis modules
         try:
@@ -1716,6 +1732,7 @@ def get_musician_network():
             }
         }
         
+        _MUSICIAN_NETWORK_CACHE[user_id] = (time.time(), response_data)
         return jsonify(response_data)
         
     except Exception as e:

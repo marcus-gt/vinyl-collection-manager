@@ -31,14 +31,11 @@ token = os.getenv('DISCOGS_TOKEN')
 if not token:
     raise ValueError("DISCOGS_TOKEN environment variable is not set")
 
-# Initialize Discogs client
-try:
-    d = Client('VinylCollectionManager/1.0', user_token=token)
-    # Test the client with a simple identity call
-    d.identity()
-except Exception as e:
-    print(f"Error initializing Discogs client: {str(e)}")
-    raise
+# Initialize the Discogs client. Constructing the client does not hit the
+# network; we deliberately avoid an import-time identity() call so that worker
+# startup does not depend on Discogs being reachable. The first actual lookup
+# will surface any auth/connectivity problems.
+d = Client('VinylCollectionManager/1.0', user_token=token)
 
 def get_all_credits(credits) -> dict:
     """
