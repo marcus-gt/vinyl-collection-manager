@@ -97,11 +97,10 @@ def add_record():
 
 
 @bp.route('/api/records/<record_id>', methods=['DELETE'])
+@require_auth
 def delete_record(record_id):
     """Delete a record from the user's collection."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     result = remove_record_from_collection(user_id, record_id)
     if result['success']:
@@ -110,11 +109,10 @@ def delete_record(record_id):
 
 
 @bp.route('/api/records/<record_id>/custom-values', methods=['GET'])
+@require_auth
 def get_custom_values(record_id):
     """Get all custom values for a record."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         client = get_supabase_client()
@@ -127,11 +125,10 @@ def get_custom_values(record_id):
 
 
 @bp.route('/api/records/<record_id>/custom-values', methods=['PUT'])
+@require_auth
 def update_custom_values(record_id):
     """Update custom values for a record."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         values = request.get_json()
@@ -173,11 +170,10 @@ def update_custom_values(record_id):
 
 
 @bp.route('/api/records/<record_id>', methods=['PATCH'])
+@require_auth
 def update_record(record_id):
     """Update standard fields of a record."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         updates = request.get_json()

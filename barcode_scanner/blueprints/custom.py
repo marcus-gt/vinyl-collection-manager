@@ -11,12 +11,10 @@ bp = Blueprint('custom', __name__)
 
 
 @bp.route('/api/custom-columns', methods=['GET'])
+@require_auth
 def get_custom_columns():
     """Get all custom columns for the current user."""
-    user_id = session.get('user_id')
-
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         client = get_supabase_client()
@@ -43,12 +41,10 @@ def get_custom_columns():
 
 
 @bp.route('/api/custom-columns', methods=['POST'])
+@require_auth
 def create_custom_column():
     """Create a new custom column."""
-    user_id = session.get('user_id')
-
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         data = request.get_json()
@@ -119,11 +115,10 @@ def create_custom_column():
 
 
 @bp.route('/api/custom-columns/<column_id>', methods=['PUT'])
+@require_auth
 def update_custom_column(column_id):
     """Update a custom column."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         data = request.get_json()
@@ -171,11 +166,10 @@ def update_custom_column(column_id):
 
 
 @bp.route('/api/custom-columns/<column_id>', methods=['DELETE'])
+@require_auth
 def delete_custom_column(column_id):
     """Delete a custom column."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         client = get_supabase_client()
@@ -186,11 +180,10 @@ def delete_custom_column(column_id):
 
 
 @bp.route('/api/settings', methods=['GET'])
+@require_auth
 def get_all_settings():
     """Get all settings for the current user."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         client = get_supabase_client()
@@ -201,11 +194,10 @@ def get_all_settings():
 
 
 @bp.route('/api/settings/<setting_key>', methods=['GET'])
+@require_auth
 def get_setting(setting_key):
     """Get a specific setting for the current user."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         client = get_supabase_client()
@@ -220,11 +212,10 @@ def get_setting(setting_key):
 
 
 @bp.route('/api/settings', methods=['POST'])
+@require_auth
 def set_setting():
     """Create or update a setting for the current user."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    user_id = session['user_id']
 
     try:
         data = request.get_json()
