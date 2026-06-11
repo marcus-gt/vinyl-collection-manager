@@ -306,10 +306,6 @@ export function Scanner() {
     setSuccess(null);
     
     try {
-      console.log('Starting add to collection...', {
-        recordData: record,
-        timestamp: new Date().toISOString()
-      });
 
       const recordData: VinylRecord = {
         artist: record.artist,
@@ -330,10 +326,8 @@ export function Scanner() {
         custom_values_cache: {}  // Required empty object
       };
 
-      console.log('Prepared record data:', recordData);
       
       const response = await records.add(recordData);
-      console.log('Add record response:', response);
 
       if (response.success) {
         setSuccess('Added to collection!');
@@ -349,10 +343,8 @@ export function Scanner() {
         setError(response.error || 'Failed to add to collection');
         // Add retry logic
         if (response.error?.includes('security policy')) {
-          console.log('Detected security policy error, retrying in 1 second...');
           setTimeout(async () => {
             try {
-              console.log('Retrying add to collection...');
               const retryResponse = await records.add(recordData);
               if (retryResponse.success) {
                 setSuccess('Added to collection!');

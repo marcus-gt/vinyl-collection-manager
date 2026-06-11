@@ -197,7 +197,6 @@ export default function NetworkGraph({ data }: NetworkGraphProps) {
 
   // Handle when graph engine stops (simulation stabilizes)
   const handleEngineStop = useCallback(() => {
-    console.log('Graph engine stopped, graph is ready');
     setGraphReady(true);
     
     // If there's a pending zoom request, execute it now

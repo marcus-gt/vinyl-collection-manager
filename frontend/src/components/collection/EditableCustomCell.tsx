@@ -194,17 +194,14 @@ export function EditableCustomCell({
     
     // Function to rename an option
     const handleRenameOption = async (oldName: string, newName: string) => {
-      console.log(`[handleRenameOption] Called with oldName="${oldName}", newName="${newName}"`);
       
       if (!newName.trim() || oldName === newName.trim()) {
-        console.log('[handleRenameOption] Early return: empty or same name');
         return;
       }
       
       try {
         // Check if new name already exists
         if (column.options?.some(opt => opt.toLowerCase() === newName.trim().toLowerCase() && opt !== oldName)) {
-          console.log('[handleRenameOption] Error: option name already exists');
           notifications.show({
             title: 'Error',
             message: 'An option with this name already exists',
@@ -215,7 +212,6 @@ export function EditableCustomCell({
         
         // Update options list
         const updatedOptions = (column.options || []).map(opt => opt === oldName ? newName.trim() : opt);
-        console.log('[handleRenameOption] Updated options:', updatedOptions);
         
         // Update option colors if the old name had a color
         const updatedColors = { ...(column.option_colors || {}) };
@@ -224,17 +220,14 @@ export function EditableCustomCell({
           delete updatedColors[oldName];
         }
         
-        console.log('[handleRenameOption] Calling API to update column...');
         await customColumnsApi.update(column.id, {
           options: updatedOptions,
           option_colors: updatedColors
         });
-        console.log('[handleRenameOption] Column updated successfully');
         
         // Update ALL records that have this option selected
         // Get fresh records to ensure we have the latest data
         const currentRecords = getAllRecords();
-        console.log(`[handleRenameOption] Got ${currentRecords.length} records from getAllRecords()`);
         
         const recordsToUpdate = currentRecords.filter(record => {
           const value = record.custom_values_cache?.[column.id];
@@ -249,7 +242,6 @@ export function EditableCustomCell({
           return false;
         });
         
-        console.log(`[handleRenameOption] Found ${recordsToUpdate.length} records to update:`, recordsToUpdate.map(r => ({ id: r.id, value: r.custom_values_cache[column.id] })));
         
         // Update the column object locally first
         column.options = updatedOptions;

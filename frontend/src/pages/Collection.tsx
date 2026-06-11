@@ -42,16 +42,23 @@ function Collection() {
   const [editingColumn, setEditingColumn] = useState<CustomColumn | null>(null);
   const [returnToSettings, setReturnToSettings] = useState(false);
   const [columnOrder, setColumnOrder] = useBackendSettings<string[]>('table-column-order', []);
-  const [columnVisibility, setColumnVisibility] = useBackendSettings<Record<string, boolean>>('table-column-visibility', {});
+  const [columnVisibility, setColumnVisibility, visibilityLoading] = useBackendSettings<Record<string, boolean>>('table-column-visibility', {});
   const [previewRecord, setPreviewRecord] = useState<VinylRecord | null>(null);
+  const defaultVisibilityAppliedRef = useRef(false);
   
   // Keep ref in sync with state
   useEffect(() => {
     userRecordsRef.current = userRecords;
   }, [userRecords]);
 
-  // Set default visibility for new hidden columns (only on first load)
+  // Set default visibility for hidden-by-default columns, but only AFTER the
+  // saved visibility has loaded from the backend. Running before the load
+  // completes would merge defaults onto an empty map and the debounced save
+  // would clobber the user's persisted visibility settings.
   useEffect(() => {
+    if (visibilityLoading || defaultVisibilityAppliedRef.current) return;
+    defaultVisibilityAppliedRef.current = true;
+
     const hiddenByDefaultColumns = [
       'master_id',
       'original_release_id',
@@ -65,7 +72,7 @@ function Collection() {
       'added_from'
     ];
 
-    // Only set defaults if these columns don't have visibility settings yet
+    // Only set defaults for columns that have no saved visibility yet
     const needsDefaults = hiddenByDefaultColumns.some(col => columnVisibility[col] === undefined);
     if (needsDefaults) {
       setColumnVisibility(prev => {
@@ -78,7 +85,7 @@ function Collection() {
         return updated;
       });
     }
-  }, []); // Run only once on mount
+  }, [visibilityLoading, columnVisibility, setColumnVisibility]);
 
 
   useEffect(() => {
@@ -99,8 +106,6 @@ function Collection() {
   // Separate useEffect for CSV export to ensure it has access to current userRecords
   useEffect(() => {
     const handleExportCSV = () => {
-      console.log('Export CSV event received');
-      console.log('Current records:', userRecords);
       
       if (!userRecords.length) {
         notifications.show({
@@ -133,12 +138,9 @@ function Collection() {
       const customHeaders = customColumns.map(col => col.name);
       const headers = [...standardHeaders, ...customHeaders];
 
-      console.log('Headers:', headers);
-      console.log('Custom columns:', customColumns);
 
       // Convert records to CSV rows
       const rows = userRecords.map(record => {
-        console.log('Processing record:', record);
         
         // Standard fields
         const standardFields = [
@@ -161,16 +163,13 @@ function Collection() {
         // Custom fields
         const customFields = customColumns.map(col => {
           const value = record.custom_values_cache[col.id];
-          console.log(`Custom field ${col.name}:`, value);
           return value || '';
         });
 
         const row = [...standardFields, ...customFields];
-        console.log('Generated row:', row);
         return row;
       });
 
-      console.log('Generated rows:', rows);
 
       // Combine headers and rows
       const csvContent = [
@@ -190,7 +189,6 @@ function Collection() {
         )
       ].join('\n');
 
-      console.log('CSV Content:', csvContent);
 
       // Create blob and trigger save dialog
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -252,98 +250,16 @@ function Collection() {
     }
   };
 
-  // Define standard column IDs (must match the EXACT order in standardColumns definition)
-  const STANDARD_COLUMN_IDS = [
-    'artist',
-    'album',
-    'year',
-    'current_release_year',
-    'label',
-    'original_catno',
-    'current_label',
-    'current_catno',
-    'country',
-    'current_country',
-    'master_format',
-    'current_release_format',
-    'genres',
-    'styles',
-    'created_at',
-    'added_from',
-    'links',
-    'master_id',
-    'tracklist',
-    'contributors',  // Right after tracklist, matching standardColumns definition
-    'original_release_id',
-    'original_release_date',
-    'original_identifiers',
-    'current_release_id',
-    'current_release_date',
-    'current_identifiers'
-  ];
-
   const loadCustomColumns = async () => {
     try {
       const response = await customColumnsApi.getAll();
       if (response.success && response.data) {
         setCustomColumns(response.data);
-        
-        // Auto-update column order to include ALL columns (standard + custom)
-        setColumnOrder(prevOrder => {
-          const customColumnIds = response.data!.map(col => col.id);
-          
-          // If prevOrder is empty, initialize with all standard columns + custom columns
-          if (prevOrder.length === 0) {
-            return [...STANDARD_COLUMN_IDS, ...customColumnIds];
-          }
-          
-          // Build new order preserving user's arrangement
-          const newOrder: string[] = [];
-          const processedIds = new Set<string>();
-          
-          // Separate standard and custom columns from prevOrder
-          const standardsInPrevOrder: string[] = [];
-          const customsInPrevOrder: string[] = [];
-          
-          for (const id of prevOrder) {
-            if (STANDARD_COLUMN_IDS.includes(id)) {
-              standardsInPrevOrder.push(id);
-            } else if (customColumnIds.includes(id)) {
-              customsInPrevOrder.push(id);
-            }
-            // Skip deleted custom columns
-          }
-          
-          // 1. Add standard columns first (in their saved order)
-          for (const id of standardsInPrevOrder) {
-            newOrder.push(id);
-            processedIds.add(id);
-          }
-          
-          // 2. Add any missing standard columns (in default order)
-          for (const id of STANDARD_COLUMN_IDS) {
-            if (!processedIds.has(id)) {
-              newOrder.push(id);
-              processedIds.add(id);
-            }
-          }
-          
-          // 3. Add custom columns (in their saved order)
-          for (const id of customsInPrevOrder) {
-            newOrder.push(id);
-            processedIds.add(id);
-          }
-          
-          // 4. Add any new custom columns to the end
-          for (const id of customColumnIds) {
-            if (!processedIds.has(id)) {
-              newOrder.push(id);
-              processedIds.add(id);
-            }
-          }
-          
-          return newOrder;
-        });
+        // Column order is intentionally NOT modified here. Display ordering is
+        // handled non-destructively by the tableColumns sort (unknown columns
+        // fall to the end), and the order is only persisted on explicit user
+        // actions (drag/delete). Rewriting it on load previously regrouped
+        // standard/custom columns and clobbered the user's saved arrangement.
       }
     } catch (err) {
       console.error('Failed to load custom columns:', err);
@@ -379,7 +295,6 @@ function Collection() {
   };
 
   const handleDelete = (record: VinylRecord) => {
-    console.log('Delete initiated for record:', record);
     
     if (!record.id) {
       console.error('No record ID found:', record);
@@ -404,26 +319,20 @@ function Collection() {
       labels: { confirm: 'Delete', cancel: 'Cancel' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
-    console.log('Starting delete process for record ID:', record.id);
     setLoading(true);
     try {
       // First load fresh data to ensure we have the latest state
       const currentData = await records.getAll();
-      console.log('Current data from server:', currentData);
       
       if (currentData.success && currentData.data) {
         setUserRecords(currentData.data);
       }
 
-      console.log('Calling delete API...');
           const response = await records.delete(record.id!);
-      console.log('Delete API response:', response);
       
       if (response.success) {
-        console.log('Delete successful, reloading data...');
         // Reload the full data after successful deletion
         const refreshedData = await records.getAll();
-        console.log('Refreshed data:', refreshedData);
         
         if (refreshedData.success && refreshedData.data) {
           setUserRecords(refreshedData.data);
@@ -460,7 +369,6 @@ function Collection() {
       });
     } finally {
       setLoading(false);
-      console.log('Delete process completed');
     }
       }
     });
@@ -1395,11 +1303,6 @@ function Collection() {
             getAllRecords={() => userRecordsRef.current}
             onUpdate={async (recordId, columnId, newValue) => {
             try {
-              console.log('Updating custom value:', {
-                  columnId,
-                newValue,
-                  recordId
-              });
               
               const valueToSend = {
                   [columnId]: newValue
@@ -1421,7 +1324,6 @@ function Collection() {
                       : r
                   )
                 );
-                console.log('Successfully updated custom value');
               } else {
                 console.error('Failed to update custom value');
                 notifications.show({
@@ -1468,7 +1370,6 @@ function Collection() {
                       size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Delete clicked for record:', row.original);
                 handleDelete(row.original);
               }}
                     >
@@ -1519,8 +1420,36 @@ function Collection() {
       }
     }
 
-    return allColumns;
+    // Order the column definitions themselves according to the saved columnOrder
+    // so standard and custom columns interleave correctly and persist across
+    // refreshes (independent of whether a column is standard or custom). Columns
+    // not present in the saved order keep their natural position at the end.
+    if (columnOrder.length === 0) {
+      return allColumns;
+    }
+    // Resolve a column's effective id the same way the table does: explicit id
+    // (custom columns + actions) or accessorKey (standard columns).
+    const columnId = (col: ColumnDef<VinylRecord>): string | undefined =>
+      (col.id ?? (col as { accessorKey?: string }).accessorKey);
+    const orderIndex = (col: ColumnDef<VinylRecord>) => {
+      const id = columnId(col);
+      const idx = id ? columnOrder.indexOf(id) : -1;
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    const orderedColumns = [...allColumns].sort((a, b) => orderIndex(a) - orderIndex(b));
+    return orderedColumns;
   }, [customColumns, columnOrder, columnVisibility]);
+
+  // The complete, ordered list of column ids actually present in the table.
+  // Passing this (rather than the raw saved order, which may be missing newly
+  // added columns) to the table means it never appends columns separately - so
+  // custom and standard columns interleave exactly as ordered above.
+  const tableColumnOrder = useMemo(
+    () => tableColumns
+      .map(col => (col.id ?? (col as { accessorKey?: string }).accessorKey))
+      .filter((id): id is string => Boolean(id)),
+    [tableColumns]
+  );
 
   return (
     <Box
@@ -1625,7 +1554,7 @@ function Collection() {
         customColumns={customColumns}
         searchQuery={searchQuery}
         columnVisibility={columnVisibility}
-        columnOrder={columnOrder}
+        columnOrder={tableColumnOrder}
         onColumnOrderChange={setColumnOrder}
       />
 

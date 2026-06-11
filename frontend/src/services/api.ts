@@ -17,11 +17,6 @@ export const api = axios.create({
 
 // Add request interceptor for debugging
 api.interceptors.request.use((config) => {
-  console.log(`Making ${config.method?.toUpperCase()} request to ${config.url}`, {
-    headers: config.headers,
-    data: config.data,
-    withCredentials: config.withCredentials
-  });
   config.withCredentials = true;
   return config;
 });
@@ -37,7 +32,6 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Only try to refresh if we're not already on /api/auth/me or /api/auth/refresh
       if (originalRequest.url !== '/api/auth/me' && originalRequest.url !== '/api/auth/refresh') {
-        console.log(`Received ${error.response?.status} error, attempting token refresh...`);
         originalRequest._retry = true;
         
         try {
@@ -45,7 +39,6 @@ api.interceptors.response.use(
           const refreshResult = await auth.refreshToken();
           
           if (refreshResult.success) {
-            console.log('Token refreshed successfully, retrying request');
             // Retry the original request after successful token refresh
             return api(originalRequest);
           } else {
@@ -53,7 +46,6 @@ api.interceptors.response.use(
             const response = await auth.getCurrentUser();
             
             if (response.success && response.session) {
-              console.log('Session still valid via getCurrentUser, retrying request');
               // Update the token in localStorage
               localStorage.setItem('session', JSON.stringify(response.session));
               
@@ -73,7 +65,6 @@ api.interceptors.response.use(
     
     // For /api/auth/me 401s, just return the error
     if (error.config?.url === '/api/auth/me' && error.response?.status === 401) {
-      console.log('Auth check: No active session');
       return Promise.reject(error);
     }
     
@@ -118,7 +109,6 @@ export const auth = {
     } catch (error: any) {
       // If it's a 401, return a standardized response instead of throwing
       if (error.response?.status === 401) {
-        console.log('No active session found');
         return {
           success: false,
           error: 'Not authenticated'
@@ -132,9 +122,7 @@ export const auth = {
 
   refreshToken: async (): Promise<AuthResponse> => {
     try {
-      console.log('Explicitly refreshing token...');
       const response = await api.post<AuthResponse>('/api/auth/refresh');
-      console.log('Token refresh response:', response.data);
       return response.data;
     } catch (error: any) {
       console.error('Token refresh error:', error instanceof Error ? error.message : 'Unknown error');
@@ -148,7 +136,6 @@ export const auth = {
   
   autoSyncPlaylists: async (): Promise<ApiResponse<any>> => {
     try {
-      console.log('Triggering auto-sync of playlists...');
       const response = await api.post<ApiResponse<any>>('/api/auth/auto-sync');
       return response.data;
     } catch (error) {
@@ -340,17 +327,8 @@ export const customColumns = {
 
 export const customValues = {
   getForRecord: async (recordId: string): Promise<ApiResponse<CustomColumnValue[]>> => {
-    console.log(`=== Fetching Custom Values for Record ${recordId} ===`);
     try {
       const response = await api.get<ApiResponse<CustomColumnValue[]>>(`/api/records/${recordId}/custom-values`);
-      console.log('Custom values response:', {
-        success: response.data.success,
-        count: response.data.data?.length || 0,
-        values: response.data.data?.map(val => ({ 
-          column_id: val.column_id,
-          value: val.value 
-        }))
-      });
       return response.data;
     } catch (err) {
       console.error('Error fetching custom values:', {
@@ -362,15 +340,8 @@ export const customValues = {
   },
 
   update: async (recordId: string, values: Record<string, string>): Promise<ApiResponse<void>> => {
-    console.log(`=== Updating Custom Values for Record ${recordId} ===`, {
-      values
-    });
     try {
       const response = await api.put<ApiResponse<void>>(`/api/records/${recordId}/custom-values`, values);
-      console.log('Update custom values response:', {
-        success: response.data.success,
-        error: response.data.error
-      });
       return response.data;
     } catch (err) {
       console.error('Error updating custom values:', {

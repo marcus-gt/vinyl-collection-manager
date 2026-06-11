@@ -871,7 +871,6 @@ function TopMusiciansChart({ data, sortBy, onSortByChange }: TopMusiciansChartPr
     // Initialize ECharts
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current, 'dark');
-      console.log('Top Musicians Chart initialized');
     }
 
     // Get top 15 musicians based on sort criteria
@@ -887,7 +886,6 @@ function TopMusiciansChart({ data, sortBy, onSortByChange }: TopMusiciansChartPr
       })
       .slice(0, 15);
 
-    console.log('Top musicians data:', topMusicians.length, 'musicians, sorted by:', sortBy);
 
     const option: echarts.EChartsOption = {
       backgroundColor: '#1e1e1e',
@@ -1104,7 +1102,6 @@ function SessionScatterChart({ data }: SessionScatterChartProps) {
     // Initialize ECharts
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current, 'dark');
-      console.log('Session Scatter Chart initialized');
     }
 
     // Categorize musicians
@@ -1121,12 +1118,6 @@ function SessionScatterChart({ data }: SessionScatterChartProps) {
       return minSize + (maxSize - minSize) * (total / maxTotal);
     };
 
-    console.log('Scatter plot data counts:', {
-      pureSession: pureSessionMusicians.length,
-      balanced: balancedMusicians.length,
-      pureMain: pureMainArtists.length,
-      total: data.musician_stats.length
-    });
 
     // Group musicians by coordinates to detect overlaps
     const groupByCoordinates = (musicians: any[]) => {

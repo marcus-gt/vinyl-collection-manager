@@ -30,12 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Function to refresh the token
   const refreshToken = useCallback(async (): Promise<boolean> => {
-    console.log('=== Refreshing Auth Token ===');
     try {
       const response = await auth.refreshToken();
       
       if (response.success) {
-        console.log('Token refreshed successfully');
         // If we got a new session with user data, update it
         if (response.session?.user) {
           localStorage.setItem('session', JSON.stringify(response.session));
@@ -60,7 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const initializeAuth = async () => {
-      console.log('=== Initializing Auth ===');
       initComplete.current = true;
       setIsLoading(true);
 
@@ -69,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const savedSession = localStorage.getItem('session');
         if (savedSession) {
           const parsedSession = JSON.parse(savedSession);
-          console.log('Found saved session:', parsedSession);
           
           // Set user from saved session temporarily
           if (parsedSession.user) {
@@ -79,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Try to refresh the token first
           const refreshed = await refreshToken();
           if (refreshed) {
-            console.log('Session refreshed during initialization');
             
             // Delay the initial sync to avoid initialization loops
             setTimeout(() => {
@@ -93,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // If no saved session or refresh failed, verify session with server
         const response = await auth.getCurrentUser();
-        console.log('Server auth check response:', response);
 
         if (response.success && response.session?.user) {
           // Update session in localStorage and state
@@ -138,7 +132,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Set up periodic token refresh (every 30 minutes)
     const tokenRefreshInterval = setInterval(() => {
-      console.log('Running scheduled token refresh');
       if (user) {
         refreshToken().catch(e => 
           console.error('Scheduled token refresh failed:', e)
@@ -148,7 +141,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Set up periodic playlist sync (every 6 hours)
     const playlistSyncInterval = setInterval(() => {
-      console.log('Running scheduled playlist sync');
       if (user) {
         syncNow(false).catch(e => 
           console.error('Scheduled playlist sync failed:', e)
@@ -168,13 +160,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Increment login counter to track this login operation
     const currentLoginCount = ++loginCounter.current;
-    console.log(`Starting login operation #${currentLoginCount}`);
     
     try {
       const response = await auth.login(email, password);
       
       if (response.success && response.session) {
-        console.log(`Login #${currentLoginCount} successful`);
         
         // Save session to localStorage
         localStorage.setItem('session', JSON.stringify(response.session));
@@ -183,18 +173,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Only perform the sync if this is still the most recent login operation
         // This prevents multiple sync calls from different login attempts
         if (currentLoginCount === loginCounter.current) {
-          console.log(`Scheduling sync for login #${currentLoginCount}`);
           
           // Schedule the sync with a longer delay for login
           setTimeout(() => {
-            console.log(`Executing delayed sync for login #${currentLoginCount}`);
             syncNow(true);
           }, 3000);
         } else {
-          console.log(`Skipping sync for superseded login #${currentLoginCount}`);
         }
       } else {
-        console.log(`Login #${currentLoginCount} failed: ${response.error}`);
         setError(response.error || 'Login failed');
         setUser(null);
       }
@@ -208,20 +194,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [syncNow]);
 
   const register = useCallback(async (email: string, password: string) => {
-    console.log('Attempting registration...');
     setIsLoading(true);
     setError(null);
     try {
       const response = await auth.register(email, password);
-      console.log('Registration response:', response);
       
       if (response.success && response.user) {
-        console.log('Setting user after registration:', response.user);
         setUser(response.user);
         // Verify session is set
         await login(email, password);
       } else {
-        console.log('Registration failed:', response.error);
         setError(response.error || 'Registration failed');
         setUser(null);
       }

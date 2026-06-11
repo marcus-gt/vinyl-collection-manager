@@ -179,7 +179,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     const loadFilters = async () => {
       const response = await columnFiltersApi.getAll();
       if (response.success && response.data) {
-        console.log('Loading saved filters:', response.data);
         
         // Convert saved filters to table format
         const tableFilters = Object.entries(response.data).map(([id, value]) => {
@@ -199,7 +198,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           return { id, value };
         });
 
-        console.log('Converted filters:', tableFilters);
         
         // Set filters in state
         setColumnFilters(tableFilters);
@@ -271,11 +269,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     columnId: string,
     value: string[]
   ): boolean => {
-    console.log(`Filtering row for ${columnId}:`, {
-      value,
-      cellValue: row.getValue(columnId),
-      rowData: row.original
-    });
     
     if (!value || value.length === 0) return true;
 
@@ -301,25 +294,12 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     // Trim and lowercase the filter values
     const trimmedFilterValues = value.map(v => v.trim().toLowerCase());
 
-    console.log('Processed values:', {
-      filterValues: trimmedFilterValues,
-      cellValues,
-      cellValueType: typeof cellValue
-    });
 
     // Check if ALL filter values are present in the cell values
     const result = trimmedFilterValues.every(filterValue => 
       cellValues.some(cellValue => cellValue === filterValue)
     );
 
-    console.log(`Filter result for ${columnId}:`, {
-      filterValues: trimmedFilterValues,
-      cellValues,
-      result,
-      explanation: result 
-        ? 'Row matches because it contains all selected options'
-        : 'Row filtered out because it is missing some selected options'
-    });
     
     return result;
   };
@@ -376,12 +356,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     
     // For the Source column, we need to compare raw values
     if (columnId === 'added_from') {
-      console.log('Single-select filter comparison:', {
-        columnId,
-        cellValue,
-        filterValue: filterArray,
-        matches: filterArray.includes(cellValue as string)
-      });
     }
     
     // Check if the cell value is in the filter array
@@ -458,19 +432,10 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   // Determine filter types for columns
   const columnsWithFilters = useMemo(() => {
-    console.log('Initial columns:', JSON.stringify(columns, null, 2));
-    console.log('Available custom columns:', customColumns);
     
     return columns.map(column => {
       const columnId = String(column.accessorKey || column.id);
 
-      console.log(`\n=== Processing column ${columnId} ===`);
-      console.log('Raw column data:', {
-        meta: JSON.stringify(column.meta, null, 2),
-        accessorKey: column.accessorKey,
-        id: column.id,
-        fullColumn: JSON.stringify(column, null, 2)
-      });
       
       // Special case for created_at
       if (columnId === 'created_at') {
@@ -488,14 +453,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       const isCustomColumn = columnId.startsWith('customValues.');
       const customColumnId = isCustomColumn ? columnId.split('.')[1] : null;
 
-      console.log('Custom column check:', {
-        isCustomColumn,
-        customColumnId,
-        hasMetadata: !!column.meta,
-        metaType: column.meta?.type,
-        metaOptions: column.meta?.options,
-        customColumnData: column.meta?.customColumn
-      });
 
       // Determine filter type based on column metadata
       let filterType: FilterType = 'text';
@@ -514,19 +471,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
           if (column.meta.customColumn?.options) {
             // If we have the full custom column data, use it
             options = [...column.meta.customColumn.options];
-            console.log('Using options from customColumn:', {
-              source: 'customColumn',
-              options,
-              customColumn: column.meta.customColumn
-            });
           } else if (Array.isArray(column.meta.options)) {
             // Fallback to direct options if available
             options = [...column.meta.options];
-            console.log('Using options from direct meta:', {
-              source: 'meta.options',
-              options,
-              metaOptions: column.meta.options
-            });
           } else {
             // Try to find the custom column data from the API response
             const customColumn = customColumns.find((col: CustomColumnData) => col.id === customColumnId);
@@ -534,28 +481,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               options = [...(customColumn.options || [])];
               // Update the meta to include the full custom column data
               column.meta.customColumn = customColumn;
-              console.log('Found options from API data:', {
-                source: 'api',
-                options,
-                customColumn
-              });
             } else {
-              console.log('No valid options found:', {
-                metaType: typeof column.meta.options,
-                metaOptions: column.meta.options,
-                fullMeta: column.meta
-              });
             }
           }
         }
 
-        console.log('Column metadata:', {
-          originalType: column.meta.type,
-          resolvedFilterType: filterType,
-          hasCustomColumn: !!column.meta.customColumn,
-          hasDirectOptions: Array.isArray(column.meta.options),
-          metaContent: JSON.stringify(column.meta, null, 2)
-        });
       }
 
       const result = {
@@ -582,16 +512,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         }
       };
 
-      console.log('Final column configuration:', {
-        id: result.id,
-        filterType,
-        optionsLength: options.length,
-        options,
-        metaType: result.meta.type,
-        metaOptions: result.meta.options,
-        filterOptions: result.filter.options,
-        hasCustomColumn: !!result.meta.customColumn
-      });
 
       return result;
     });
@@ -613,7 +533,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       columnSizing,
       columnFilters,
       globalFilter: searchQuery,
-      columnOrder,
+      // NOTE: columnOrder is intentionally NOT part of table state. The parent
+      // already provides the `columns` array in the desired order, so we let the
+      // definition order drive rendering. Passing columnOrder here caused
+      // TanStack to re-derive a visual order that didn't honor custom/standard
+      // interleaving. Drag-to-reorder still works via onColumnOrderChange below.
       columnVisibility,
       pagination: {
         pageIndex: page - 1,
@@ -629,7 +553,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         ? updater(columnFilters)
         : updater;
       
-      console.log('Filter change:', newFilters);
       setColumnFilters(newFilters);
       
       if (onColumnFiltersChange) {
@@ -654,7 +577,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       textMultiTermContains: (row, columnId, filterValue) => {
         const cellValue = row.getValue(columnId);
         
-        console.log(`🔍 [textMultiTermContains] columnId: ${columnId}, filterValue:`, filterValue, 'cellValue:', cellValue);
         
         // Handle new format: { terms: string[], mode: 'AND' | 'OR' }
         // or old format: string[]
@@ -679,18 +601,15 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         
         // If cell value is null/undefined, don't match
         if (cellValue === null || cellValue === undefined) {
-          console.log(`   ❌ Cell value is null/undefined`);
           return false;
         }
         
         // Convert filter terms to lowercase for case-insensitive matching
         const filterTermsLower = filterTerms.map((term: string) => term.toLowerCase());
-        console.log(`   📋 Filter terms (lowercase):`, filterTermsLower, `Mode: ${filterMode}`);
         
         // Handle array values (like genres)
         if (Array.isArray(cellValue)) {
           const cellValuesLower = cellValue.map(v => String(v).toLowerCase());
-          console.log(`   📚 Cell values (lowercase array):`, cellValuesLower);
           
           let matches: boolean;
           if (filterMode === 'AND') {
@@ -698,30 +617,25 @@ export function ResizableTable<T extends RowData & BaseRowData>({
             matches = filterTermsLower.every(filterTerm => 
               cellValuesLower.some(cellVal => cellVal.includes(filterTerm))
             );
-            console.log(`   ${matches ? '✅' : '❌'} Array match result (AND): ${matches}`);
           } else {
             // Check if ANY filter term matches at least one value in the cell's array
             matches = filterTermsLower.some(filterTerm => 
               cellValuesLower.some(cellVal => cellVal.includes(filterTerm))
             );
-            console.log(`   ${matches ? '✅' : '❌'} Array match result (OR): ${matches}`);
           }
           return matches;
         }
         
         // Handle string/number values
         const cellStr = String(cellValue).toLowerCase();
-        console.log(`   📝 Cell value (lowercase string): "${cellStr}"`);
         
         let matches: boolean;
         if (filterMode === 'AND') {
           // Check if ALL filter terms are contained in the cell value
           matches = filterTermsLower.every(filterTerm => cellStr.includes(filterTerm));
-          console.log(`   ${matches ? '✅' : '❌'} String match result (AND): ${matches}`);
         } else {
           // Check if ANY filter term is contained in the cell value
           matches = filterTermsLower.some(filterTerm => cellStr.includes(filterTerm));
-          console.log(`   ${matches ? '✅' : '❌'} String match result (OR): ${matches}`);
         }
         return matches;
       }
@@ -735,52 +649,26 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     }
   });
 
-  // Get all filtered and sorted rows
-  const allFilteredRows = table.getFilteredRowModel().rows;
-  const totalRecords = allFilteredRows.length;
-
   // Get paginated rows using TanStack Table's pagination
   const paginatedRows = table.getPaginationRowModel().rows;
 
-  console.log('Table state:', {
-    totalRecords,
-    currentPage: page,
-    recordsPerPage,
-    startIndex: 0,
-    endIndex: totalRecords,
-    paginatedRowsCount: paginatedRows.length,
-    allFilteredRowsCount: allFilteredRows.length,
-    filters: columnFilters
-  });
 
   const handleFilterChange = React.useCallback((columnId: string, value: any) => {
-    console.log('handleFilterChange called:', {
-      columnId,
-      value
-    });
 
     // Reset to page 1 before updating filters
     onPageChange(1);
 
     setColumnFilters((prev: ColumnFiltersState) => {
-      console.log('  Previous filters:', prev);
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (value == null || (typeof value === 'string' && !value)) {
-        console.log('  Removing filter for column:', columnId);
         return existing;
       }
       const newFilters = [...existing, { id: columnId, value }];
-      console.log('  New filters state:', newFilters);
       return newFilters;
     });
   }, [onPageChange]);
 
   const applyLocalFilter = (columnId: string, value: any) => {
-    console.log('applyLocalFilter called:', {
-      columnId,
-      value,
-      currentFilters: columnFilters
-    });
 
     // Reset to page 1 before updating filters
     onPageChange(1);
@@ -788,11 +676,9 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     setColumnFilters((prev: ColumnFiltersState) => {
       const existing = prev.filter((filter: { id: string }) => filter.id !== columnId);
       if (value == null || (typeof value === 'string' && !value)) {
-        console.log('Removing filter for column:', columnId);
         return existing;
       }
       const newFilters = [...existing, { id: columnId, value }];
-      console.log('New filters state:', newFilters);
 
       // Notify parent of filter change
       if (onColumnFiltersChange) {
@@ -1102,13 +988,11 @@ export function ResizableTable<T extends RowData & BaseRowData>({
       if (currentFilterValue) {
         // New format: { terms: string[], mode: 'AND' | 'OR' }
         if (typeof currentFilterValue === 'object' && 'terms' in currentFilterValue) {
-          console.log('🔄 Initializing filterTerms from saved filters (with mode):', currentFilterValue);
           setFilterMode(currentFilterValue.mode || 'OR');
           return currentFilterValue.terms || [];
         }
         // Old format: string[]
         if (Array.isArray(currentFilterValue) && currentFilterValue.length > 0) {
-          console.log('🔄 Initializing filterTerms from saved filters (array):', currentFilterValue);
           return currentFilterValue;
         }
       }
@@ -1125,9 +1009,7 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
     const handleAddTerm = () => {
       if (inputValue.trim() && !filterTerms.includes(inputValue.trim())) {
-        console.log('✅ Adding term to pills:', inputValue.trim());
         const newTerms = [...filterTerms, inputValue.trim()];
-        console.log('📋 All filter terms:', newTerms);
         setFilterTerms(newTerms);
         setInputValue('');
         // Update table filter with all pills and mode (if applicable)
@@ -1140,7 +1022,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
     };
 
     const handleRemoveTerm = (term: string) => {
-      console.log('❌ Removing term from pills:', term);
       const newTerms = filterTerms.filter(t => t !== term);
       setFilterTerms(newTerms);
       // Update table filter
@@ -1520,11 +1401,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         const columnMeta = column.meta;
         // Get the mapping from display labels to raw values
         const labelToValueMap = columnMeta?.labelMap || {};
-        // Get the mapping from raw values to display labels
-        const valueToLabelMap = Object.entries(labelToValueMap as Record<string, string>).reduce((acc, [label, value]) => {
-          acc[value] = label;
-          return acc;
-        }, {} as Record<string, string>);
 
         // Create options array with value = raw value, label = display label
         const selectOptions = column.filter.options?.map((displayLabel: string) => ({
@@ -1535,14 +1411,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         // Get option colors from column meta if available
         const singleSelectOptionColors = (header.column.columnDef.meta as any)?.option_colors || {};
 
-        console.log('Single-select setup:', {
-          columnId: header.column.id,
-          labelToValueMap,
-          valueToLabelMap,
-          selectOptions,
-          currentFilter,
-          singleSelectOptionColors
-        });
 
         const singleSelectValues = Array.isArray(currentFilter?.value) 
           ? currentFilter.value 
@@ -1567,13 +1435,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         const optionColors = (header.column.columnDef.meta as any)?.option_colors || {};
         const selectedMultiValues = (currentFilter?.value as string[]) || [];
         
-        console.log(`Rendering multi-select for ${header.column.id}:`, {
-          options: multiSelectOptions,
-          currentValue: currentFilter?.value,
-          columnFilter: column.filter,
-          columnMeta: column.meta,
-          optionColors
-        });
         
         return (
           <MultiSelectFilter
@@ -1631,8 +1492,6 @@ export function ResizableTable<T extends RowData & BaseRowData>({
 
   // Add debug logging for filter application
   useEffect(() => {
-    console.log('Current filters:', columnFilters);
-    console.log('Filtered rows:', table.getFilteredRowModel().rows.length);
   }, [columnFilters, table]);
 
   const handleClearFilter = (columnId: string) => {
@@ -1651,11 +1510,21 @@ export function ResizableTable<T extends RowData & BaseRowData>({
         onClearFilter={handleClearFilter}
       />
 
-      <Box style={{ 
+      <Box className="resizable-table-wrapper" style={{ 
         width: '100%',
         overflowX: 'auto',
         position: 'relative'
       }}>
+        <style>{`
+          .resizable-table-wrapper td,
+          .resizable-table-wrapper th {
+            border-right: 1px solid var(--mantine-color-dark-4);
+          }
+          .resizable-table-wrapper td:last-child,
+          .resizable-table-wrapper th:last-child {
+            border-right: none;
+          }
+        `}</style>
         <LoadingOverlay visible={loading} zIndex={100} />
         <Table
           striped
@@ -1688,25 +1557,17 @@ export function ResizableTable<T extends RowData & BaseRowData>({
               height: `${columnHeaderHeight}px`,
               maxHeight: `${columnHeaderHeight}px`,
               padding: '4px 8px',
-              borderRight: '1px solid var(--mantine-color-dark-4)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              '&:last-child': {
-                borderRight: 'none'
-              }
+              textOverflow: 'ellipsis'
             },
             th: {
               height: `${columnHeaderHeight}px`,
               maxHeight: `${columnHeaderHeight}px`,
               padding: '4px 8px',
-              borderRight: '1px solid var(--mantine-color-dark-4)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              '&:last-child': {
-                borderRight: 'none'
-              }
+              textOverflow: 'ellipsis'
             }
           }}
         >
@@ -1765,15 +1626,22 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           }}
                           onDrop={() => {
                             if (draggedColumn && draggedColumn !== header.column.id) {
-                              const newOrder = [...table.getAllLeafColumns().map(c => c.id)];
+                              // Base the reorder on the current full column order (which
+                              // includes hidden columns and reflects the visual order),
+                              // falling back to definition order only if unset.
+                              const base = (columnOrder && columnOrder.length > 0)
+                                ? columnOrder
+                                : table.getAllLeafColumns().map(c => c.id);
+                              const newOrder = [...base];
                               const draggedIdx = newOrder.indexOf(draggedColumn);
                               const targetIdx = newOrder.indexOf(header.column.id);
-                              
-                              // Remove dragged column and insert at target position
-                              newOrder.splice(draggedIdx, 1);
-                              newOrder.splice(targetIdx, 0, draggedColumn);
-                              
-                              setColumnOrder(newOrder);
+
+                              if (draggedIdx !== -1 && targetIdx !== -1) {
+                                // Remove dragged column and insert at target position
+                                newOrder.splice(draggedIdx, 1);
+                                newOrder.splice(targetIdx, 0, draggedColumn);
+                                setColumnOrder(newOrder);
+                              }
                             }
                             setDraggedColumn(null);
                             setDragOverColumn(null);
@@ -1808,15 +1676,19 @@ export function ResizableTable<T extends RowData & BaseRowData>({
                           }}
                           onTouchEnd={() => {
                             if (draggedColumn && dragOverColumn && draggedColumn !== dragOverColumn) {
-                              const newOrder = [...table.getAllLeafColumns().map(c => c.id)];
+                              const base = (columnOrder && columnOrder.length > 0)
+                                ? columnOrder
+                                : table.getAllLeafColumns().map(c => c.id);
+                              const newOrder = [...base];
                               const draggedIdx = newOrder.indexOf(draggedColumn);
                               const targetIdx = newOrder.indexOf(dragOverColumn);
-                              
-                              // Remove dragged column and insert at target position
-                              newOrder.splice(draggedIdx, 1);
-                              newOrder.splice(targetIdx, 0, draggedColumn);
-                              
-                              setColumnOrder(newOrder);
+
+                              if (draggedIdx !== -1 && targetIdx !== -1) {
+                                // Remove dragged column and insert at target position
+                                newOrder.splice(draggedIdx, 1);
+                                newOrder.splice(targetIdx, 0, draggedColumn);
+                                setColumnOrder(newOrder);
+                              }
                             }
                             setDraggedColumn(null);
                             setDragOverColumn(null);
