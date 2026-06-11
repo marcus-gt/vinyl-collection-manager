@@ -23,6 +23,7 @@ import { EditableStandardCell } from '../components/collection/EditableStandardC
 import { EditableDiscogsLinks } from '../components/collection/EditableDiscogsLinks';
 import { EditableCustomCell } from '../components/collection/EditableCustomCell';
 import { RecordPreviewModal } from '../components/collection/RecordPreviewModal';
+import { appEvents } from '../lib/appEvents';
 
 function Collection() {
   const [loading, setLoading] = useState(false);
@@ -84,35 +85,15 @@ function Collection() {
     loadRecords();
     loadCustomColumns();
 
-    // Add event listeners for data updates
-    const handleCustomValuesUpdate = () => {
-      console.log('Custom values update event received');
-      loadRecords();
-    };
-
+    // Reload records and custom columns whenever something signals a table refresh
+    // (record added/imported/synced, or a custom column modified).
     const handleTableRefresh = () => {
-      console.log('Table refresh event received, reloading records...');
       loadRecords();
       loadCustomColumns();
-      console.log('Records reload initiated');
     };
 
-    const handleCustomColumnsRefresh = () => {
-      console.log('Custom columns refresh event received');
-      loadCustomColumns();
-    };
-
-    // Add event listeners
-    window.addEventListener('custom-values-updated', handleCustomValuesUpdate);
-    window.addEventListener('vinyl-collection-table-refresh', handleTableRefresh);
-    window.addEventListener('refreshCustomColumns', handleCustomColumnsRefresh);
-
-    return () => {
-      console.log('Removing event listeners');
-      window.removeEventListener('custom-values-updated', handleCustomValuesUpdate);
-      window.removeEventListener('vinyl-collection-table-refresh', handleTableRefresh);
-      window.removeEventListener('refreshCustomColumns', handleCustomColumnsRefresh);
-    };
+    const off = appEvents.on('tableRefresh', handleTableRefresh);
+    return off;
   }, []);
 
   // Separate useEffect for CSV export to ensure it has access to current userRecords
@@ -249,8 +230,8 @@ function Collection() {
       }
     };
 
-    window.addEventListener('export-collection-csv', handleExportCSV);
-    return () => window.removeEventListener('export-collection-csv', handleExportCSV);
+    const off = appEvents.on('exportCollectionCsv', handleExportCSV);
+    return off;
   }, [userRecords, customColumns]); // Include dependencies
 
   const loadRecords = async () => {

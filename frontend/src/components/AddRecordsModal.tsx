@@ -5,6 +5,7 @@ import { lookup, records, spotify, customColumns as customColumnsApi } from '../
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
+import { appEvents } from '../lib/appEvents';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -399,14 +400,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleModalClose = () => {
-    console.log('Modal closing, recordsChanged:', recordsChanged);
     if (recordsChanged) {
-      console.log('Changes detected, triggering table refresh');
-      const refreshEvent = new CustomEvent('vinyl-collection-table-refresh');
-      window.dispatchEvent(refreshEvent);
-      console.log('Table refresh event dispatched:', refreshEvent);
-    } else {
-      console.log('No changes detected, skipping table refresh');
+      appEvents.emit('tableRefresh');
     }
     onClose();
   };

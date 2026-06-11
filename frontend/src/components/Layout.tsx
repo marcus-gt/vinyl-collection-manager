@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
 import type { CustomColumn, VinylRecord } from '../types';
+import { appEvents } from '../lib/appEvents';
 
 const recordsService: RecordsService = records;
 
@@ -42,7 +43,7 @@ function Layout() {
   };
 
   const handleExportCSV = () => {
-    window.dispatchEvent(new CustomEvent('export-collection-csv'));
+    appEvents.emit('exportCollectionCsv');
   };
 
   const handleImportCSV = async () => {
@@ -191,7 +192,7 @@ function Layout() {
         });
 
         // Trigger table refresh
-        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
+        appEvents.emit('tableRefresh');
 
         // Reset state
         setImporting(false);

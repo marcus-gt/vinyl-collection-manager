@@ -8,6 +8,7 @@ import { customColumns as customColumnsApi } from '../../services/api';
 import type { CustomColumn, VinylRecord } from '../../types';
 import { PILL_COLORS } from '../../constants/colors';
 import { getColorStyles } from './helpers';
+import { appEvents, type ColumnMetadataUpdate, type RecordValuesUpdate } from '../../lib/appEvents';
 
 export interface EditableCustomCellProps {
   value: string;
@@ -35,40 +36,38 @@ export function EditableCustomCell({
     setLocalValue(value);
   }, [value]);
   
-  // Listen for column metadata updates from other cells
+  // Listen for column metadata / record value updates from other cells
   useEffect(() => {
-    const handleMetadataUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail?.columnId === column.id) {
+    const handleMetadataUpdate = (detail: ColumnMetadataUpdate) => {
+      if (detail.columnId === column.id) {
         // Update local column reference with new metadata
-        if (customEvent.detail.option_colors) {
-          column.option_colors = customEvent.detail.option_colors;
+        if (detail.option_colors) {
+          column.option_colors = detail.option_colors;
         }
-        if (customEvent.detail.options) {
-          column.options = customEvent.detail.options;
+        if (detail.options) {
+          column.options = detail.options;
         }
         // Force re-render to show updated colors/options
         forceUpdate({});
       }
     };
-    
-    const handleRecordValuesUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail?.columnId === column.id) {
+
+    const handleRecordValuesUpdate = (detail: RecordValuesUpdate) => {
+      if (detail.columnId === column.id) {
         // Check if this record's value needs updating
-        const update = customEvent.detail.updates?.find((u: any) => u.recordId === recordId);
+        const update = detail.updates?.find((u) => u.recordId === recordId);
         if (update) {
           // Update the local value to reflect the change
           setLocalValue(update.value);
         }
       }
     };
-    
-    window.addEventListener('updateColumnMetadata', handleMetadataUpdate);
-    window.addEventListener('updateRecordValues', handleRecordValuesUpdate);
+
+    const offMeta = appEvents.on('columnMetadata', handleMetadataUpdate);
+    const offValues = appEvents.on('recordValues', handleRecordValuesUpdate);
     return () => {
-      window.removeEventListener('updateColumnMetadata', handleMetadataUpdate);
-      window.removeEventListener('updateRecordValues', handleRecordValuesUpdate);
+      offMeta();
+      offValues();
     };
   }, [column, forceUpdate, recordId]);
   
@@ -182,9 +181,7 @@ export function EditableCustomCell({
         forceUpdate({});
         
         // Dispatch a custom event that only updates the column metadata without refreshing everything
-        window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
-          detail: { columnId: column.id, option_colors: updatedColors } 
-        }));
+        appEvents.emit('columnMetadata', { columnId: column.id, option_colors: updatedColors });
       } catch (error) {
         console.error('Error changing color:', error);
         notifications.show({
@@ -287,17 +284,13 @@ export function EditableCustomCell({
         })).then((updates) => {
           // After all updates complete, dispatch events to refresh other cells
           // 1. Update column metadata (options and colors)
-          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
-            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
-          }));
+          appEvents.emit('columnMetadata', { columnId: column.id, options: updatedOptions, option_colors: updatedColors });
           
           // 2. Update record values with the new option name
-          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
-            detail: { 
-              columnId: column.id, 
-              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
-            } 
-          }));
+          appEvents.emit('recordValues', {
+            columnId: column.id,
+            updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+          });
           
           notifications.show({
             title: 'Option renamed',
@@ -386,17 +379,13 @@ export function EditableCustomCell({
         })).then((updates) => {
           // After all updates complete, dispatch events to refresh other cells
           // 1. Update column metadata (options and colors)
-          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
-            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
-          }));
+          appEvents.emit('columnMetadata', { columnId: column.id, options: updatedOptions, option_colors: updatedColors });
           
           // 2. Update record values with the deleted option removed
-          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
-            detail: { 
-              columnId: column.id, 
-              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
-            } 
-          }));
+          appEvents.emit('recordValues', {
+            columnId: column.id,
+            updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+          });
           
           notifications.show({
             title: 'Option deleted',
@@ -847,9 +836,7 @@ export function EditableCustomCell({
         column.option_colors = updatedColors;
         forceUpdate({});
         
-        window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
-          detail: { columnId: column.id, option_colors: updatedColors } 
-        }));
+        appEvents.emit('columnMetadata', { columnId: column.id, option_colors: updatedColors });
       } catch (error) {
         console.error('Error changing color:', error);
         notifications.show({
@@ -905,16 +892,12 @@ export function EditableCustomCell({
           await onUpdate(record.id!, column.id, newName.trim());
           return { recordId: record.id!, newValue: newName.trim() };
         })).then((updates) => {
-          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
-            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
-          }));
+          appEvents.emit('columnMetadata', { columnId: column.id, options: updatedOptions, option_colors: updatedColors });
           
-          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
-            detail: { 
-              columnId: column.id, 
-              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
-            } 
-          }));
+          appEvents.emit('recordValues', {
+            columnId: column.id,
+            updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+          });
           
           notifications.show({
             title: 'Option renamed',
@@ -970,16 +953,12 @@ export function EditableCustomCell({
           await onUpdate(record.id!, column.id, ''); // Clear value
           return { recordId: record.id!, newValue: '' };
         })).then((updates) => {
-          window.dispatchEvent(new CustomEvent('updateColumnMetadata', { 
-            detail: { columnId: column.id, options: updatedOptions, option_colors: updatedColors } 
-          }));
+          appEvents.emit('columnMetadata', { columnId: column.id, options: updatedOptions, option_colors: updatedColors });
           
-          window.dispatchEvent(new CustomEvent('updateRecordValues', { 
-            detail: { 
-              columnId: column.id, 
-              updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
-            } 
-          }));
+          appEvents.emit('recordValues', {
+            columnId: column.id,
+            updates: updates.map(u => ({ recordId: u.recordId, value: u.newValue }))
+          });
           
           notifications.show({
             title: 'Option deleted',
