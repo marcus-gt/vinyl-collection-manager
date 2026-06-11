@@ -1,12 +1,11 @@
 import axios from 'axios';
 import type { AuthResponse, VinylRecord, ApiResponse, CustomColumn, CustomColumnValue, SyncPlaylistsResponse } from '../types';
-import { notifications } from '@mantine/notifications';
 
 const API_URL = import.meta.env.PROD 
   ? 'https://vinyl-collection-manager.onrender.com'
   : ''; // Empty string = use relative URLs, Vite proxy will handle it
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: {
@@ -33,9 +32,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    // If the error is 401 or 500 and we haven't tried to refresh yet
-    if ((error.response?.status === 401 || error.response?.status === 500) && 
-        !originalRequest._retry) {
+    // If the error is a 401 and we haven't tried to refresh yet. (We intentionally
+    // do NOT retry on 500 - that masks server errors and can cause retry storms.)
+    if (error.response?.status === 401 && !originalRequest._retry) {
       // Only try to refresh if we're not already on /api/auth/me or /api/auth/refresh
       if (originalRequest.url !== '/api/auth/me' && originalRequest.url !== '/api/auth/refresh') {
         console.log(`Received ${error.response?.status} error, attempting token refresh...`);
@@ -81,30 +80,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-// Helper to handle session timeouts
-const handleSessionTimeout = () => {
-  notifications.show({
-    title: 'Session Expired',
-    message: 'Your session has expired. Please log in again.',
-    color: 'yellow'
-  });
-  // Clear any auth state if you're using it
-  localStorage.removeItem('session');
-  // Redirect to login page
-  window.location.href = '/login';
-};
-
-// Helper to handle API responses
-const handleApiResponse = async (response: Response) => {
-  if (response.status === 400 || response.status === 401) {
-    handleSessionTimeout();
-    return { success: false, error: 'Session expired' };
-  }
-  
-  const data = await response.json();
-  return data;
-};
 
 export const auth = {
   register: async (email: string, password: string): Promise<AuthResponse> => {
@@ -224,17 +199,8 @@ export const records: RecordsService = {
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
-      console.log('API: Initiating delete request for record:', id);
-      const response = await fetch(`/api/records/${id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      console.log('API: Delete response status:', response.status);
-      const responseText = await response.text();
-      console.log('API: Raw response text:', responseText);
-      const data = responseText ? JSON.parse(responseText) : { success: true };
-      console.log('API: Parsed delete response data:', data);
-      return data;
+      const response = await api.delete<ApiResponse<void>>(`/api/records/${id}`);
+      return response.data ?? { success: true };
     } catch (err) {
       console.error('API: Failed to delete record:', err);
       return { success: false, error: 'Failed to delete record' };
@@ -243,15 +209,8 @@ export const records: RecordsService = {
 
   updateNotes: async (id: string, notes: string): Promise<ApiResponse<VinylRecord>> => {
     try {
-      const response = await fetch(`/api/records/${id}/notes`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ notes })
-      });
-      return handleApiResponse(response);
+      const response = await api.put<ApiResponse<VinylRecord>>(`/api/records/${id}/notes`, { notes });
+      return response.data;
     } catch (err) {
       console.error('Failed to update notes:', err);
       return { success: false, error: 'Failed to update notes' };
@@ -316,33 +275,8 @@ export const lookup = {
 export const customColumns = {
   getAll: async (): Promise<ApiResponse<CustomColumn[]>> => {
     try {
-      console.log('=== Fetching Custom Columns ===');
-      const response = await fetch('/api/custom-columns', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      const responseText = await response.text();
-      
-      if (!response.ok) {
-        console.error('Failed to fetch custom columns:', {
-          status: response.status,
-          error: responseText
-        });
-        return { 
-          success: false, 
-          error: `Failed to fetch custom columns: ${response.status} ${responseText}` 
-        };
-      }
-      
-      const data = JSON.parse(responseText);
-      console.log('Custom columns fetched successfully:', {
-        count: data.data?.length || 0,
-        columns: data.data?.map((col: { id: string; name: string; type: string }) => ({ id: col.id, name: col.name, type: col.type }))
-      });
-      return data;
+      const response = await api.get<ApiResponse<CustomColumn[]>>('/api/custom-columns');
+      return response.data;
     } catch (err) {
       console.error('Error in getAll custom columns:', err);
       return { success: false, error: 'Failed to get custom columns' };
@@ -351,12 +285,10 @@ export const customColumns = {
 
   getAllValues: async (columnId: string): Promise<ApiResponse<Array<{ record_id: string; value: string }>>> => {
     try {
-      const response = await fetch(`/api/custom-columns/${columnId}/all-values`, {
-        method: 'GET',
-        credentials: 'include'
-      });
-      const data = await response.json();
-      return data;
+      const response = await api.get<ApiResponse<Array<{ record_id: string; value: string }>>>(
+        `/api/custom-columns/${columnId}/all-values`
+      );
+      return response.data;
     } catch (err) {
       console.error('Failed to get custom column values:', err);
       return { success: false, error: 'Failed to get custom column values' };
@@ -365,17 +297,10 @@ export const customColumns = {
 
   updateValue: async (recordId: string, columnId: string, value: string): Promise<ApiResponse<void>> => {
     try {
-      const response = await fetch(`/api/records/${recordId}/custom-values`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          [columnId]: value
-        })
+      const response = await api.put<ApiResponse<void>>(`/api/records/${recordId}/custom-values`, {
+        [columnId]: value
       });
-      return handleApiResponse(response);
+      return response.data;
     } catch (err) {
       console.error('Failed to update custom column value:', err);
       return { success: false, error: 'Failed to update custom column value' };
@@ -384,15 +309,8 @@ export const customColumns = {
 
   create: async (data: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
     try {
-      const response = await fetch('/api/custom-columns', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      return handleApiResponse(response);
+      const response = await api.post<ApiResponse<CustomColumn>>('/api/custom-columns', data);
+      return response.data;
     } catch (err) {
       console.error('Failed to create custom column:', err);
       return { success: false, error: 'Failed to create custom column' };
@@ -401,25 +319,8 @@ export const customColumns = {
 
   update: async (id: string, data: Partial<CustomColumn>): Promise<ApiResponse<CustomColumn>> => {
     try {
-      console.log('API: Starting column update:', { id, data });
-      console.log('API: Request payload:', JSON.stringify(data, null, 2));
-      
-      const response = await fetch(`/api/custom-columns/${id}`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      
-      console.log('API: Raw response:', response);
-      const responseText = await response.text();
-      console.log('API: Raw response body:', responseText);
-      
-      const responseData = JSON.parse(responseText);
-      console.log('API: Parsed response data:', responseData);
-      return responseData;
+      const response = await api.put<ApiResponse<CustomColumn>>(`/api/custom-columns/${id}`, data);
+      return response.data;
     } catch (err) {
       console.error('API: Failed to update custom column:', err);
       return { success: false, error: 'Failed to update custom column' };
@@ -428,11 +329,8 @@ export const customColumns = {
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
-      const response = await fetch(`/api/custom-columns/${id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      return handleApiResponse(response);
+      const response = await api.delete<ApiResponse<void>>(`/api/custom-columns/${id}`);
+      return response.data ?? { success: true };
     } catch (err) {
       console.error('Failed to delete custom column:', err);
       return { success: false, error: 'Failed to delete custom column' };
@@ -549,9 +447,8 @@ export const spotify = {
     };
   }> => {
     try {
-      const response = await fetch(`/api/spotify/album-from-url?url=${encodeURIComponent(url)}`);
-      const data = await response.json();
-      return data;
+      const response = await api.get(`/api/spotify/album-from-url?url=${encodeURIComponent(url)}`);
+      return response.data;
     } catch (error) {
       console.error('Error getting album from URL:', error);
       return {
@@ -572,9 +469,8 @@ export const spotify = {
     };
   }> => {
     try {
-      const response = await fetch(`/api/spotify/album-from-url-public?url=${encodeURIComponent(url)}`, { signal });
-      const data = await response.json();
-      return data;
+      const response = await api.get(`/api/spotify/album-from-url-public?url=${encodeURIComponent(url)}`, { signal });
+      return response.data;
     } catch (error) {
       console.error('Error getting album from URL (public):', error);
       return {
