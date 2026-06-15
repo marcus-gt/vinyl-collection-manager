@@ -72,7 +72,6 @@ export function useBackendSettings<T>(
   const debouncedSave = useDebouncedCallback(async (newValue: T) => {
     try {
       await userSettings.set(key, newValue);
-      console.log(`Setting ${key} saved to backend`);
     } catch (error) {
       console.error(`Failed to save setting ${key} to backend:`, error);
     }

@@ -87,7 +87,7 @@ export interface AuthResponse {
   user?: User;
   error?: string;
   session?: {
-    access_token: string;
+    access_token?: string;
     user: User;
   };
 }

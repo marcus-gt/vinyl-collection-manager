@@ -91,7 +91,7 @@ export interface AuthResponse {
     email: string;
   };
   session?: {
-    access_token: string;
+    access_token?: string;
     user: {
       id: string;
       email: string;

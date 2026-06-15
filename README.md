@@ -1,215 +1,189 @@
 # Vinyl Collection Manager
 
-A full-stack web application for managing your vinyl record collection with barcode scanning, Discogs integration, Spotify playlists, and custom metadata tracking.
+A full-stack web application for managing a vinyl record collection with barcode
+scanning, Discogs enrichment, Spotify playlist sync, and custom metadata.
 
 ## Features
 
-### Core Functionality
-- 📷 **Barcode scanning** using device camera
-- 🎵 **Discogs integration** for detailed record information (artist, album, year, label, genres, styles, musicians)
+- 📷 **Barcode scanning** using the device camera
+- 🎵 **Discogs integration** for record metadata (artist, album, year, label, genres, styles, contributors)
 - 🎶 **Spotify integration** for playlist management and auto-sync
-- 📊 **Advanced table view** with sorting, filtering, and column customization
-- 🏷️ **Custom columns** for personal metadata (condition, location, purchase date, etc.)
-- 🔍 **Multiple search methods**: barcode, Discogs URL, artist/album lookup
-- 📱 **Responsive design** that works on mobile and desktop
-- 🔐 **User authentication** with secure session management
-- 💾 **Auto-save** custom field values with debouncing
-
-## Setup
-
-1. Clone the repository:
-```bash
-git clone [your-repo-url]
-cd vinyl-barcode-scanner
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Create a `.env` file in the root directory with your Discogs API token:
-```
-DISCOGS_TOKEN=your_token_here
-```
-
-4. Run the development server:
-```bash
-cd barcode-scanner
-python server.py
-```
-
-5. Open `http://localhost:3000` in your browser
-
-## Development
-
-The project structure:
-```
-vinyl-barcode-scanner/
-├── barcode-scanner/
-│   ├── app.js          # Frontend JavaScript
-│   ├── index.html      # Main HTML file
-│   ├── server.py       # Flask server
-│   └── styles.css      # CSS styles
-├── discogs_lookup.py   # Discogs API interaction
-├── discogs_data.py     # Data processing
-├── requirements.txt    # Python dependencies
-└── render.yaml         # Render deployment config
-```
-
-## Deployment
-
-The application is configured for deployment on Render.com. Required environment variables:
-- `DISCOGS_TOKEN`: Your Discogs API token
-- `FLASK_ENV`: Set to 'production' for deployment
+- 📊 **Advanced table** with sorting, filtering, resizing, and drag-to-reorder columns
+- 🏷️ **Custom columns** for personal metadata (condition, rating, location, etc.)
+- 🔍 **Multiple lookup methods**: barcode, Discogs URL, artist/album search
+- 📱 **Responsive UI** for mobile and desktop
+- 🔐 **Authentication** via Supabase with per-user row-level security
+- 💾 **Per-user preferences** (column order/visibility) persisted to the backend
 
 ## Tech Stack
 
-### Frontend
-- **React** with TypeScript
-- **Mantine UI** for components
-- **TanStack Table** for advanced table functionality
-- **Vite** for build tooling
-- **Axios** for API calls
+**Frontend** — React 18 + TypeScript, Mantine UI, TanStack Table, React Router,
+Vite, Axios.
 
-### Backend
-- **Flask** (Python) with Gunicorn
-- **Supabase** (PostgreSQL) for database and auth
-- **Discogs API** for vinyl metadata
-- **Spotify API** for playlist integration
+**Backend** — Flask (Python) organized into blueprints, served by Gunicorn in
+production. Supabase (PostgreSQL) for database and auth. Discogs and Spotify APIs
+for enrichment.
 
-## Future Improvements
+## Project Structure
 
-### High Priority (Recommended)
-
-#### 1. Code Splitting & Bundle Optimization
-**Impact**: ~40% faster initial load time (1047 KB → ~400 KB initial bundle)  
-**Time**: 2-3 hours
-
-Currently, the entire application bundle is 1047 KB (314 KB gzipped), which can slow down initial page load. Implementing lazy loading for routes will significantly improve performance.
-
-**Implementation:**
-```typescript
-// In main.tsx or router config
-const Collection = lazy(() => import('./pages/Collection'));
-const Scanner = lazy(() => import('./pages/Scanner'));
-const Login = lazy(() => import('./pages/Login'));
-
-// Wrap routes with Suspense
-<Suspense fallback={<LoadingSpinner />}>
-  <Routes>
-    <Route path="/collection" element={<Collection />} />
-    {/* ... */}
-  </Routes>
-</Suspense>
+```
+vinyl-collection-manager/
+├── barcode_scanner/          # Flask backend
+│   ├── server.py             # App setup, config, blueprint registration
+│   ├── extensions.py         # Shared extensions (CORS, rate limiter)
+│   ├── auth_utils.py         # @require_auth and auth helpers
+│   ├── db.py                 # Supabase client
+│   ├── spotify.py            # Spotify helpers
+│   └── blueprints/           # Routes: auth, lookup, records, custom, spotify, analytics
+├── frontend/                 # React + TypeScript (Vite) SPA
+│   └── src/
+│       ├── pages/            # Route pages (Collection, MusicianNetwork, ...)
+│       ├── components/       # UI components (ResizableTable, Layout, ...)
+│       ├── hooks/            # useBackendSettings, useCsvImport, useSpotifySync, ...
+│       ├── contexts/         # AuthContext
+│       ├── services/         # api.ts (shared axios instance)
+│       └── lib/              # appEvents (typed event emitter)
+├── discogs_lookup.py         # Discogs API helpers
+├── requirements.txt          # Python dependencies (pip)
+├── gunicorn.conf.py          # Gunicorn config (production)
+├── start_server.sh           # Local backend launcher
+├── render.yaml               # Render deployment config
+└── .env.example              # Environment variable template
 ```
 
-**Benefits:**
-- Faster time to first paint
-- Reduced initial JavaScript parsing time
-- Better mobile experience
+## Setup
 
-#### 2. Discogs API Rate Limiting
-**Impact**: Fewer failed lookups, better UX  
-**Time**: 1 hour
+### 1. Clone
 
-Add rate limiting to prevent hitting Discogs API limits (60 requests/minute for authenticated users).
-
-**Implementation:**
-```python
-# In discogs_lookup.py
-from time import sleep, time
-
-class RateLimiter:
-    def __init__(self, min_interval=1.0):
-        self.min_interval = min_interval
-        self.last_request = 0
-    
-    def wait(self):
-        elapsed = time() - self.last_request
-        if elapsed < self.min_interval:
-            sleep(self.min_interval - elapsed)
-        self.last_request = time()
-
-rate_limiter = RateLimiter(min_interval=1.0)
-
-# Use before each Discogs API call
-rate_limiter.wait()
+```bash
+git clone <your-repo-url>
+cd vinyl-collection-manager
 ```
 
-**Benefits:**
-- Prevents API rate limit errors
-- More reliable lookups
-- Better user experience
+### 2. Configure environment
 
-#### 3. Better Error Handling for Failed Lookups
-**Impact**: Improved UX when Discogs data is unavailable  
-**Time**: 30 minutes
+Copy `.env.example` to `.env` in the project root and fill in real values
+(Supabase, Discogs, and Spotify credentials):
 
-Currently, errors like "404: That release does not exist" are shown in logs but could be handled more gracefully in the UI.
-
-**Implementation:**
-- Add user-friendly error messages
-- Provide retry button for failed requests
-- Show alternative search methods when lookup fails
-- Cache failed lookups to avoid repeated attempts
-
-### Medium Priority (Optional)
-
-#### 4. Virtual Scrolling for Large Collections
-**When**: Only if you have 1000+ records  
-**Time**: 3-4 hours
-
-The current pagination works well for most collections. Virtual scrolling would only be beneficial for very large datasets.
-
-**Note**: TanStack Table already provides good performance with pagination. Monitor actual performance before implementing this.
-
-#### 5. Improved Caching Strategy
-**When**: If you notice slow load times  
-**Time**: 2-3 hours
-
-Implement client-side caching for:
-- Discogs metadata (reduce API calls for re-scanned items)
-- Custom column configurations
-- User preferences
-
-**Note**: Supabase already handles server-side caching well. This would only optimize client-side performance.
-
-### Low Priority (Skip for Now)
-
-The following were considered but are **not recommended** at this time:
-
-- ❌ **React.memo() everywhere**: Table already uses proper memoization; premature optimization
-- ❌ **Complex state management**: Current React Context works fine for this app size
-- ❌ **Additional tests**: Nice to have, but not blocking any features
-- ❌ **Microservices architecture**: Overkill for this application
-
-## Performance Notes
-
-Current bundle analysis (production build):
-```
-dist/assets/index-DHaTUcmb.css    203.66 kB │ gzip:  29.86 kB
-dist/assets/index-DKXwiJpS.js   1,047.36 kB │ gzip: 314.95 kB
+```bash
+cp .env.example .env
 ```
 
-Main contributors to bundle size:
-- Mantine UI components (~400 KB)
-- TanStack Table (~150 KB)
-- React and dependencies (~300 KB)
+### 3. Install backend dependencies
 
-**Recommendation**: Implement code splitting (Priority #1) to load these libraries on-demand.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-## Contributing
+### 4. Install frontend dependencies
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you'd like to change.
+```bash
+cd frontend
+npm install
+```
 
-### Development Workflow
+> Requires Node.js 20+.
 
-See [RUNNING.md](RUNNING.md) for detailed instructions on:
-- Setting up the local development environment
-- Running backend and frontend servers
-- Troubleshooting common issues
+## Running Locally
+
+You need two processes: the Flask backend and the Vite dev server.
+
+### Terminal 1 — backend
+
+```bash
+./start_server.sh
+```
+
+The backend runs on **port 3000** in development. `start_server.sh` activates a
+local `.venv` if present, then runs the app as a module
+(`python -m barcode_scanner.server`) so the package imports resolve correctly.
+
+### Terminal 2 — frontend (dev server with hot reload)
+
+```bash
+cd frontend
+npm run dev
+```
+
+Vite runs on **port 5173** and proxies API requests to the backend on port 3000.
+
+**Open the app at http://localhost:5173**
+
+### Production build (optional, served by the backend)
+
+```bash
+cd frontend
+npm run build
+```
+
+The backend serves the built files from `frontend/dist` at **http://localhost:3000**.
+Note that the production build targets the deployed API URL; for local testing
+prefer the dev server above.
+
+## Environment Variables
+
+All backend configuration is provided via environment variables (loaded from
+`.env` locally). See `.env.example` for the full list:
+
+| Variable | Description |
+| --- | --- |
+| `FLASK_ENV` | `development` locally, `production` on deploy |
+| `FLASK_SECRET_KEY` | Secret used to sign Flask sessions |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_KEY` | Supabase anon (public) key |
+| `DISCOGS_TOKEN` | Discogs API token |
+| `SPOTIFY_CLIENT_ID` | Spotify app client ID |
+| `SPOTIFY_CLIENT_SECRET` | Spotify app client secret |
+| `SPOTIFY_REDIRECT_URI` | Registered Spotify redirect URI |
+| `SYNC_SECRET_KEY` | Authorizes the automated (cron) playlist-sync endpoint. Required in production; optional locally (only needed to test `/api/spotify/playlist/sync/automated`). |
+
+## Deployment
+
+The app is configured for [Render](https://render.com) via `render.yaml`:
+
+- Build: `pip install -r requirements.txt && cd frontend && npm install && npm run build`
+- Start: `gunicorn -c gunicorn.conf.py barcode_scanner.server:app`
+- Backend runs with Gunicorn; the built frontend is served as static files.
+- Set the secret environment variables (marked `sync: false`) in the Render dashboard.
+
+### Automated Spotify sync (cron)
+
+Playlists are re-synced on a schedule by a Supabase `pg_cron` job
+(`public.sync_spotify_playlists_cron`) that POSTs to
+`/api/spotify/playlist/sync/automated` with an `X-Sync-Key` header.
+
+The secret lives in **two places that must match**:
+
+1. The `SYNC_SECRET_KEY` environment variable on Render (read by the backend).
+2. The `sync_secret_key` row in the Supabase `app_settings` table (read by the
+   cron function, alongside `api_url`).
+
+> ⚠️ The SQL files under `supabase/migrations/` are **not authoritative** — the
+> live cron schedule, endpoint path, and secret source differ from them. Inspect
+> the running database (e.g. `cron.job`, `pg_get_functiondef`, `app_settings`)
+> rather than trusting those files.
+
+## Troubleshooting
+
+**"Network Error" / requests hitting the production URL when logging in locally.**
+You're loading a production build. Use the dev server (`npm run dev`) on port 5173.
+
+**401 / "User not authenticated".**
+Use `http://localhost:5173` (dev) or `http://localhost:3000` (production build),
+not other ports.
+
+**`Address already in use` on port 3000.**
+
+```bash
+lsof -ti:3000 | xargs kill -9
+```
+
+**`ImportError: attempted relative import with no known parent package`.**
+Start the backend with `./start_server.sh` (or `python -m barcode_scanner.server`),
+not `python barcode_scanner/server.py`.
 
 ## License
 
-MIT 
+MIT

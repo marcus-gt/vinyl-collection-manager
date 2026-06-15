@@ -5,6 +5,7 @@ import { customColumns as customColumnsService, customValues, records } from '..
 import type { CustomColumn, CustomColumnType } from '../types';
 import { PILL_COLORS } from '../constants/colors';
 import { notifications } from '@mantine/notifications';
+import { appEvents } from '../lib/appEvents';
 
 // Helper function to get color styles for badges
 const getColorStyles = (colorName: string) => {
@@ -69,7 +70,7 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
   const handleModalClose = () => {
     if (columnsChanged) {
       // Only trigger table refresh if columns were modified
-      window.dispatchEvent(new CustomEvent('refresh-table-data'));
+      appEvents.emit('tableRefresh');
     }
     resetForm();
     onClose(false); // X button - don't return to Settings
@@ -119,7 +120,6 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
         applyToAll
       };
 
-      console.log('Submitting column data:', columnData);
 
       if (editingColumn?.id) {
         // Update existing column
@@ -200,7 +200,6 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
         
         if (response.success) {
           setColumnsChanged(true);
-          console.log('Color updated successfully');
           // Reload columns
           await loadColumns();
         } else {
@@ -224,7 +223,6 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
         });
       }
     } else {
-      console.log('No column being edited, skipping backend update');
     }
   };
 
@@ -234,7 +232,6 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
     try {
       // Get all records to find ones that use this option
       const recordsResponse = await records.getAll();
-      console.log('Records response:', recordsResponse);
       
       if (recordsResponse.success && recordsResponse.data) {
         // Filter records that have this value
@@ -251,7 +248,6 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
           return false;
         });
 
-        console.log('Records to update:', recordsToUpdate);
 
         // Remove the option and its color
         const newOptionColors = { ...optionColors };
@@ -293,8 +289,7 @@ export function CustomColumnManager({ opened, onClose, onCustomColumnsChange, ed
         });
 
         // Wait for all updates to complete
-        const updateResults = await Promise.all(updates);
-        console.log('Update results:', updateResults);
+        await Promise.all(updates);
 
         // Refresh the columns
         await loadColumns();

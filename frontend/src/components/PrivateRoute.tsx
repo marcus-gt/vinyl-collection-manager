@@ -16,11 +16,9 @@ function PrivateRoute({ children }: PrivateRouteProps) {
 
   // Redirect to login if not authenticated
   if (!user) {
-    console.log('No user found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('User authenticated, rendering protected route');
   return <>{children}</>;
 }
 

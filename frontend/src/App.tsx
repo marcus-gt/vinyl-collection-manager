@@ -1,15 +1,28 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { MantineProvider, createTheme } from '@mantine/core';
+import { MantineProvider, createTheme, Center, Loader } from '@mantine/core';
 import '@mantine/core/styles.css';
 import { ModalsProvider } from '@mantine/modals';
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Collection from './pages/Collection';
-import MusicianNetwork from './pages/MusicianNetwork';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import { Notifications } from '@mantine/notifications';
+
+// Lazy-load the heavy authenticated pages so their large dependencies
+// (e.g. ECharts and react-force-graph for the musician network) are split out
+// of the initial bundle and only fetched when those routes are visited.
+const Collection = lazy(() => import('./pages/Collection'));
+const MusicianNetwork = lazy(() => import('./pages/MusicianNetwork'));
+
+function RouteFallback() {
+  return (
+    <Center h="60vh">
+      <Loader />
+    </Center>
+  );
+}
 
 // Create custom theme
 const theme = createTheme({
@@ -102,7 +115,9 @@ function App() {
                 path="collection"
                 element={
                   <PrivateRoute>
-                    <Collection />
+                    <Suspense fallback={<RouteFallback />}>
+                      <Collection />
+                    </Suspense>
                   </PrivateRoute>
                 }
               />
@@ -110,7 +125,9 @@ function App() {
                   path="musician-network"
                   element={
                     <PrivateRoute>
-                      <MusicianNetwork />
+                      <Suspense fallback={<RouteFallback />}>
+                        <MusicianNetwork />
+                      </Suspense>
                     </PrivateRoute>
                   }
                 />

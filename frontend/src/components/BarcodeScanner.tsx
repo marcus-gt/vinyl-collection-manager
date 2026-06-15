@@ -16,7 +16,6 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
   const handleScan = (detectedCodes: IDetectedBarcode[]) => {
     if (detectedCodes && detectedCodes.length > 0 && !isPaused && !isLoading) {
       const barcode = detectedCodes[0].rawValue;
-      console.log("Barcode detected:", barcode);
       onScan(barcode);
               setIsPaused(true);
             }
@@ -72,7 +71,6 @@ export function BarcodeScanner({ onScan, isScanning, isLoading }: BarcodeScanner
         });
       }
     } catch (err) {
-      console.log('Focus not supported or failed:', err);
     }
   };
 

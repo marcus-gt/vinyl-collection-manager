@@ -5,6 +5,7 @@ import { lookup, records, spotify, customColumns as customColumnsApi } from '../
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
+import { appEvents } from '../lib/appEvents';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -88,7 +89,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   // Reset state when modal is opened
   useEffect(() => {
     if (opened) {
-      console.log('Modal opened, resetting states');
       setArtist('');
       setAlbum('');
       setUrlOrBarcode('');
@@ -115,7 +115,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       setSelectedPlaylist(undefined);
       setLoadingSpotify(false);
       setIsSpotifyAuthenticated(false);
-      console.log('States reset complete');
     }
   }, [opened]);
 
@@ -399,14 +398,8 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   };
 
   const handleModalClose = () => {
-    console.log('Modal closing, recordsChanged:', recordsChanged);
     if (recordsChanged) {
-      console.log('Changes detected, triggering table refresh');
-      const refreshEvent = new CustomEvent('vinyl-collection-table-refresh');
-      window.dispatchEvent(refreshEvent);
-      console.log('Table refresh event dispatched:', refreshEvent);
-    } else {
-      console.log('No changes detected, skipping table refresh');
+      appEvents.emit('tableRefresh');
     }
     onClose();
   };
@@ -426,8 +419,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         custom_values_cache: record.custom_values_cache || {}
       };
 
-      console.log('Adding record with all fields:', recordData);
-      console.log('Custom values being sent:', recordData.custom_values_cache);
       const response = await records.add(recordData);
 
       if (response.success) {
@@ -464,7 +455,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     setIsLoadingSpotifyAuth(true);
     setError(undefined);
     try {
-      console.log('Getting Spotify auth URL...');
       const response = await spotify.getAuthUrl();
       
       if (!response.success) {
@@ -498,7 +488,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         setSpotifyPlaylists(response.data || []);
       }
     } catch (err) {
-      console.log('Failed to check Spotify auth:', err);
       setIsSpotifyAuthenticated(false);
     } finally {
       setLoadingSpotify(false);
@@ -555,7 +544,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
       const spotifyCode = urlParams.get('code');
       
       if (spotifyCode) {
-        console.log('Detected Spotify auth code - clearing URL to prevent auth loops');
         // Clear URL parameters without refreshing the page to avoid auth loops
         window.history.replaceState({}, document.title, window.location.pathname);
       }
@@ -570,7 +558,6 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
     const returnPath = localStorage.getItem('spotify_auth_return_path');
     
     if (spotifyCode) {
-      console.log('Processing Spotify auth callback');
       // Clear the URL parameters without triggering navigation
       window.history.replaceState({}, document.title, window.location.pathname);
       // Clear stored return path

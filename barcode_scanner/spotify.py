@@ -5,7 +5,7 @@ import requests
 from urllib.parse import urlencode
 from flask import session, redirect, request, jsonify
 from functools import wraps
-from .db import get_supabase_client
+from .db import get_supabase_client, add_record_to_collection
 from datetime import datetime
 import sys
 from pathlib import Path
@@ -22,13 +22,6 @@ from discogs_data import get_album_data_from_id
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1"
-
-# Debug environment variables
-print("\n=== Spotify Configuration ===")
-print(f"Environment variables:")
-print(f"SPOTIFY_CLIENT_ID: {os.getenv('SPOTIFY_CLIENT_ID')}")
-print(f"SPOTIFY_CLIENT_SECRET: {'Present' if os.getenv('SPOTIFY_CLIENT_SECRET') else 'Missing'}")
-print(f"SPOTIFY_REDIRECT_URI: {os.getenv('SPOTIFY_REDIRECT_URI')}")
 
 # Load and validate configuration
 CLIENT_ID = os.getenv('SPOTIFY_CLIENT_ID')
@@ -158,14 +151,8 @@ def require_spotify_auth(f):
 
 def get_spotify_auth_url():
     """Generate the Spotify authorization URL"""
-    print("\n=== Generating Spotify Auth URL ===")
-    print(f"Using configuration:")
-    print(f"CLIENT_ID: {CLIENT_ID}")
-    print(f"REDIRECT_URI: {REDIRECT_URI}")
-    
     try:
         if not CLIENT_ID:
-            print("Error: Missing CLIENT_ID")
             return jsonify({
                 'success': False,
                 'error': 'Spotify CLIENT_ID is missing'
@@ -882,28 +869,17 @@ def sync_subscribed_playlists(is_automated: bool = False):
                         print(f"Discogs lookup response: {lookup_response}")
                         
                         if lookup_response['success'] and lookup_response['data']:
-                            # Add to collection
-                            add_response = client.table('vinyl_records').insert({
-                                'user_id': sub['user_id'],
-                                'artist': lookup_response['data']['artist'],
-                                'album': lookup_response['data']['album'],
-                                'year': lookup_response['data']['year'],
-                                'label': lookup_response['data']['label'],
-                                'genres': lookup_response['data']['genres'],
-                                'styles': lookup_response['data']['styles'],
-                                'musicians': lookup_response['data']['musicians'],
-                                'master_url': lookup_response['data']['master_url'],
-                                'current_release_url': None,  # Always null for spotify_list_sub
-                                'current_release_year': None,  # Always null for spotify_list_sub
-                                'country': lookup_response['data'].get('country'),
-                                'added_from': 'spotify_list_sub',  # Force spotify_list_sub as source
-                                'created_at': datetime.utcnow().isoformat(),
-                                'updated_at': datetime.utcnow().isoformat()
-                            }).execute()
-                            
-                            print(f"Add to collection response: {add_response}")
-                            
-                            if add_response.data:
+                            # Route through the centralized add_record_to_collection so
+                            # synced records get the full field set AND relational
+                            # contributor rows, exactly like manually added records.
+                            record_data = dict(lookup_response['data'])
+                            record_data['added_from'] = 'spotify_list_sub'  # Force source
+                            record_data['current_release_url'] = None  # Always null for spotify_list_sub
+                            record_data['current_release_year'] = None  # Always null for spotify_list_sub
+
+                            add_result = add_record_to_collection(sub['user_id'], record_data)
+
+                            if add_result.get('success'):
                                 # Mark as processed
                                 client.table('spotify_processed_albums').insert({
                                     'user_id': sub['user_id'],
@@ -917,7 +893,7 @@ def sync_subscribed_playlists(is_automated: bool = False):
                                     'album': lookup_response['data']['album']
                                 })
                             else:
-                                print(f"Failed to add album: {album['name']}")
+                                print(f"Failed to add album: {album['name']}: {add_result.get('error')}")
                         else:
                             print(f"Could not find album in Discogs: {album['name']}")
                             failed_lookups.append({

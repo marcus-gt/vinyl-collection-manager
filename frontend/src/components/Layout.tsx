@@ -4,11 +4,10 @@ import { IconDownload, IconUpload, IconNetwork } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDisclosure } from '@mantine/hooks';
 import { useState, useEffect } from 'react';
-import { notifications } from '@mantine/notifications';
-import { records, type RecordsService, customColumns as customColumnsApi } from '../services/api';
-import type { CustomColumn, VinylRecord } from '../types';
-
-const recordsService: RecordsService = records;
+import { customColumns as customColumnsApi } from '../services/api';
+import type { CustomColumn } from '../types';
+import { appEvents } from '../lib/appEvents';
+import { useCsvImport } from '../hooks/useCsvImport';
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -17,9 +16,8 @@ function Layout() {
   const [opened, { toggle, close }] = useDisclosure(false);
   const [importModalOpened, setImportModalOpened] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const { importing, progress, importCsv } = useCsvImport(customColumns);
 
   useEffect(() => {
     // Load custom columns when component mounts
@@ -42,172 +40,16 @@ function Layout() {
   };
 
   const handleExportCSV = () => {
-    window.dispatchEvent(new CustomEvent('export-collection-csv'));
+    appEvents.emit('exportCollectionCsv');
   };
 
   const handleImportCSV = async () => {
     if (!csvFile) return;
 
-    setImporting(true);
-    setProgress(0);
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const text = e.target?.result;
-        if (typeof text !== 'string') {
-          throw new Error('Failed to read CSV file');
-        }
-
-        // Parse CSV with proper handling of quoted values
-        const parseCSVLine = (line: string): string[] => {
-          const values: string[] = [];
-          let currentValue = '';
-          let insideQuotes = false;
-          
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            
-            if (char === '"') {
-              if (insideQuotes && line[i + 1] === '"') {
-                // Handle escaped quotes
-                currentValue += '"';
-                i++;
-              } else {
-                // Toggle quote state
-                insideQuotes = !insideQuotes;
-              }
-            } else if (char === ',' && !insideQuotes) {
-              // End of value
-              values.push(currentValue.trim());
-              currentValue = '';
-            } else {
-              currentValue += char;
-            }
-          }
-          
-          // Add the last value
-          values.push(currentValue.trim());
-          return values;
-        };
-
-        // Parse CSV
-        const lines = text.split('\n');
-        const headers = parseCSVLine(lines[0]);
-        const records = lines.slice(1).filter(line => line.trim());
-        const totalRecords = records.length;
-
-        let successCount = 0;
-        let failureCount = 0;
-
-        for (let i = 0; i < records.length; i++) {
-          try {
-            // Update progress
-            setProgress((i / totalRecords) * 100);
-
-            // Process record
-            const values = parseCSVLine(records[i]);
-            const importRecord: VinylRecord = {
-              artist: values[0]?.trim() || '',
-              album: values[1]?.trim() || '',
-              year: values[2]?.trim() ? parseInt(values[2].trim()) : undefined,
-              label: values[3]?.trim(),
-              country: values[4]?.trim(),
-              genres: values[5]?.trim() ? values[5].trim().split(';').map(g => g.trim()) : [],
-              styles: values[6]?.trim() ? values[6].trim().split(';').map(s => s.trim()) : [],
-              musicians: values[7]?.trim() ? values[7].trim().split(';').map(m => m.trim()) : [],
-              master_url: values[8]?.trim(),
-              current_release_url: values[9]?.trim(),
-              added_from: 'csv_import',
-              custom_values_cache: {}
-            };
-
-            headers.forEach((header, index) => {
-              const value = values[index]?.trim();
-              if (!value) return;
-
-              // First try to match standard fields
-              switch (header.toLowerCase()) {
-                case 'artist':
-                  importRecord.artist = value;
-                  break;
-                case 'album':
-                  importRecord.album = value;
-                  break;
-                case 'original year':
-                  importRecord.year = parseInt(value);
-                  break;
-                case 'label':
-                  importRecord.label = value;
-                  break;
-                case 'country':
-                  importRecord.country = value;
-                  break;
-                case 'genres':
-                  importRecord.genres = value.split(';').map(g => g.trim());
-                  break;
-                case 'styles':
-                  importRecord.styles = value.split(';').map(s => s.trim());
-                  break;
-                case 'musicians':
-                  importRecord.musicians = value.split(';').map(m => m.trim());
-                  break;
-                case 'master url':
-                  importRecord.master_url = value;
-                  break;
-                case 'release url':
-                  importRecord.current_release_url = value;
-                  break;
-                default:
-                  // If it's not a standard field, check if it's a custom column
-                  const customColumn = customColumns.find(col => col.name === header);
-                  if (customColumn) {
-                    // Add to custom_values_cache if it's a custom column
-                    importRecord.custom_values_cache![customColumn.id] = value;
-                  }
-              }
-            });
-
-            // Add record
-            const response = await recordsService.add(importRecord);
-            if (response.success) {
-              successCount++;
-            } else {
-              failureCount++;
-            }
-          } catch (err) {
-            console.error('Failed to process record:', err);
-            failureCount++;
-          }
-        }
-
-        setProgress(100);
-
-        // Show completion notification
-        notifications.show({
-          title: 'Import Complete',
-          message: `Successfully imported ${successCount} records. ${failureCount} records failed.`,
-          color: failureCount > 0 ? 'yellow' : 'green'
-        });
-
-        // Trigger table refresh
-        window.dispatchEvent(new CustomEvent('vinyl-collection-table-refresh'));
-
-        // Reset state
-        setImporting(false);
-        setImportModalOpened(false);
-        setCsvFile(null);
-      };
-
-      reader.readAsText(csvFile);
-    } catch (err) {
-      console.error('Failed to import CSV:', err);
-      notifications.show({
-        title: 'Import Failed',
-        message: 'Failed to import CSV file. Please check the file format and try again.',
-        color: 'red'
-      });
-      setImporting(false);
+    const completed = await importCsv(csvFile);
+    if (completed) {
+      setImportModalOpened(false);
+      setCsvFile(null);
     }
   };
 

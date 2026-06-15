@@ -7,19 +7,13 @@ echo "  Python: $(python --version)"
 echo "  Working directory: $(pwd)"
 echo ""
 
-# Activate the Poetry virtual environment if not already active
+# Activate the local virtual environment if present.
+# Create it with: python -m venv .venv && pip install -r requirements.txt
 if [ -f ".venv/bin/activate" ]; then
     source .venv/bin/activate
-elif command -v poetry &> /dev/null; then
-    # Try to find the virtual environment managed by poetry
-    VENV_PATH=$(poetry env info -p 2>/dev/null)
-    if [ -n "$VENV_PATH" ] && [ -f "$VENV_PATH/bin/activate" ]; then
-        source "$VENV_PATH/bin/activate"
-    else
-        echo "Warning: Poetry virtual environment not found or not active. Attempting to run without explicit activation."
-    fi
 else
-    echo "Warning: Poetry not found. Attempting to run without explicit virtual environment activation."
+    echo "Warning: .venv not found. Running with the current Python environment."
+    echo "         Create one with: python -m venv .venv && pip install -r requirements.txt"
 fi
 
 # Run the Flask server as a module

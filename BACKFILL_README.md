@@ -35,7 +35,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here  # NOT the anon key!
 Generate a comparison CSV to see what will change **without updating the database**:
 
 ```bash
-poetry run python backfill_discogs_data.py --dry-run
+python backfill_discogs_data.py --dry-run
 ```
 
 This will:
@@ -56,7 +56,7 @@ Open the generated CSV file and verify:
 Test the actual database update with just 5 records:
 
 ```bash
-poetry run python backfill_discogs_data.py --test 5
+python backfill_discogs_data.py --test 5
 ```
 
 This will:
@@ -75,7 +75,7 @@ After running, **check the UI** to verify:
 If everything looks good, run the full update:
 
 ```bash
-poetry run python backfill_discogs_data.py --full
+python backfill_discogs_data.py --full
 ```
 
 This will:
@@ -139,7 +139,7 @@ This will:
 ls -la .env
 
 # Check if variables are set
-poetry run python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('URL:', os.getenv('SUPABASE_URL')); print('Key:', bool(os.getenv('SUPABASE_SERVICE_ROLE_KEY')))"
+python -c "import os; from dotenv import load_dotenv; load_dotenv(); print('URL:', os.getenv('SUPABASE_URL')); print('Key:', bool(os.getenv('SUPABASE_SERVICE_ROLE_KEY')))"
 ```
 
 ### "Rate limit exceeded"
