@@ -7,6 +7,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: NODE_VERSION
+        value: "20"
       - key: FLASK_ENV
         value: production
       - key: FLASK_SECRET_KEY
@@ -29,8 +31,3 @@ services:
         value: https://vinyl-collection-manager.onrender.com
       - key: SYNC_SECRET_KEY
         generateValue: true
-
-databases:
-  - name: vinyl-collection-db
-    databaseName: vinyl_collection
-    ipAllowList: []
