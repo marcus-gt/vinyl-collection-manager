@@ -42,22 +42,23 @@ def get_records():
             'user_id', user_id
         ).execute()
 
-        if response.data:
+        # An empty collection is a valid state (e.g. a brand-new user), not an
+        # error - return success with an empty list so the UI shows an empty
+        # table rather than "Failed to get records".
+        records = response.data or []
+
+        if records:
             # Fetch contributors for all records
-            record_ids = [record['id'] for record in response.data]
+            record_ids = [record['id'] for record in records]
             contributors_by_record = get_contributors_for_records(user_id, record_ids)
 
             # Attach contributors to each record
-            for record in response.data:
+            for record in records:
                 record['contributors'] = contributors_by_record.get(record['id'], {})
 
-            return jsonify({
-                'success': True,
-                'data': response.data
-            })
         return jsonify({
-            'success': False,
-            'error': 'No records found'
+            'success': True,
+            'data': records
         })
     except Exception as e:
         print(f"Error fetching records: {str(e)}")
