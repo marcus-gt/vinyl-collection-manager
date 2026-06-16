@@ -31,3 +31,8 @@ services:
         value: https://vinyl-collection-manager.onrender.com
       - key: SYNC_SECRET_KEY
         generateValue: true
+      # Anthropic API key for the photo-recognition feature (Add → Identify by photo).
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5

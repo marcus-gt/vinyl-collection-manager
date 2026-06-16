@@ -264,6 +264,31 @@ export const lookup = {
       data: response.data.data,
       error: response.data.error
     };
+  },
+
+  // Identify an album from a photo (data URL or raw base64) via the vision
+  // backend, returning the resolved record plus what was recognized.
+  byImage: async (
+    image: string,
+    mediaType: string,
+    signal?: AbortSignal
+  ): Promise<ApiResponse<VinylRecord> & { recognized?: { artist: string; album: string; confidence: string } }> => {
+    const response = await api.post<{
+      success: boolean;
+      data: VinylRecord;
+      recognized?: { artist: string; album: string; confidence: string };
+      error?: string;
+    }>(
+      '/api/lookup/image',
+      { image, media_type: mediaType },
+      { signal }
+    );
+    return {
+      success: response.data.success,
+      data: response.data.data,
+      recognized: response.data.recognized,
+      error: response.data.error,
+    };
   }
 };
 

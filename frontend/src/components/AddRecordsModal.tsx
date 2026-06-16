@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal, Title, TextInput, Button, Paper, Stack, Text, Group, Alert, Loader, Box, Tabs, Select, Divider, ScrollArea, Checkbox, MultiSelect, ActionIcon, Collapse } from '@mantine/core';
-import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronRight } from '@tabler/icons-react';
+import { IconX, IconBrandSpotify, IconBarcode, IconExternalLink, IconChevronDown, IconChevronRight, IconCamera } from '@tabler/icons-react';
 import { lookup, records, spotify, customColumns as customColumnsApi } from '../services/api';
 import type { VinylRecord, CustomColumn } from '../types';
 import { BarcodeScanner } from './BarcodeScanner';
 import { notifications } from '@mantine/notifications';
 import { appEvents } from '../lib/appEvents';
+import { prepareImageForUpload } from '../lib/image';
 
 interface AddRecordsModalProps {
   opened: boolean;
@@ -85,6 +86,7 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
   const [customColumns, setCustomColumns] = useState<CustomColumn[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -388,6 +390,48 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
         return;
       }
       setError('Failed to lookup album');
+      setRecord(undefined);
+    } finally {
+      if (abortControllerRef.current) {
+        abortControllerRef.current = undefined;
+      }
+      setLoading(false);
+    }
+  };
+
+  const handlePhotoSelected = async (file: File | undefined) => {
+    if (!file) return;
+
+    setLoading(true);
+    setError(undefined);
+    setSuccess(undefined);
+    setRecord(undefined);
+    abortControllerRef.current = new AbortController();
+
+    try {
+      // Downscale + re-encode to keep the upload small and under the API limit.
+      const { dataUrl, mediaType } = await prepareImageForUpload(file);
+      const response = await lookup.byImage(dataUrl, mediaType, abortControllerRef.current.signal);
+
+      if (response.success && response.data) {
+        setRecord(getRecordWithDefaults(response.data));
+        if (response.recognized) {
+          setSuccess(
+            `Recognized: ${response.recognized.artist} – ${response.recognized.album} ` +
+            `(confidence: ${response.recognized.confidence})`
+          );
+        }
+      } else {
+        setError(response.error || 'Could not identify an album in the photo');
+        setRecord(undefined);
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      // Surface the backend's specific error message when available.
+      const serverError = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(serverError || 'Failed to identify album from photo');
       setRecord(undefined);
     } finally {
       if (abortControllerRef.current) {
@@ -1031,6 +1075,29 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         variant="light"
                       >
                         Search
+                      </Button>
+
+                      <Divider label="OR" labelPosition="center" />
+
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          handlePhotoSelected(e.currentTarget.files?.[0]);
+                          e.currentTarget.value = '';
+                        }}
+                      />
+                      <Button
+                        onClick={() => photoInputRef.current?.click()}
+                        loading={loading}
+                        fullWidth
+                        variant="light"
+                        leftSection={<IconCamera size={18} />}
+                      >
+                        Identify by photo (experimental)
                       </Button>
                   </Stack>
                   )}

@@ -7,6 +7,8 @@ requests are exempted so bulk/batch imports are never throttled.
 from flask import Blueprint, jsonify, request
 
 from barcode_scanner.extensions import limiter, is_authenticated_request
+from barcode_scanner.auth_utils import require_auth
+from barcode_scanner.image_lookup import identify_album_from_image
 from discogs_lookup import (
     search_by_barcode,
     search_by_discogs_id,
@@ -175,6 +177,84 @@ def lookup_discogs_url():
             'success': False,
             'message': str(e)
         }), 500
+
+
+@bp.route('/api/lookup/image', methods=['POST'])
+@require_auth
+@limiter.limit("20 per minute")
+def lookup_image():
+    """Identify an album from a photo (Claude vision) and resolve it via Discogs.
+
+    Auth-required because each call hits a paid vision API. Expects JSON:
+    { "image": "<base64 or data URL>", "media_type": "image/jpeg" }.
+    """
+    try:
+        data = request.get_json() or {}
+        image = data.get('image') or ''
+        media_type = data.get('media_type') or 'image/jpeg'
+
+        # Accept a full data URL (data:image/png;base64,xxxx) or raw base64.
+        if image.startswith('data:'):
+            header, _, b64 = image.partition(',')
+            image = b64
+            if ';base64' in header and header.startswith('data:'):
+                media_type = header[5:].split(';')[0] or media_type
+
+        if not image:
+            return jsonify({'success': False, 'error': 'No image provided'}), 400
+
+        recognition = identify_album_from_image(image, media_type)
+        if not recognition.get('success'):
+            # 404 when no album could be recognized; 502 for upstream/service errors.
+            status = 404 if recognition.get('kind') == 'not_found' else 502
+            return jsonify({
+                'success': False,
+                'error': recognition.get('error', 'Could not identify the album')
+            }), status
+
+        artist = recognition['artist']
+        album = recognition['album']
+
+        # Resolve full metadata via the existing Discogs artist/album search.
+        result = search_by_artist_album(artist, album, source='discogs_url')
+        if result and result.get('success') and result.get('data'):
+            record = result['data']
+            record['current_release_url'] = None
+            record['current_release_year'] = None
+        else:
+            # No Discogs match - return the recognized names for manual entry.
+            record = {
+                'artist': artist,
+                'album': album,
+                'genres': [],
+                'styles': [],
+                'musicians': [],
+                'current_release_url': None,
+                'current_release_year': None,
+            }
+
+        # Mark provenance so photo-added records are distinguishable.
+        record['added_from'] = 'photo'
+
+        return jsonify({
+            'success': True,
+            'recognized': {
+                'artist': artist,
+                'album': album,
+                'confidence': recognition.get('confidence', 'low'),
+            },
+            'data': record,
+        })
+
+    except ValueError as e:
+        # Configuration / input errors (e.g. missing API key, bad media type).
+        print(f"Image lookup config/input error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        print(f"Error in image lookup: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to identify album from image'}), 500
 
 
 @bp.route('/api/lookup/artist-album')
