@@ -8,6 +8,7 @@ extracts artist + album; the caller resolves full metadata via Discogs.
 import os
 import json
 import re
+import time
 
 import requests
 
@@ -77,40 +78,55 @@ def identify_album_from_image(image_b64: str, media_type: str = "image/jpeg") ->
         ],
     }
 
-    try:
-        response = requests.post(
-            ANTHROPIC_API_URL,
-            headers={
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json=payload,
-            timeout=30,
-        )
-    except requests.RequestException as e:
-        print(f"Anthropic request failed: {e}", flush=True)
-        return {
-            "success": False,
-            "kind": "service",
-            "error": f"Image recognition service is unavailable ({type(e).__name__}). Please try again.",
-        }
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+    # Transient upstream statuses (gateway/rate-limit/overloaded) are worth a
+    # quick retry - Anthropic's edge occasionally returns 502/503/529.
+    transient = {429, 500, 502, 503, 504, 529}
+    response = None
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                ANTHROPIC_API_URL, headers=headers, json=payload, timeout=45
+            )
+        except requests.RequestException as e:
+            print(f"Anthropic request failed (attempt {attempt + 1}): {e}", flush=True)
+            if attempt < 2:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            return {
+                "success": False,
+                "kind": "service",
+                "error": "Image recognition service is unavailable. Please try again.",
+            }
+
+        if response.status_code == 200:
+            break
+        if response.status_code in transient and attempt < 2:
+            print(f"Anthropic transient {response.status_code}, retrying...", flush=True)
+            time.sleep(1.5 * (attempt + 1))
+            continue
+        break
 
     if response.status_code != 200:
-        # Surface the upstream error type so failures are diagnosable without
-        # server log access (the API key itself is never included).
+        # Prefer Anthropic's structured error type; for non-JSON gateway pages
+        # (e.g. a Cloudflare 502 HTML body) keep it generic. Never include the key.
         detail = ""
         try:
             err = response.json().get("error", {})
             detail = err.get("type") or err.get("message") or ""
         except ValueError:
-            detail = (response.text or "")[:120]
-        print(f"Anthropic API error {response.status_code}: {response.text[:500]}", flush=True)
+            detail = "upstream gateway error" if response.status_code >= 500 else ""
+        print(f"Anthropic API error {response.status_code}: {response.text[:300]}", flush=True)
         suffix = f": {detail}" if detail else ""
         return {
             "success": False,
             "kind": "service",
-            "error": f"Image recognition service error ({response.status_code}{suffix})",
+            "error": f"Image recognition service error ({response.status_code}{suffix}). Please try again.",
         }
 
     try:
