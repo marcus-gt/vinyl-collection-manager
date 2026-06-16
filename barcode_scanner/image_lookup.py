@@ -89,19 +89,28 @@ def identify_album_from_image(image_b64: str, media_type: str = "image/jpeg") ->
             timeout=30,
         )
     except requests.RequestException as e:
-        print(f"Anthropic request failed: {e}")
+        print(f"Anthropic request failed: {e}", flush=True)
         return {
             "success": False,
             "kind": "service",
-            "error": "Image recognition service is unavailable. Please try again.",
+            "error": f"Image recognition service is unavailable ({type(e).__name__}). Please try again.",
         }
 
     if response.status_code != 200:
-        print(f"Anthropic API error {response.status_code}: {response.text[:500]}")
+        # Surface the upstream error type so failures are diagnosable without
+        # server log access (the API key itself is never included).
+        detail = ""
+        try:
+            err = response.json().get("error", {})
+            detail = err.get("type") or err.get("message") or ""
+        except ValueError:
+            detail = (response.text or "")[:120]
+        print(f"Anthropic API error {response.status_code}: {response.text[:500]}", flush=True)
+        suffix = f": {detail}" if detail else ""
         return {
             "success": False,
             "kind": "service",
-            "error": "Image recognition service error. Please try again.",
+            "error": f"Image recognition service error ({response.status_code}{suffix})",
         }
 
     try:
