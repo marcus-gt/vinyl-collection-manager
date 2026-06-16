@@ -73,9 +73,13 @@ api.interceptors.response.use(
 );
 
 export const auth = {
-  register: async (email: string, password: string): Promise<AuthResponse> => {
+  register: async (email: string, password: string, captchaToken?: string): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/api/auth/register', { email, password });
+      const response = await api.post<AuthResponse>('/api/auth/register', {
+        email,
+        password,
+        captcha_token: captchaToken,
+      });
       return response.data;
     } catch (error) {
       console.error('Registration error:', error instanceof Error ? error.message : 'Unknown error');
@@ -83,9 +87,13 @@ export const auth = {
     }
   },
 
-  login: async (email: string, password: string): Promise<AuthResponse> => {
+  login: async (email: string, password: string, captchaToken?: string): Promise<AuthResponse> => {
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', { email, password });
+      const response = await api.post<AuthResponse>('/api/auth/login', {
+        email,
+        password,
+        captcha_token: captchaToken,
+      });
       return response.data;
     } catch (error) {
       console.error('Login error:', error instanceof Error ? error.message : 'Unknown error');

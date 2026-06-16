@@ -101,47 +101,79 @@ def refresh_session_token(refresh_token: str) -> Dict[str, Any]:
         traceback.print_exc()
         return {"success": False, "error": str(e)}
 
-def create_user(email: str, password: str) -> Dict[str, Any]:
-    """Create a new user account."""
+def _ensure_profile(access_token: str, user_id: str, email: str) -> None:
+    """Create the user's profile row if it doesn't already exist.
+
+    Runs as the authenticated user (via their access token) so it satisfies the
+    profiles RLS policy (with_check auth.uid() = id). The previous code inserted
+    with the anon client, which RLS silently rejected for every signup. Idempotent
+    (existing rows are left untouched) and best-effort - it never raises, so it
+    can't break the register/login flow.
+    """
     try:
-        # First sign up the user
-        auth_response = supabase.auth.sign_up({
-            "email": email,
-            "password": password
-        })
-        
-        if not auth_response.user:
-            return {"success": False, "error": "Failed to create user"}
-        
-        # Get the access token
-        session = auth_response.session
-        if not session:
-            return {"success": False, "error": "No session created"}
-            
-        # Create profile with the authenticated client
-        profile_data = {
-            'id': auth_response.user.id,
-            'email': email,
-            'created_at': datetime.utcnow().isoformat()
-        }
-        
-        # Insert profile using the authenticated session
-        profile_response = supabase.table('profiles').insert(profile_data).execute()
-        
-        return {"success": True, "user": auth_response.user}
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        if not url or not key or not access_token:
+            return
+        client = create_client(url, key)
+        client.postgrest.auth(access_token)
+        client.table('profiles').upsert(
+            {
+                'id': user_id,
+                'email': email,
+                'created_at': datetime.utcnow().isoformat(),
+            },
+            on_conflict='id',
+            ignore_duplicates=True,
+        ).execute()
     except Exception as e:
+        print(f"Warning: could not ensure profile for {user_id}: {str(e)}")
+
+
+def create_user(email: str, password: str, captcha_token: str = None) -> Dict[str, Any]:
+    """Create a new user account and ensure their profile row exists."""
+    try:
+        credentials = {"email": email, "password": password}
+        # When Supabase bot/abuse protection is enabled, the captcha token must
+        # be forwarded to GoTrue, which verifies it server-side.
+        if captcha_token:
+            credentials["options"] = {"captcha_token": captcha_token}
+        auth_response = supabase.auth.sign_up(credentials)
+
+        user = auth_response.user
+        if not user:
+            return {"success": False, "error": "Failed to create user"}
+
+        # Supabase returns an obfuscated user with no identities when the email
+        # is already registered (anti-enumeration). Surface a clear message.
+        identities = getattr(user, "identities", None)
+        if identities is not None and len(identities) == 0:
+            return {"success": False, "error": "An account with this email already exists."}
+
+        # With email confirmation disabled, sign_up returns a session. Use the
+        # new user's own token to create their profile so it passes RLS.
+        auth_session = auth_response.session
+        if auth_session:
+            _ensure_profile(auth_session.access_token, user.id, email)
+
+        return {"success": True, "user": user, "session": auth_session}
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
         return {"success": False, "error": str(e)}
 
-def login_user(email: str, password: str) -> Dict[str, Any]:
+def login_user(email: str, password: str, captcha_token: str = None) -> Dict[str, Any]:
     """Login a user."""
     try:
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        credentials = {"email": email, "password": password}
+        if captcha_token:
+            credentials["options"] = {"captcha_token": captcha_token}
+        response = supabase.auth.sign_in_with_password(credentials)
         # Store both tokens in session
         session['access_token'] = response.session.access_token
         session['refresh_token'] = response.session.refresh_token
+        # Self-heal: ensure a profile row exists. Accounts created before profile
+        # creation was fixed (or while it was broken) may be missing one.
+        _ensure_profile(response.session.access_token, response.session.user.id, email)
         return {"success": True, "session": response.session}
     except Exception as e:
         return {"success": False, "error": str(e)}

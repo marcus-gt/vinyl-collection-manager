@@ -1,7 +1,10 @@
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { TextInput, PasswordInput, Button, Paper, Title, Text, Container, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useAuth } from '../contexts/AuthContext';
+import { TURNSTILE_SITE_KEY } from '../lib/turnstile';
 
 interface RegisterForm {
   email: string;
@@ -12,6 +15,8 @@ interface RegisterForm {
 export default function Register() {
   const navigate = useNavigate();
   const { register, isLoading, error } = useAuth();
+  const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const form = useForm<RegisterForm>({
     initialValues: {
@@ -28,7 +33,10 @@ export default function Register() {
   });
 
   const handleSubmit = async (values: RegisterForm) => {
-    await register(values.email, values.password);
+    await register(values.email, values.password, captchaToken);
+    // Turnstile tokens are single-use; reset for any subsequent attempt.
+    setCaptchaToken('');
+    turnstileRef.current?.reset();
     if (!error) {
       navigate('/collection');
     }
@@ -65,12 +73,20 @@ export default function Register() {
               required
               {...form.getInputProps('confirmPassword')}
             />
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              options={{ appearance: 'interaction-only' }}
+              onSuccess={setCaptchaToken}
+              onError={() => setCaptchaToken('')}
+              onExpire={() => setCaptchaToken('')}
+            />
             {error && (
               <Text c="red" size="sm">
                 {error}
               </Text>
             )}
-            <Button type="submit" loading={isLoading}>
+            <Button type="submit" loading={isLoading} disabled={!captchaToken}>
               Create account
             </Button>
           </Stack>

@@ -1,7 +1,10 @@
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { TextInput, PasswordInput, Button, Paper, Title, Text, Container, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { useAuth } from '../contexts/AuthContext';
+import { TURNSTILE_SITE_KEY } from '../lib/turnstile';
 
 interface LoginForm {
   email: string;
@@ -11,6 +14,8 @@ interface LoginForm {
 function Login() {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuth();
+  const [captchaToken, setCaptchaToken] = useState('');
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const form = useForm<LoginForm>({
     initialValues: {
@@ -24,7 +29,10 @@ function Login() {
   });
 
   const handleSubmit = async (values: LoginForm) => {
-    await login(values.email, values.password);
+    await login(values.email, values.password, captchaToken);
+    // Turnstile tokens are single-use; reset for any subsequent attempt.
+    setCaptchaToken('');
+    turnstileRef.current?.reset();
     if (!error) {
       navigate('/collection');
     }
@@ -55,12 +63,20 @@ function Login() {
               required
               {...form.getInputProps('password')}
             />
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              options={{ appearance: 'interaction-only' }}
+              onSuccess={setCaptchaToken}
+              onError={() => setCaptchaToken('')}
+              onExpire={() => setCaptchaToken('')}
+            />
             {error && (
               <Text c="red" size="sm">
                 {error}
               </Text>
             )}
-            <Button type="submit" loading={isLoading}>
+            <Button type="submit" loading={isLoading} disabled={!captchaToken}>
               Sign in
             </Button>
           </Stack>
