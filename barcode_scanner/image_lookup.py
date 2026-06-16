@@ -48,7 +48,9 @@ def identify_album_from_image(image_b64: str, media_type: str = "image/jpeg") ->
 
     Raises ValueError if the API key is missing or the media type is unsupported.
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    # Strip whitespace/newlines that often sneak in when pasting the key into a
+    # dashboard env var - a trailing newline yields "invalid x-api-key".
+    api_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
