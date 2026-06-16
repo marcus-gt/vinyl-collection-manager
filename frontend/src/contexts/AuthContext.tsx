@@ -7,8 +7,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, captchaToken?: string) => Promise<void>;
+  register: (email: string, password: string, captchaToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
 }
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshToken, syncNow, user]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, captchaToken?: string) => {
     setIsLoading(true);
     setError(null);
     
@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentLoginCount = ++loginCounter.current;
     
     try {
-      const response = await auth.login(email, password);
+      const response = await auth.login(email, password, captchaToken);
       
       if (response.success && response.session) {
         
@@ -193,16 +193,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [syncNow]);
 
-  const register = useCallback(async (email: string, password: string) => {
+  const register = useCallback(async (email: string, password: string, captchaToken?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await auth.register(email, password);
-      
-      if (response.success && response.user) {
-        setUser(response.user);
-        // Verify session is set
-        await login(email, password);
+      const response = await auth.register(email, password, captchaToken);
+
+      // The backend establishes the session during register (when email
+      // confirmation is disabled), so we don't call login() again - a second
+      // call would need a fresh captcha token (they're single-use).
+      if (response.success && response.session) {
+        localStorage.setItem('session', JSON.stringify(response.session));
+        setUser(response.session.user);
+      } else if (response.success && response.user) {
+        // No session returned (e.g. email confirmation enabled): account was
+        // created but the user must verify before they can sign in.
+        setUser(null);
+        setError('Account created. Please check your email to confirm your account, then sign in.');
       } else {
         setError(response.error || 'Registration failed');
         setUser(null);
@@ -214,7 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [login]);
+  }, []);
 
   const logout = useCallback(async () => {
     setIsLoading(true);

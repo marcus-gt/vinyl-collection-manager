@@ -21,17 +21,33 @@ def register():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    captcha_token = data.get('captcha_token')
 
     if not email or not password:
         return jsonify({'success': False, 'error': 'Email and password required'}), 400
 
-    result = create_user(email, password)
-    if result['success']:
-        return jsonify({'success': True, 'user': {
-            'id': result['user'].id,
-            'email': result['user'].email
-        }}), 201
-    return jsonify({'success': False, 'error': result['error']}), 400
+    result = create_user(email, password, captcha_token)
+    if not result['success']:
+        return jsonify({'success': False, 'error': result['error']}), 400
+
+    user = result['user']
+    auth_session = result.get('session')
+
+    # When email confirmation is disabled, sign_up returns a session. Establish
+    # the login session here so the client doesn't need a second authenticated
+    # request (which, with captcha enabled, would require a fresh token).
+    if auth_session:
+        session.permanent = True
+        session['user_id'] = user.id
+        session['access_token'] = auth_session.access_token
+        session['refresh_token'] = auth_session.refresh_token
+        session.modified = True
+
+    return jsonify({
+        'success': True,
+        'user': {'id': user.id, 'email': user.email},
+        'session': {'user': {'id': user.id, 'email': user.email}} if auth_session else None
+    }), 201
 
 
 @bp.route('/api/auth/login', methods=['POST'])
@@ -40,6 +56,7 @@ def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    captcha_token = data.get('captcha_token')
 
     if not email or not password:
         return jsonify({
@@ -48,7 +65,7 @@ def login():
         }), 400
 
     try:
-        result = login_user(email, password)
+        result = login_user(email, password, captcha_token)
 
         if result['success'] and result['session']:
             # Set session data BEFORE creating response

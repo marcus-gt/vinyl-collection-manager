@@ -130,13 +130,15 @@ def _ensure_profile(access_token: str, user_id: str, email: str) -> None:
         print(f"Warning: could not ensure profile for {user_id}: {str(e)}")
 
 
-def create_user(email: str, password: str) -> Dict[str, Any]:
+def create_user(email: str, password: str, captcha_token: str = None) -> Dict[str, Any]:
     """Create a new user account and ensure their profile row exists."""
     try:
-        auth_response = supabase.auth.sign_up({
-            "email": email,
-            "password": password
-        })
+        credentials = {"email": email, "password": password}
+        # When Supabase bot/abuse protection is enabled, the captcha token must
+        # be forwarded to GoTrue, which verifies it server-side.
+        if captcha_token:
+            credentials["options"] = {"captcha_token": captcha_token}
+        auth_response = supabase.auth.sign_up(credentials)
 
         user = auth_response.user
         if not user:
@@ -154,18 +156,18 @@ def create_user(email: str, password: str) -> Dict[str, Any]:
         if auth_session:
             _ensure_profile(auth_session.access_token, user.id, email)
 
-        return {"success": True, "user": user}
+        return {"success": True, "user": user, "session": auth_session}
     except Exception as e:
         print(f"Error creating user: {str(e)}")
         return {"success": False, "error": str(e)}
 
-def login_user(email: str, password: str) -> Dict[str, Any]:
+def login_user(email: str, password: str, captcha_token: str = None) -> Dict[str, Any]:
     """Login a user."""
     try:
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        credentials = {"email": email, "password": password}
+        if captcha_token:
+            credentials["options"] = {"captcha_token": captcha_token}
+        response = supabase.auth.sign_in_with_password(credentials)
         # Store both tokens in session
         session['access_token'] = response.session.access_token
         session['refresh_token'] = response.session.refresh_token

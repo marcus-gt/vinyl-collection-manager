@@ -20,6 +20,7 @@
     "@mantine/hooks": "^7.17.0",
     "@mantine/modals": "^7.17.8",
     "@mantine/notifications": "^7.17.0",
+    "@marsidev/react-turnstile": "^1.5.3",
     "@supabase/supabase-js": "^2.48.1",
     "@tabler/icons-react": "^3.29.0",
     "@tanstack/react-table": "^8.11.3",
