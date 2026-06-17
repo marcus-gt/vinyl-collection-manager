@@ -1005,43 +1005,26 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                     <Stack>
                       <Box>
                         <Text size="sm" fw={500} mb={4}>URL or Barcode</Text>
-                        <Group gap="xs" align="flex-end" wrap="nowrap">
-                          <Box style={{ flex: '0 0 80%' }}>
-                      <TextInput
-                              placeholder="Discogs URL, Spotify URL, or numeric barcode"
-                              value={urlOrBarcode}
-                              onChange={(e) => setUrlOrBarcode(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
-                        disabled={loading}
-                              rightSection={
-                                urlOrBarcode ? (
-                                  <ActionIcon
-                                    onClick={() => setUrlOrBarcode('')}
-                                    variant="subtle"
-                                    color="gray"
-                                    size="sm"
-                                    disabled={loading}
-                        >
-                                    <IconX size={16} />
-                                  </ActionIcon>
-                                ) : null
-                              }
-                            />
-                          </Box>
-                        <Button 
-                          onClick={() => {
-                            setIsScanning(true);
-                              setUrlOrBarcode(''); // Clear URL field when starting scanner
-                            setError(undefined);
-                            setSuccess(undefined);
-                          }} 
-                          variant="light"
+                        <TextInput
+                          placeholder="Discogs URL, Spotify URL, or numeric barcode"
+                          value={urlOrBarcode}
+                          onChange={(e) => setUrlOrBarcode(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleUnifiedSearch()}
                           disabled={loading}
-                            style={{ flex: '0 0 20%' }}
-                        >
-                            <IconBarcode size={20} />
-                        </Button>
-                      </Group>
+                          rightSection={
+                            urlOrBarcode ? (
+                              <ActionIcon
+                                onClick={() => setUrlOrBarcode('')}
+                                variant="subtle"
+                                color="gray"
+                                size="sm"
+                                disabled={loading}
+                              >
+                                <IconX size={16} />
+                              </ActionIcon>
+                            ) : null
+                          }
+                        />
                         {urlOrBarcode.trim() && artist.trim() && album.trim() && (
                           <Text size="xs" c="dimmed" mt={4}>
                             ⚠️ URL/Barcode will be used (has priority over artist/album)
@@ -1091,13 +1074,27 @@ export function AddRecordsModal({ opened, onClose }: AddRecordsModalProps) {
                         }}
                       />
                       <Button
+                        onClick={() => {
+                          setIsScanning(true);
+                          setUrlOrBarcode('');
+                          setError(undefined);
+                          setSuccess(undefined);
+                        }}
+                        disabled={loading}
+                        fullWidth
+                        variant="light"
+                        leftSection={<IconBarcode size={18} />}
+                      >
+                        Scan barcode
+                      </Button>
+                      <Button
                         onClick={() => photoInputRef.current?.click()}
                         loading={loading}
                         fullWidth
                         variant="light"
                         leftSection={<IconCamera size={18} />}
                       >
-                        Identify by photo (experimental)
+                        Identify by photo
                       </Button>
                   </Stack>
                   )}
