@@ -11,6 +11,7 @@ scanning, Discogs enrichment, Spotify playlist sync, and custom metadata.
 - 📊 **Advanced table** with sorting, filtering, resizing, and drag-to-reorder columns
 - 🏷️ **Custom columns** for personal metadata (condition, rating, location, etc.)
 - 🔍 **Multiple lookup methods**: barcode, Discogs URL, artist/album search
+- 📸 **Photo recognition** (experimental): identify an album from a cover photo via Claude vision, then resolve it on Discogs
 - 📱 **Responsive UI** for mobile and desktop
 - 🔐 **Authentication** via Supabase with per-user row-level security
 - 💾 **Per-user preferences** (column order/visibility) persisted to the backend
@@ -138,6 +139,8 @@ All backend configuration is provided via environment variables (loaded from
 | `SPOTIFY_CLIENT_SECRET` | Spotify app client secret |
 | `SPOTIFY_REDIRECT_URI` | Registered Spotify redirect URI |
 | `SYNC_SECRET_KEY` | Authorizes the automated (cron) playlist-sync endpoint. Required in production; optional locally (only needed to test `/api/spotify/playlist/sync/automated`). |
+| `ANTHROPIC_API_KEY` | Anthropic API key for the photo-recognition feature. Optional — the feature is disabled (returns a clear error) if unset. |
+| `ANTHROPIC_MODEL` | Optional. Vision model for photo recognition (default `claude-haiku-4-5`). |
 
 ## Deployment
 
